@@ -1,6 +1,6 @@
 package dev.stade.update
 
-const val UPDATE_RELEASES_URL = "https://api.github.com/repos/Stade-App/stade/releases/latest"
+const val UPDATE_RELEASES_URL = "https://api.github.com/repos/StadeDevelopment/stade/releases/latest"
 const val MAX_UPDATE_METADATA_BYTES = 256 * 1024
 const val MAX_UPDATE_ASSET_BYTES = 600L * 1024 * 1024
 const val MAX_UPDATE_SIGNATURE_BYTES = 4 * 1024
