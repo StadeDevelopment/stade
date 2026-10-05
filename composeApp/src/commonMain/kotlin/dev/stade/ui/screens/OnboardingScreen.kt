@@ -31,8 +31,11 @@ import dev.stade.AppContainer
 import dev.stade.identity.LocalIdentity
 import dev.stade.ui.components.BrandMark
 import dev.stade.ui.i18n.LocalStrings
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+
+private const val IDENTITY_WAIT_MS = 2500L
 
 @Composable
 fun OnboardingScreen(container: AppContainer, presetNickname: String? = null, onReady: (LocalIdentity) -> Unit) {
@@ -42,12 +45,17 @@ fun OnboardingScreen(container: AppContainer, presetNickname: String? = null, on
     val strings = LocalStrings.current
 
     LaunchedEffect(Unit) {
-        val list = container.identities.observeIdentities().first()
-        when {
-            list.isNotEmpty() -> onReady(list.first())
-            presetNickname != null -> onReady(container.identities.create(presetNickname.trim()))
-            else -> loading = false
+        val identities = container.identities.observeIdentities()
+
+        if (presetNickname != null) {
+            val existing = identities.first().firstOrNull()
+            onReady(existing ?: container.identities.create(presetNickname.trim()))
+            return@LaunchedEffect
         }
+
+        val adopting = launch { onReady(identities.first { it.isNotEmpty() }.first()) }
+        delay(IDENTITY_WAIT_MS)
+        if (adopting.isActive) loading = false
     }
 
     Scaffold { padding ->

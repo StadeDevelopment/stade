@@ -316,6 +316,7 @@ fun StadeApp(boot: BootContext) {
                         container = active,
                         boot = boot,
                         presetNickname = pendingNickname,
+                        onNicknameConsumed = { pendingNickname = null },
                         onLockRequested = {
                             if (!locking) {
                                 lockTarget = container ?: boot.activeContainer()
@@ -353,6 +354,7 @@ private fun UnlockedApp(
     container: AppContainer,
     boot: BootContext,
     presetNickname: String?,
+    onNicknameConsumed: () -> Unit,
     onLockRequested: () -> Unit,
     onWipeRequested: () -> Unit
 ) {
@@ -662,7 +664,11 @@ private fun UnlockedApp(
                     target == Screen.Onboarding -> OnboardingScreen(
                         container = container,
                         presetNickname = presetNickname,
-                        onReady = { identity = it; screen = Screen.Contacts }
+                        onReady = {
+                            identity = it
+                            screen = Screen.Contacts
+                            onNicknameConsumed()
+                        }
                     )
                     twoPanelNow -> TwoPanelLayout(
                         container = container,
