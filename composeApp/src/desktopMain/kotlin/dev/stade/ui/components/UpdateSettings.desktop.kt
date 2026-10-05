@@ -9,7 +9,6 @@ import dev.stade.APP_VERSION
 import dev.stade.AppContainer
 import dev.stade.ui.i18n.LocalStrings
 import dev.stade.ui.screens.NavigationSettingsRow
-import dev.stade.ui.screens.SettingsGroup
 import dev.stade.ui.screens.SettingsSectionLabel
 import dev.stade.update.DesktopUpdateState
 import dev.stade.update.UpdateStage
@@ -31,16 +30,18 @@ actual fun UpdateSettingsSection(container: AppContainer) {
 
     SettingsSectionLabel(strings.updateSection)
     SettingsGroup {
-        NavigationSettingsRow(
-            icon = Icons.Default.SystemUpdateAlt,
-            iconTint = MaterialTheme.colorScheme.primary,
-            title = strings.updateCheckTitle,
-            subtitle = subtitle,
-            onClick = {
-                if (stage != UpdateStage.Checking && stage != UpdateStage.Downloading) {
-                    scope.launch { DesktopUpdateState.check(container, silent = false) }
+        row {
+            NavigationSettingsRow(
+                icon = Icons.Default.SystemUpdateAlt,
+                iconTint = MaterialTheme.colorScheme.primary,
+                title = strings.updateCheckTitle,
+                subtitle = subtitle,
+                onClick = {
+                    if (stage != UpdateStage.Checking && stage != UpdateStage.Downloading) {
+                        scope.launch { DesktopUpdateState.check(container, silent = false) }
                 }
-            }
-        )
+                }
+            )
+        }
     }
 }

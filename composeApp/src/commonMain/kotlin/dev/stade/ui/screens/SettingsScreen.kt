@@ -56,7 +56,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -96,6 +95,9 @@ import dev.stade.notification.setNotificationPrivacyEnabled
 import dev.stade.notification.setNotificationsEnabled
 import dev.stade.notification.setRunInBackgroundEnabledCommon
 import dev.stade.ui.compressAvatar
+import dev.stade.ui.components.SettingsGroup
+import dev.stade.ui.components.SettingsRowSurface
+import dev.stade.ui.components.SettingsBadge
 import dev.stade.ui.components.Avatar
 import dev.stade.ui.components.PlatformVerticalScrollbar
 import dev.stade.ui.rememberMediaPickerLauncher
@@ -344,8 +346,8 @@ fun SettingsScreen(
                 item {
                     SettingsSectionLabel(strings.appearanceSection)
                     SettingsGroup {
-                        Column {
-                            if (isDynamicColorSupported) {
+                        if (isDynamicColorSupported) {
+                            row {
                                 SwitchSettingsRow(
                                     icon = Icons.Default.Palette,
                                     iconTint = MaterialTheme.colorScheme.tertiary,
@@ -355,23 +357,16 @@ fun SettingsScreen(
                                     onCheckedChange = { setDynamicColorEnabled(it) }
                                 )
                             }
-                            AnimatedVisibility(
-                                visible = !stadeyVisible,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                Column {
-                                    if (isDynamicColorSupported) {
-                                        SettingsDivider()
-                                    }
-                                    NavigationSettingsRow(
-                                        icon = Icons.Default.SmartToy,
-                                        iconTint = MaterialTheme.colorScheme.tertiary,
-                                        title = strings.activateStadeyTitle,
-                                        subtitle = strings.activateStadeySubtitle,
-                                        onClick = { showActivateStadeyConfirm = true }
-                                    )
-                                }
+                        }
+                        if (!stadeyVisible) {
+                            row {
+                                NavigationSettingsRow(
+                                    icon = Icons.Default.SmartToy,
+                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    title = strings.activateStadeyTitle,
+                                    subtitle = strings.activateStadeySubtitle,
+                                    onClick = { showActivateStadeyConfirm = true }
+                                )
                             }
                         }
                     }
@@ -381,31 +376,33 @@ fun SettingsScreen(
             item {
                 SettingsSectionLabel(strings.languageSection)
                 SettingsGroup {
-                    Box {
-                        NavigationSettingsRow(
-                            icon = Icons.Default.Grid3x3,
-                            iconTint = MaterialTheme.colorScheme.primary,
-                            title = strings.languageTitle,
-                            subtitle = strings.languageSubtitle,
-                            onClick = { showLanguageMenu = true }
-                        )
-                        DropdownMenu(
-                            expanded = showLanguageMenu,
-                            onDismissRequest = { showLanguageMenu = false }
-                        ) {
-                            AppLocale.entries.forEach { locale ->
-                                DropdownMenuItem(
-                                    text = { Text(localeDisplayName(locale)) },
-                                    trailingIcon = {
-                                        if (locale == currentLocale) {
-                                            Icon(Icons.Default.Check, contentDescription = null)
+                    row {
+                        Box {
+                            NavigationSettingsRow(
+                                icon = Icons.Default.Grid3x3,
+                                iconTint = MaterialTheme.colorScheme.primary,
+                                title = strings.languageTitle,
+                                subtitle = strings.languageSubtitle,
+                                onClick = { showLanguageMenu = true }
+                            )
+                            DropdownMenu(
+                                expanded = showLanguageMenu,
+                                onDismissRequest = { showLanguageMenu = false }
+                            ) {
+                                AppLocale.entries.forEach { locale ->
+                                    DropdownMenuItem(
+                                        text = { Text(localeDisplayName(locale)) },
+                                        trailingIcon = {
+                                            if (locale == currentLocale) {
+                                                Icon(Icons.Default.Check, contentDescription = null)
+                                            }
+                                        },
+                                        onClick = {
+                                            setLocalePreference(locale)
+                                            showLanguageMenu = false
                                         }
-                                    },
-                                    onClick = {
-                                        setLocalePreference(locale)
-                                        showLanguageMenu = false
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
                     }
@@ -419,7 +416,7 @@ fun SettingsScreen(
                     val showPrivacyRow = notificationsEnabled
 
                     SettingsGroup {
-                        Column {
+                    row {
                         SwitchSettingsRow(
                             icon = if (notificationsEnabled) Icons.Default.Notifications
                                    else Icons.Default.NotificationsOff,
@@ -431,28 +428,24 @@ fun SettingsScreen(
                             checked = notificationsEnabled,
                             onCheckedChange = { setNotificationsEnabled(it) }
                         )
-                        AnimatedVisibility(
-                            visible = showPrivacyRow,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
-                            Column {
-                                SettingsDivider()
-                                SwitchSettingsRow(
-                                    icon = Icons.Default.VisibilityOff,
-                                    iconTint = MaterialTheme.colorScheme.primary,
-                                    title = strings.hideNotificationTitle,
-                                    subtitle = if (notificationPrivacyEnabled)
-                                        strings.hiddenNotificationSubtitle
-                                    else
-                                        strings.visibleNotificationSubtitle,
-                                    checked = notificationPrivacyEnabled,
-                                    onCheckedChange = { setNotificationPrivacyEnabled(it) }
-                                )
-                            }
+                    }
+                    if (showPrivacyRow) {
+                        row {
+                            SwitchSettingsRow(
+                                icon = Icons.Default.VisibilityOff,
+                                iconTint = MaterialTheme.colorScheme.primary,
+                                title = strings.hideNotificationTitle,
+                                subtitle = if (notificationPrivacyEnabled)
+                                    strings.hiddenNotificationSubtitle
+                                else
+                                    strings.visibleNotificationSubtitle,
+                                checked = notificationPrivacyEnabled,
+                                onCheckedChange = { setNotificationPrivacyEnabled(it) }
+                            )
                         }
-                        if (showSystemRow) {
-                            SettingsDivider()
+                    }
+                    if (showSystemRow) {
+                        row {
                             NavigationSettingsRow(
                                 icon = Icons.Default.OpenInNew,
                                 iconTint = MaterialTheme.colorScheme.primary,
@@ -461,7 +454,7 @@ fun SettingsScreen(
                                 onClick = { openNotificationSettings() }
                             )
                         }
-                        }
+                    }
                     }
                 }
             }
@@ -470,15 +463,17 @@ fun SettingsScreen(
                 item {
                     SettingsSectionLabel(strings.runInBackgroundTitle)
                     SettingsGroup {
-                        SwitchSettingsRow(
-                            icon = Icons.Default.Sync,
-                            iconTint = MaterialTheme.colorScheme.secondary,
-                            title = strings.runInBackgroundTitle,
-                            subtitle = if (runInBackgroundEnabled) strings.runInBackgroundOnSubtitle
-                                       else strings.runInBackgroundOffSubtitle,
-                            checked = runInBackgroundEnabled,
-                            onCheckedChange = { setRunInBackgroundEnabledCommon(it) }
-                        )
+                        row {
+                            SwitchSettingsRow(
+                                icon = Icons.Default.Sync,
+                                iconTint = MaterialTheme.colorScheme.secondary,
+                                title = strings.runInBackgroundTitle,
+                                subtitle = if (runInBackgroundEnabled) strings.runInBackgroundOnSubtitle
+                                           else strings.runInBackgroundOffSubtitle,
+                                checked = runInBackgroundEnabled,
+                                onCheckedChange = { setRunInBackgroundEnabledCommon(it) }
+                            )
+                        }
                     }
                 }
             }
@@ -486,26 +481,30 @@ fun SettingsScreen(
             item {
                 SettingsSectionLabel(strings.networkSection)
                 SettingsGroup {
-                    NavigationSettingsRow(
-                        icon = Icons.Default.SettingsEthernet,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = strings.transportLayersTitle,
-                        subtitle = strings.transportLayersSubtitle,
-                        onClick = onOpenTransports
-                    )
+                    row {
+                        NavigationSettingsRow(
+                            icon = Icons.Default.SettingsEthernet,
+                            iconTint = MaterialTheme.colorScheme.primary,
+                            title = strings.transportLayersTitle,
+                            subtitle = strings.transportLayersSubtitle,
+                            onClick = onOpenTransports
+                        )
+                    }
                 }
             }
 
             item {
                 SettingsSectionLabel(strings.securitySection)
                 SettingsGroup {
-                    NavigationSettingsRow(
-                        icon = Icons.Default.Lock,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = strings.securitySettingsTitle,
-                        subtitle = strings.securitySettingsSubtitle,
-                        onClick = onOpenSecurity
-                    )
+                    row {
+                        NavigationSettingsRow(
+                            icon = Icons.Default.Lock,
+                            iconTint = MaterialTheme.colorScheme.primary,
+                            title = strings.securitySettingsTitle,
+                            subtitle = strings.securitySettingsSubtitle,
+                            onClick = onOpenSecurity
+                        )
+                    }
                 }
             }
 
@@ -514,40 +513,46 @@ fun SettingsScreen(
             item {
                 SettingsSectionLabel(strings.aboutSection)
                 SettingsGroup {
-                    NavigationSettingsRow(
-                        icon = Icons.Default.Info,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = strings.aboutTitle,
-                        subtitle = strings.aboutSubtitle,
-                        onClick = onOpenAbout
-                    )
+                    row {
+                        NavigationSettingsRow(
+                            icon = Icons.Default.Info,
+                            iconTint = MaterialTheme.colorScheme.primary,
+                            title = strings.aboutTitle,
+                            subtitle = strings.aboutSubtitle,
+                            onClick = onOpenAbout
+                        )
+                    }
                 }
             }
 
             item {
                 SettingsSectionLabel(strings.backupSection)
                 SettingsGroup {
-                    NavigationSettingsRow(
-                        icon = Icons.Default.Save,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = strings.backupExportTitle,
-                        subtitle = strings.backupExportSubtitle,
-                        onClick = { showBackupDialog = true }
-                    )
+                    row {
+                        NavigationSettingsRow(
+                            icon = Icons.Default.Save,
+                            iconTint = MaterialTheme.colorScheme.primary,
+                            title = strings.backupExportTitle,
+                            subtitle = strings.backupExportSubtitle,
+                            onClick = { showBackupDialog = true }
+                        )
+                    }
                 }
             }
 
             item {
                 SettingsSectionLabel(strings.accountSection)
                 SettingsGroup {
-                    ActionSettingsRow(
-                        icon = Icons.AutoMirrored.Filled.Logout,
-                        iconTint = MaterialTheme.colorScheme.error,
-                        title = strings.logoutTitle,
-                        subtitle = strings.logoutSubtitle,
-                        titleColor = MaterialTheme.colorScheme.error,
-                        onClick = { showLogoutDialog = true }
-                    )
+                    row {
+                        ActionSettingsRow(
+                            icon = Icons.AutoMirrored.Filled.Logout,
+                            iconTint = MaterialTheme.colorScheme.error,
+                            title = strings.logoutTitle,
+                            subtitle = strings.logoutSubtitle,
+                            titleColor = MaterialTheme.colorScheme.error,
+                            onClick = { showLogoutDialog = true }
+                        )
+                    }
                 }
             }
             }
@@ -712,67 +717,47 @@ private fun ProfileHeader(
 @Composable
 internal fun SettingsSectionLabel(title: String) {
     Text(
-        text = title.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 28.dp, top = 24.dp, bottom = 6.dp, end = 16.dp)
+        text = title,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 28.dp, top = 20.dp, bottom = 8.dp, end = 16.dp)
     )
 }
 
 
 @Composable
-internal fun SettingsGroup(content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        content()
-    }
-}
-
-
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-}
-
-
-@Composable
-private fun SwitchSettingsRow(
+internal fun SwitchSettingsRow(
     icon: ImageVector,
     iconTint: Color,
     title: String,
     subtitle: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(modifier)
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+    SettingsRowSurface(
+        modifier = modifier,
+        enabled = enabled,
+        onClick = { onCheckedChange(!checked) }
     ) {
-        SettingsIconBox(icon = icon, tint = iconTint)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SettingsBadge(icon = icon, tint = iconTint)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                if (subtitle != null) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
         }
-        Spacer(Modifier.width(8.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -784,33 +769,35 @@ internal fun NavigationSettingsRow(
     title: String,
     subtitle: String? = null,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    trailingContent: (@Composable () -> Unit)? = null
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(modifier)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        SettingsIconBox(icon = icon, tint = iconTint)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+    SettingsRowSurface(modifier = modifier, onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SettingsBadge(icon = icon, tint = iconTint)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                if (subtitle != null) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            if (trailingContent != null) {
+                trailingContent()
+            } else {
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        Icon(
-            Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -824,41 +811,21 @@ private fun ActionSettingsRow(
     titleColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        SettingsIconBox(icon = icon, tint = iconTint)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    SettingsRowSurface(onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SettingsBadge(icon = icon, tint = iconTint)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = titleColor)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
 
-@Composable
-private fun SettingsIconBox(icon: ImageVector, tint: Color) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(tint.copy(alpha = 0.12f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(20.dp)
-        )
-    }
-}

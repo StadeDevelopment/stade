@@ -39,7 +39,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -86,6 +85,7 @@ import dev.stade.security.getLockOnShutdownEnabled
 import dev.stade.security.isLockOnShutdownSupported
 import dev.stade.security.setLockOnShutdownEnabled
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import dev.stade.ui.components.SettingsGroup
 import dev.stade.ui.components.PlatformVerticalScrollbar
 import dev.stade.ui.i18n.LocalStrings
 import kotlinx.coroutines.Dispatchers
@@ -172,51 +172,55 @@ private fun SecuritySettingsContent(
             ) {
                 item {
                     SecuritySectionLabel(strings.pinSection)
-                    SecurityGroup {
-                        SecurityNavRow(
-                            icon = Icons.Default.Fingerprint,
-                            tint = MaterialTheme.colorScheme.primary,
-                            title = strings.changePinTitle,
-                            subtitle = strings.changePinSubtitle,
-                            onClick = { onOpenPinSetup(true) }
-                        )
-                        if (biometricAvail != BiometricAvailability.Unsupported) {
-                            SecurityDivider()
-                            val ready = biometricAvail == BiometricAvailability.Ready
-                            SecuritySwitchRow(
+                    SettingsGroup {
+                        row {
+                            SecurityNavRow(
                                 icon = Icons.Default.Fingerprint,
                                 tint = MaterialTheme.colorScheme.primary,
-                                title = strings.biometricUnlockTitle,
-                                subtitle = when {
-                                    !ready -> strings.biometricNotEnrolledSubtitle
-                                    biometricOn -> strings.biometricUnlockOnSubtitle
-                                    else -> strings.biometricUnlockOffSubtitle
-                                },
-                                checked = biometricOn && ready,
-                                enabled = ready,
-                                onCheckedChange = { want ->
-                                    if (want) {
-                                        showBiometricPinDialog = true
-                                    } else {
-                                        biometrics.disable()
-                                        biometricOn = false
-                                    }
-                                }
+                                title = strings.changePinTitle,
+                                subtitle = strings.changePinSubtitle,
+                                onClick = { onOpenPinSetup(true) }
                             )
                         }
+                        if (biometricAvail != BiometricAvailability.Unsupported) {
+                            val ready = biometricAvail == BiometricAvailability.Ready
+                            row {
+                                SecuritySwitchRow(
+                                    icon = Icons.Default.Fingerprint,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    title = strings.biometricUnlockTitle,
+                                    subtitle = when {
+                                        !ready -> strings.biometricNotEnrolledSubtitle
+                                        biometricOn -> strings.biometricUnlockOnSubtitle
+                                        else -> strings.biometricUnlockOffSubtitle
+                                    },
+                                    checked = biometricOn && ready,
+                                    enabled = ready,
+                                    onCheckedChange = { want ->
+                                        if (want) {
+                                            showBiometricPinDialog = true
+                                        } else {
+                                            biometrics.disable()
+                                            biometricOn = false
+                                        }
+                                    }
+                                )
+                            }
+                        }
                         if (isKeypadSupported) {
-                            SecurityDivider()
-                            SecuritySwitchRow(
-                                icon = Icons.Default.Grid3x3,
-                                tint = MaterialTheme.colorScheme.primary,
-                                title = strings.scrambleKeypadTitle,
-                                subtitle = if (scrambleEnabled) strings.scrambleKeypadOnSubtitle else strings.scrambleKeypadOffSubtitle,
-                                checked = scrambleEnabled,
-                                onCheckedChange = {
-                                    container.secrets.setScrambleKeypadEnabled(it)
-                                    refreshTick++
-                                }
-                            )
+                            row {
+                                SecuritySwitchRow(
+                                    icon = Icons.Default.Grid3x3,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    title = strings.scrambleKeypadTitle,
+                                    subtitle = if (scrambleEnabled) strings.scrambleKeypadOnSubtitle else strings.scrambleKeypadOffSubtitle,
+                                    checked = scrambleEnabled,
+                                    onCheckedChange = {
+                                        container.secrets.setScrambleKeypadEnabled(it)
+                                        refreshTick++
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -226,143 +230,153 @@ private fun SecuritySettingsContent(
                     val transportsLockEnabled = remember(refreshTick) { container.secrets.isTransportsLockEnabled() }
                     val conversationShortcutsEnabled by dev.stade.notification.getConversationShortcutsEnabled()
                     SecuritySectionLabel(strings.privacySection)
-                    SecurityGroup {
-                        SecuritySwitchRow(
-                            icon = Icons.Default.Link,
-                            tint = MaterialTheme.colorScheme.primary,
-                            title = strings.linkPreviewsSettingTitle,
-                            subtitle = strings.linkPreviewsSettingSubtitle,
-                            checked = linkPreviewsEnabled,
-                            onCheckedChange = {
-                                dev.stade.link.setLinkPreviewsEnabled(container.db, it)
-                                refreshTick++
-                            }
-                        )
-                        if (isScreenPrivacySupported) {
-                            SecurityDivider()
+                    SettingsGroup {
+                        row {
                             SecuritySwitchRow(
-                                icon = Icons.Default.VisibilityOff,
+                                icon = Icons.Default.Link,
                                 tint = MaterialTheme.colorScheme.primary,
-                                title = strings.screenshotBlockingTitle,
-                                subtitle = if (screenshotBlockingEnabled) strings.screenshotBlockingOnSubtitle else strings.screenshotBlockingOffSubtitle,
-                                checked = screenshotBlockingEnabled,
+                                title = strings.linkPreviewsSettingTitle,
+                                subtitle = strings.linkPreviewsSettingSubtitle,
+                                checked = linkPreviewsEnabled,
                                 onCheckedChange = {
-                                    container.secrets.setScreenshotBlockingEnabled(it)
+                                    dev.stade.link.setLinkPreviewsEnabled(container.db, it)
                                     refreshTick++
                                 }
                             )
                         }
-                        SecurityDivider()
-                        SecuritySwitchRow(
-                            icon = Icons.Default.Lock,
-                            tint = MaterialTheme.colorScheme.primary,
-                            title = strings.transportsLockTitle,
-                            subtitle = strings.transportsLockSubtitle,
-                            checked = transportsLockEnabled,
-                            onCheckedChange = {
-                                container.secrets.setTransportsLockEnabled(it)
-                                refreshTick++
+                        if (isScreenPrivacySupported) {
+                            row {
+                                SecuritySwitchRow(
+                                    icon = Icons.Default.VisibilityOff,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    title = strings.screenshotBlockingTitle,
+                                    subtitle = if (screenshotBlockingEnabled) strings.screenshotBlockingOnSubtitle else strings.screenshotBlockingOffSubtitle,
+                                    checked = screenshotBlockingEnabled,
+                                    onCheckedChange = {
+                                        container.secrets.setScreenshotBlockingEnabled(it)
+                                        refreshTick++
+                                    }
+                                )
                             }
-                        )
-                        if (dev.stade.notification.isConversationShortcutsSupported) {
-                            SecurityDivider()
+                        }
+                        row {
                             SecuritySwitchRow(
-                                icon = Icons.Default.TouchApp,
+                                icon = Icons.Default.Lock,
                                 tint = MaterialTheme.colorScheme.primary,
-                                title = strings.conversationShortcutsTitle,
-                                subtitle = if (conversationShortcutsEnabled) strings.conversationShortcutsOnSubtitle else strings.conversationShortcutsOffSubtitle,
-                                checked = conversationShortcutsEnabled,
+                                title = strings.transportsLockTitle,
+                                subtitle = strings.transportsLockSubtitle,
+                                checked = transportsLockEnabled,
                                 onCheckedChange = {
-                                    dev.stade.notification.setConversationShortcutsEnabled(it)
+                                    container.secrets.setTransportsLockEnabled(it)
+                                    refreshTick++
                                 }
                             )
                         }
-                        SecurityDivider()
-                        SecurityNavRow(
-                            icon = Icons.Default.ReportProblem,
-                            tint = MaterialTheme.colorScheme.error,
-                            title = strings.duressPinTitle,
-                            subtitle = if (duressSet) strings.duressPinSetSubtitle else strings.duressPinNotSetSubtitle,
-                            onClick = onOpenDuressPinSetup,
-                            trailingContent = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(onClick = { showDuressInfoDialog = true }) {
-                                        Icon(
-                                            Icons.Default.Info,
-                                            contentDescription = strings.duressPinInfoTitle,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                            modifier = Modifier.size(20.dp)
-                                        )
+                        if (dev.stade.notification.isConversationShortcutsSupported) {
+                            row {
+                                SecuritySwitchRow(
+                                    icon = Icons.Default.TouchApp,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    title = strings.conversationShortcutsTitle,
+                                    subtitle = if (conversationShortcutsEnabled) strings.conversationShortcutsOnSubtitle else strings.conversationShortcutsOffSubtitle,
+                                    checked = conversationShortcutsEnabled,
+                                    onCheckedChange = {
+                                        dev.stade.notification.setConversationShortcutsEnabled(it)
                                     }
-                                    if (duressSet) {
-                                        IconButton(onClick = {
-                                            container.vault.clearDuressPin()
-                                            refreshTick++
-                                        }) {
+                                )
+                            }
+                        }
+                        row {
+                            SecurityNavRow(
+                                icon = Icons.Default.ReportProblem,
+                                tint = MaterialTheme.colorScheme.error,
+                                title = strings.duressPinTitle,
+                                subtitle = if (duressSet) strings.duressPinSetSubtitle else strings.duressPinNotSetSubtitle,
+                                onClick = onOpenDuressPinSetup,
+                                trailingContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(onClick = { showDuressInfoDialog = true }) {
                                             Icon(
-                                                Icons.Default.Close,
-                                                contentDescription = strings.clearDuressPinAction,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                Icons.Default.Info,
+                                                contentDescription = strings.duressPinInfoTitle,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                modifier = Modifier.size(20.dp)
                                             )
+                                        }
+                                        if (duressSet) {
+                                            IconButton(onClick = {
+                                                container.vault.clearDuressPin()
+                                                refreshTick++
+                                            }) {
+                                                Icon(
+                                                    Icons.Default.Close,
+                                                    contentDescription = strings.clearDuressPinAction,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
 
                 item {
                     SecuritySectionLabel(strings.sessionSection)
-                    SecurityGroup {
-                        Box {
-                            SecurityNavRow(
-                                icon = Icons.Default.Timer,
-                                tint = MaterialTheme.colorScheme.primary,
-                                title = strings.autoLockTitle,
-                                subtitle = strings.autoLockSubtitle(strings.sessionTimeoutLabel(sessionTimeout)),
-                                onClick = { timeoutMenuOpen = true },
-                                trailingContent = {
-                                    IconButton(onClick = { showNeverInfoDialog = true }) {
-                                        Icon(
-                                            Icons.Default.Info,
-                                            contentDescription = strings.autoLockNeverInfoTitle,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                            modifier = Modifier.size(20.dp)
+                    SettingsGroup {
+                        row {
+                            Box {
+                                SecurityNavRow(
+                                    icon = Icons.Default.Timer,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    title = strings.autoLockTitle,
+                                    subtitle = strings.autoLockSubtitle(strings.sessionTimeoutLabel(sessionTimeout)),
+                                    onClick = { timeoutMenuOpen = true },
+                                    trailingContent = {
+                                        IconButton(onClick = { showNeverInfoDialog = true }) {
+                                            Icon(
+                                                Icons.Default.Info,
+                                                contentDescription = strings.autoLockNeverInfoTitle,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                )
+                                DropdownMenu(
+                                    expanded = timeoutMenuOpen,
+                                    onDismissRequest = { timeoutMenuOpen = false }
+                                ) {
+                                    SessionTimeout.OPTIONS.forEach { opt ->
+                                        DropdownMenuItem(
+                                            text = { Text(strings.sessionTimeoutLabel(opt)) },
+                                            trailingIcon = {
+                                                if (opt == sessionTimeout) {
+                                                    Icon(Icons.Default.Check, contentDescription = null)
+                                                }
+                                            },
+                                            onClick = {
+                                                container.secrets.setSessionTimeoutSeconds(opt)
+                                                timeoutMenuOpen = false
+                                                refreshTick++
+                                            }
                                         )
                                     }
-                                }
-                            )
-                            DropdownMenu(
-                                expanded = timeoutMenuOpen,
-                                onDismissRequest = { timeoutMenuOpen = false }
-                            ) {
-                                SessionTimeout.OPTIONS.forEach { opt ->
-                                    DropdownMenuItem(
-                                        text = { Text(strings.sessionTimeoutLabel(opt)) },
-                                        trailingIcon = {
-                                            if (opt == sessionTimeout) {
-                                                Icon(Icons.Default.Check, contentDescription = null)
-                                            }
-                                        },
-                                        onClick = {
-                                            container.secrets.setSessionTimeoutSeconds(opt)
-                                            timeoutMenuOpen = false
-                                            refreshTick++
-                                        }
-                                    )
                                 }
                             }
                         }
                         if (isLockOnShutdownSupported) {
-                            SecuritySwitchRow(
-                                icon = Icons.Default.PowerSettingsNew,
-                                tint = MaterialTheme.colorScheme.primary,
-                                title = strings.lockOnShutdownTitle,
-                                subtitle = strings.lockOnShutdownSubtitle,
-                                checked = lockOnShutdown,
-                                onCheckedChange = { setLockOnShutdownEnabled(it) }
-                            )
+                            row {
+                                SecuritySwitchRow(
+                                    icon = Icons.Default.PowerSettingsNew,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    title = strings.lockOnShutdownTitle,
+                                    subtitle = strings.lockOnShutdownSubtitle,
+                                    checked = lockOnShutdown,
+                                    onCheckedChange = { setLockOnShutdownEnabled(it) }
+                                )
+                            }
                         }
                     }
                 }
@@ -466,31 +480,9 @@ private fun SecuritySettingsContent(
 
 @Composable
 private fun SecuritySectionLabel(title: String) {
-    Text(
-        text = title.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 6.dp, end = 16.dp)
-    )
+    SettingsSectionLabel(title)
 }
 
-@Composable
-private fun SecurityGroup(content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-    ) {
-        content()
-    }
-}
-
-@Composable
-private fun SecurityDivider() {
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-}
 
 @Composable
 private fun SecurityNavRow(
@@ -502,43 +494,15 @@ private fun SecurityNavRow(
     modifier: Modifier = Modifier,
     trailingContent: (@Composable () -> Unit)? = null
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(modifier),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clickable(onClick = onClick)
-                .padding(
-                    start = 16.dp,
-                    top = 14.dp,
-                    bottom = 14.dp,
-                    end = if (trailingContent != null) 4.dp else 16.dp
-                ),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            SecurityIconBox(icon, tint)
-            Spacer(Modifier.width(14.dp))
-            Column {
-                Text(title, style = MaterialTheme.typography.bodyLarge)
-                if (subtitle != null) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        if (trailingContent != null) {
-            Box(
-                modifier = Modifier.padding(end = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                trailingContent()
-            }
-        }
-    }
+    NavigationSettingsRow(
+        icon = icon,
+        iconTint = tint,
+        title = title,
+        subtitle = subtitle,
+        onClick = onClick,
+        modifier = modifier,
+        trailingContent = trailingContent
+    )
 }
 
 @Composable
@@ -552,37 +516,16 @@ private fun SecuritySwitchRow(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(modifier)
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        SecurityIconBox(icon, tint)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) {
-                Spacer(Modifier.height(2.dp))
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Spacer(Modifier.width(8.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
-    }
-}
-
-
-@Composable
-private fun SecurityIconBox(icon: ImageVector, tint: Color) {
-    Box(
-        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(tint.copy(alpha = 0.12f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-    }
+    SwitchSettingsRow(
+        icon = icon,
+        iconTint = tint,
+        title = title,
+        subtitle = subtitle,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        enabled = enabled
+    )
 }
 
 
