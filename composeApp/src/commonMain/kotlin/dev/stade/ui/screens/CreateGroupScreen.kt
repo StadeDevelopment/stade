@@ -74,6 +74,7 @@ fun CreateGroupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
                 title = {
                     if (embedded) {
                         Text(strings.createGroupTitle, style = MaterialTheme.typography.titleMedium)
@@ -82,7 +83,7 @@ fun CreateGroupScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )

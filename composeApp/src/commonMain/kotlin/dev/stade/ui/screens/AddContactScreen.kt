@@ -14,9 +14,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -45,11 +43,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import dev.stade.ui.components.HomeIdentityHeader
 import dev.stade.ui.components.LocalHomeBarClearance
@@ -121,8 +121,9 @@ fun AddContactScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface
@@ -137,14 +138,17 @@ fun AddContactScreen(
             )
         }
     ) { padding ->
+        val density = LocalDensity.current
+        val keyboardBottom = with(density) { WindowInsets.ime.getBottom(density).toDp() }
+        val systemBottom = with(density) { WindowInsets.navigationBars.getBottom(density).toDp() }
+        val restingBottom = LocalHomeBarClearance.current + systemBottom
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(bottom = LocalHomeBarClearance.current)
-                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+                .verticalScroll(scroll)
                 .padding(16.dp)
-                .verticalScroll(scroll),
+                .padding(bottom = maxOf(restingBottom, keyboardBottom)),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             StepCard(stepNumber = 1, title = strings.step1Title) {

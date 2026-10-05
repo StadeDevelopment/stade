@@ -35,6 +35,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 class StadeService : Service() {
@@ -79,6 +80,7 @@ class StadeService : Service() {
     private fun registerShutdownReceiver() {
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SHUTDOWN)
+            addAction(Intent.ACTION_SCREEN_OFF)
             addAction("android.intent.action.QUICKBOOT_POWEROFF")
             addAction("com.htc.intent.action.QUICKBOOT_POWEROFF")
         }
@@ -86,8 +88,16 @@ class StadeService : Service() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (!getLockOnShutdownEnabled().value) return
                 val app = application as? StadeApplication ?: return
-                runCatching { app.boot.markLocked() }
-                runCatching { app.vault.flushAndClose() }
+                if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                    scope.launch {
+                        runCatching { app.boot.activeContainer()?.close() }
+                        runCatching { app.boot.markLocked() }
+                        runCatching { withContext(Dispatchers.IO) { app.vault.flushAndClose() } }
+                    }
+                } else {
+                    runCatching { app.boot.markLocked() }
+                    runCatching { app.vault.flushAndClose() }
+                }
             }
         }
         runCatching {

@@ -335,6 +335,10 @@ abstract class AppStrings {
     abstract val duressPinInfoTitle: String
     abstract val duressPinInfoBody: String
     abstract val clearDuressPinAction: String
+    abstract val duressPinManageTitle: String
+    abstract val duressPinManageBody: String
+    abstract val duressPinReplaceAction: String
+    abstract val duressPinRemoveAction: String
     abstract val biometricUnlockTitle: String
     abstract val biometricUnlockOnSubtitle: String
     abstract val biometricUnlockOffSubtitle: String

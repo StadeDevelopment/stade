@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
@@ -89,6 +90,8 @@ fun StarredMessagesScreen(
         topBar = {
             if (inSelectionMode) {
                 TopAppBar(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                     title = { Text(strings.selectedCount(selectedIds.size)) },
                     navigationIcon = {
                         IconButton(onClick = { selectedIds = emptySet() }) {
@@ -111,6 +114,8 @@ fun StarredMessagesScreen(
                 )
             } else {
                 TopAppBar(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                     title = { Text(strings.starredMessagesTitle) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {

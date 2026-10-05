@@ -114,8 +114,9 @@ object StadeColors {
 fun StadeTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
     val dynamicScheme = resolveDynamicColorScheme(dark)
+    val target = dynamicScheme ?: if (dark) DarkColors else LightColors
     MaterialTheme(
-        colorScheme = dynamicScheme ?: if (dark) DarkColors else LightColors,
+        colorScheme = rememberBlendedColorScheme(target),
         shapes      = StadeShapes,
         typography  = StadeTypography,
         content     = content

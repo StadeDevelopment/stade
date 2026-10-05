@@ -119,6 +119,7 @@ import dev.stade.ui.components.BotBadge
 import dev.stade.ui.components.BrandMark
 import dev.stade.ui.components.DESKTOP_USER_BAR_HEIGHT
 import dev.stade.ui.components.DesktopModalHost
+import dev.stade.radar.isRadarSupported
 import dev.stade.ui.components.DesktopUserBar
 import dev.stade.ui.components.UpdateAvailableButton
 import dev.stade.ui.components.UpdateRequiredBanner
@@ -139,6 +140,7 @@ import dev.stade.ui.screens.ManageStadiumScreen
 import dev.stade.ui.screens.PinSetupScreen
 import dev.stade.ui.screens.ArchiveSettingsScreen
 import dev.stade.ui.screens.StadeyScreen
+import dev.stade.ui.screens.LanguageScreen
 import dev.stade.ui.screens.StarredMessagesScreen
 import dev.stade.ui.screens.getStadeyVisible
 import dev.stade.ui.screens.setStadeyVisible
@@ -169,6 +171,7 @@ private sealed class PanelRight {
     data object Security : PanelRight()
     data object Transports : PanelRight()
     data object About : PanelRight()
+    data object Language : PanelRight()
     data object Starred : PanelRight()
     data object ArchiveSettings : PanelRight()
     data object Stadey : PanelRight()
@@ -483,6 +486,15 @@ fun TwoPanelLayout(
                         actions = {
                             UpdateAvailableButton(container = container)
                             if (!showArchived) {
+                                if (archivedKeys.isNotEmpty()) {
+                                    IconButton(onClick = { showArchived = true }) {
+                                        Icon(
+                                            Icons.Default.Archive,
+                                            contentDescription = strings.archivedChatsTitle,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
                                 IconButton(onClick = { right = PanelRight.Starred }) {
                                     Icon(
                                         Icons.Default.StarOutline,
@@ -531,14 +543,6 @@ fun TwoPanelLayout(
                                             else strings.updateRequiredByPeer,
                                         dismissLabel = strings.updateAction,
                                         onDismiss = { container.sync.clearVersionMismatch() }
-                                    )
-                                }
-                            }
-                            if (!showArchived && query.isBlank() && archivedKeys.isNotEmpty()) {
-                                item(key = "archivedEntry") {
-                                    PanelArchivedRow(
-                                        unreadCount = archivedUnreadCount,
-                                        onClick = { showArchived = true }
                                     )
                                 }
                             }
@@ -778,10 +782,12 @@ fun TwoPanelLayout(
                             onCreateStadium = { createDialog = CreateDialog.CreateStadium },
                             onJoinStadium = { createDialog = CreateDialog.JoinStadium },
                             onOpenSettings = { right = PanelRight.Settings },
+                            onOpenRadar = if (isRadarSupported) ({ right = PanelRight.Radar }) else null,
                             settingsOpen = right is PanelRight.Settings ||
                                 right is PanelRight.Security ||
                                 right is PanelRight.Transports ||
                                 right is PanelRight.About ||
+                                right is PanelRight.Language ||
                                 right is PanelRight.ArchiveSettings,
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -866,6 +872,7 @@ fun TwoPanelLayout(
                     onOpenTransports = { right = PanelRight.Transports },
                     onOpenSecurity = { right = PanelRight.Security },
                     onOpenAbout = { right = PanelRight.About },
+                    onOpenLanguage = { right = PanelRight.Language },
                     onLogout = onLogout,
                     listState = settingsListState
                 )
@@ -898,6 +905,9 @@ fun TwoPanelLayout(
                     onBack = { right = PanelRight.Settings }
                 )
 
+                is PanelRight.Language -> LanguageScreen(
+                    onBack = { right = PanelRight.Settings }
+                )
                 is PanelRight.ArchiveSettings -> ArchiveSettingsScreen(
                     container = container,
                     onBack = { right = PanelRight.Empty }
@@ -1887,6 +1897,7 @@ private fun panelKey(panel: PanelRight): String = when (panel) {
     is PanelRight.Security -> "security"
     is PanelRight.Transports -> "transports"
     is PanelRight.About -> "about"
+    is PanelRight.Language -> "language"
     is PanelRight.Starred -> "starred"
     is PanelRight.ArchiveSettings -> "archiveSettings"
     is PanelRight.Stadey -> "stadey"
@@ -1915,6 +1926,7 @@ private fun panelDepth(panel: PanelRight): Int = when (panel) {
     is PanelRight.Security,
     is PanelRight.Transports,
     is PanelRight.About,
+    is PanelRight.Language,
     is PanelRight.ArchiveSettings -> 2
     is PanelRight.PinSetup -> 3
 }

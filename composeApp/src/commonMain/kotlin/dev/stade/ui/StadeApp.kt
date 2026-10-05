@@ -2,6 +2,9 @@
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +47,7 @@ import dev.stade.ui.screens.StarredMessagesScreen
 import dev.stade.ui.screens.ArchiveSettingsScreen
 import dev.stade.ui.screens.StadeyScreen
 import dev.stade.ui.screens.SecuritySettingsScreen
+import dev.stade.ui.screens.LanguageScreen
 import dev.stade.ui.screens.SettingsScreen
 import dev.stade.ui.screens.StadiumScreen
 import dev.stade.ui.screens.TransportsScreen
@@ -51,6 +55,7 @@ import dev.stade.ui.screens.VerifyContactScreen
 import dev.stade.ui.screens.WelcomeUsernameScreen
 import dev.stade.ui.i18n.LocalStrings
 import dev.stade.ui.i18n.getLocalePreference
+import dev.stade.ui.theme.SystemBarIconContrast
 import dev.stade.ui.i18n.localeToStrings
 import dev.stade.ui.i18n.localeToLayoutDirection
 import dev.stade.ui.components.fastLongPressConfiguration
@@ -145,6 +150,7 @@ sealed interface Screen {
     data object Security : Screen
     data object Transports : Screen
     data object About : Screen
+    data object Language : Screen
     data object Stadey : Screen
     data object Starred : Screen
     data object ArchiveSettings : Screen
@@ -163,6 +169,10 @@ fun StadeApp(boot: BootContext) {
         dev.stade.ui.i18n.I18n.current = activeStrings
     }
     StadeTheme {
+        SystemBarIconContrast(
+            statusBarBehind = MaterialTheme.colorScheme.surfaceContainerHighest,
+            navigationBarBehind = MaterialTheme.colorScheme.background
+        )
         CompositionLocalProvider(
             LocalStrings provides activeStrings,
             LocalLayoutDirection provides localeToLayoutDirection(locale),
@@ -555,6 +565,7 @@ private fun UnlockedApp(
                 Screen.Security -> screen = Screen.Settings
                 Screen.Transports -> screen = Screen.Settings
                 Screen.About -> screen = Screen.Settings
+                Screen.Language -> screen = Screen.Settings
                 Screen.Stadey -> screen = Screen.Contacts
                 Screen.Starred -> screen = Screen.Contacts
                 Screen.ArchiveSettings -> screen = Screen.Archived
@@ -578,6 +589,10 @@ private fun UnlockedApp(
             }
         }
         var measuredTopBarHeight by remember { mutableStateOf(0.dp) }
+        val assumedTopBarHeight =
+            WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + DEFAULT_TOP_BAR_HEIGHT
+        val homeTopBarClearance =
+            if (measuredTopBarHeight > 0.dp) measuredTopBarHeight else assumedTopBarHeight
         val homeTopBarScreen = homeProfileScreen(screen)
         val homeTopBarVisible = !showTwoPanel && identity != null && homeTopBarScreen != null
         Box(
@@ -621,7 +636,7 @@ private fun UnlockedApp(
                     }
                 val pageTopClearance =
                     if (!showTwoPanel && identity != null && homeProfileScreen(target) != null) {
-                        measuredTopBarHeight
+                        homeTopBarClearance
                     } else {
                         0.dp
                     }
@@ -666,6 +681,7 @@ private fun UnlockedApp(
                         onOpenTransports = { screen = Screen.Transports },
                         onOpenSecurity = { screen = Screen.Security },
                         onOpenAbout = { screen = Screen.About },
+                        onOpenLanguage = { screen = Screen.Language },
                         onLogout = {
                             scope.launch {
                                 container.connections.stop()
@@ -693,6 +709,9 @@ private fun UnlockedApp(
                     )
                     target == Screen.Stadey -> StadeyScreen(
                         onBack = { screen = Screen.Contacts }
+                    )
+                    target == Screen.Language -> LanguageScreen(
+                        onBack = { screen = Screen.Settings }
                     )
                     target == Screen.ArchiveSettings -> ArchiveSettingsScreen(
                         container = container,
@@ -969,3 +988,5 @@ private fun homeProfileScreen(screen: Screen): HomeProfileActions? = when (scree
     Screen.Radar -> HomeProfileActions.Radar
     else -> null
 }
+
+private val DEFAULT_TOP_BAR_HEIGHT = 64.dp

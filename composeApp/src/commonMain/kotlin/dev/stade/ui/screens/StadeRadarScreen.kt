@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -66,6 +67,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -81,10 +83,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import dev.stade.ui.components.HomeIdentityHeader
 import dev.stade.ui.components.LocalHomeTopBarClearance
+import dev.stade.ui.components.HOME_BAR_HEIGHT
 import dev.stade.ui.components.LocalHomeBarClearance
 import dev.stade.AppContainer
 import dev.stade.contact.InviteParseResult
@@ -168,8 +172,12 @@ fun StadeRadarScreen(
 
     var showIntro by remember { mutableStateOf(!introSuppressed) }
     var showSettings by remember { mutableStateOf(false) }
+    var handledSettingsTicket by remember { mutableStateOf(openSettingsTicket) }
     LaunchedEffect(openSettingsTicket) {
-        if (openSettingsTicket > 0) showSettings = true
+        if (openSettingsTicket != handledSettingsTicket) {
+            handledSettingsTicket = openSettingsTicket
+            showSettings = true
+        }
     }
 
     val contacts by remember(owner.id) { container.contacts.observeContacts(owner.id) }
@@ -250,7 +258,7 @@ fun StadeRadarScreen(
             if (hideTopBar) return@Scaffold
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface
@@ -258,7 +266,7 @@ fun StadeRadarScreen(
                 title = { HomeIdentityHeader(container = container, owner = owner) },
                 actions = {
                     Row(
-                        modifier = Modifier.padding(end = 4.dp),
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest).then(Modifier.padding(end = 4.dp)),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TopBarPill(
@@ -279,10 +287,15 @@ fun StadeRadarScreen(
                     start = padding.calculateStartPadding(layoutDirection),
                     end = padding.calculateEndPadding(layoutDirection),
                     top = if (hideTopBar) LocalHomeTopBarClearance.current else padding.calculateTopPadding(),
-                    bottom = padding.calculateBottomPadding()
+                    bottom = 0.dp
                 )
-                .padding(bottom = LocalHomeBarClearance.current)
         ) {
+            val density = LocalDensity.current
+            val systemBottom = with(density) {
+                WindowInsets.navigationBars.getBottom(density).toDp()
+            }
+            val chromeBottom =
+                if (hideTopBar) systemBottom + HOME_BAR_HEIGHT else padding.calculateBottomPadding()
             if (session.status == RadarStatus.Scanning) {
                 Column(Modifier.fillMaxSize()) {
                     RadarStage(
@@ -296,6 +309,7 @@ fun StadeRadarScreen(
                         discoverable = session.discoverable,
                         anonymous = anonymous,
                         invisible = invisible,
+                        bottomChrome = chromeBottom,
                         onPeerClick = { connect(it) }
                     )
                 }
@@ -304,7 +318,7 @@ fun StadeRadarScreen(
                     status = session.status,
                     strings = strings,
                     onResolve = { session.resolve() },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize().padding(bottom = chromeBottom)
                 )
             }
 
@@ -512,11 +526,13 @@ private fun RadarSettingsSheet(
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
+    val barClearance = LocalHomeBarClearance.current
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp)
+                .padding(start = 20.dp, end = 20.dp)
+                .padding(bottom = 28.dp + barClearance)
         ) {
             Text(
                 strings.radarSettingsTitle,
@@ -710,16 +726,24 @@ private fun RadarPanel(
     discoverable: Boolean,
     anonymous: Boolean,
     invisible: Boolean,
+    bottomChrome: Dp,
     onPeerClick: (RadarPeer) -> Unit
 ) {
     val strings = LocalStrings.current
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+        shape = RoundedCornerShape(22.dp),
         tonalElevation = 2.dp
     ) {
-        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+        Column(
+            modifier = Modifier.padding(
+                start = 18.dp,
+                end = 18.dp,
+                top = 16.dp,
+                bottom = 16.dp + bottomChrome
+            )
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     if (peers.isEmpty()) strings.radarScanning else strings.radarNearbyCount(peers.size),

@@ -16,12 +16,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GroupAdd
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Podcasts
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +61,7 @@ fun DesktopUserBar(
     onCreateStadium: () -> Unit,
     onJoinStadium: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenRadar: (() -> Unit)? = null,
     settingsOpen: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -157,6 +160,17 @@ fun DesktopUserBar(
                             onJoinStadium()
                         }
                     )
+                    if (onOpenRadar != null) {
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(strings.radarTitle) },
+                            leadingIcon = { Icon(Icons.Default.Sensors, contentDescription = null) },
+                            onClick = {
+                                createOpen = false
+                                onOpenRadar()
+                            }
+                        )
+                    }
                 }
             }
             SpinningGearButton(

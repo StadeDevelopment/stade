@@ -627,8 +627,9 @@ fun ContactsScreen(
             topBar = {
                 if (showArchived) {
                     TopAppBar(
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            containerColor = Color.Transparent,
                             titleContentColor = MaterialTheme.colorScheme.onSurface,
                             actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                             navigationIconContentColor = MaterialTheme.colorScheme.onSurface

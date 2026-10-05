@@ -338,8 +338,8 @@ object ArabicStrings : AppStrings() {
     override val scrambleKeypadOffSubtitle = "تظهر الأرقام بالترتيب المعتاد"
     override val sessionSection = "الجلسة"
     override val autoLockTitle = "القفل التلقائي"
-    override val lockOnShutdownTitle = "القفل عند إيقاف تشغيل الجهاز"
-    override val lockOnShutdownSubtitle = "مسح النسخة المفكوكة التشفير عند إعادة التشغيل أو إيقافه"
+    override val lockOnShutdownTitle = "القفل عند إطفاء الشاشة"
+    override val lockOnShutdownSubtitle = "إنهاء الجلسة عند قفل الجهاز أو إطفائه"
     override fun autoLockSubtitle(label: String) = "بعد الانتقال إلى الخلفية: $label"
     override fun sessionTimeoutLabel(seconds: Int) = when (seconds) {
         SessionTimeout.IMMEDIATE -> "فورًا"
@@ -370,6 +370,10 @@ object ArabicStrings : AppStrings() {
     override val duressPinInfoBody =
         "أدخل هذا الرمز في شاشة القفل بدلًا من رمزك الحقيقي، فيمحو Stade فورًا كل شيء على هذا الجهاز — هويتك وجهات اتصالك ورسائلك ومجموعاتك وStadiums الخاصة بك. عندها يبدو التطبيق تمامًا كتثبيت جديد، دون أي أثر يدل على استخدام رمز إكراه. لا تحذير ولا تأكيد، ولا شيء يمكن استرجاعه بعدها. ولا يُبلَّغ جهات اتصالك."
     override val clearDuressPinAction = "إزالة رمز الإكراه"
+    override val duressPinManageTitle = "رمز الإكراه مُعيَّن"
+    override val duressPinManageBody = "يوجد رمز إكراه مُعيَّن على هذا الجهاز بالفعل. يمكنك استبداله بآخر جديد، أو إزالته ليبقى رمزك الحقيقي وحده."
+    override val duressPinReplaceAction = "تعيين رمز جديد"
+    override val duressPinRemoveAction = "إزالته"
     override val biometricUnlockTitle = "الفتح ببصمة الإصبع"
     override val biometricUnlockOnSubtitle = "يمكن لبصمتك فتح Stade بدلًا من رمز PIN"
     override val biometricUnlockOffSubtitle = "يلزم رمز PIN في كل مرة"

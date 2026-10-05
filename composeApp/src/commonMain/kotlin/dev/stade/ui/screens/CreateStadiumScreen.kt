@@ -1,5 +1,6 @@
 package dev.stade.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.stade.ui.components.HomeIdentityHeader
@@ -46,6 +48,7 @@ fun CreateStadiumScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
                 title = {
                     if (embedded) {
                         Text(strings.createStadiumAction, style = MaterialTheme.typography.titleMedium)
@@ -54,7 +57,7 @@ fun CreateStadiumScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )

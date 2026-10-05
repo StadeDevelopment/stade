@@ -145,11 +145,13 @@ private fun SecuritySettingsContent(
     var showBiometricPinDialog by remember { mutableStateOf(false) }
     var biometricNotice by remember { mutableStateOf<String?>(null) }
     var showDuressInfoDialog by remember { mutableStateOf(false) }
+    var showDuressManageDialog by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer),
                 title = { Text(strings.securitySettingsTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -157,7 +159,7 @@ private fun SecuritySettingsContent(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -292,29 +294,21 @@ private fun SecuritySettingsContent(
                                 tint = MaterialTheme.colorScheme.error,
                                 title = strings.duressPinTitle,
                                 subtitle = if (duressSet) strings.duressPinSetSubtitle else strings.duressPinNotSetSubtitle,
-                                onClick = onOpenDuressPinSetup,
+                                onClick = {
+                                    if (duressSet) {
+                                        showDuressManageDialog = true
+                                    } else {
+                                        onOpenDuressPinSetup()
+                                    }
+                                },
                                 trailingContent = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { showDuressInfoDialog = true }) {
-                                            Icon(
-                                                Icons.Default.Info,
-                                                contentDescription = strings.duressPinInfoTitle,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                        if (duressSet) {
-                                            IconButton(onClick = {
-                                                container.vault.clearDuressPin()
-                                                refreshTick++
-                                            }) {
-                                                Icon(
-                                                    Icons.Default.Close,
-                                                    contentDescription = strings.clearDuressPinAction,
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
+                                    IconButton(onClick = { showDuressInfoDialog = true }) {
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = strings.duressPinInfoTitle,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
                                 }
                             )
@@ -402,6 +396,40 @@ private fun SecuritySettingsContent(
                     confirmButton = {
                         TextButton(onClick = { showDuressInfoDialog = false }) {
                             Text(strings.understood)
+                        }
+                    }
+                )
+            }
+            if (showDuressManageDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDuressManageDialog = false },
+                    icon = {
+                        Icon(
+                            Icons.Default.ReportProblem,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    title = { Text(strings.duressPinManageTitle) },
+                    text = {
+                        Text(strings.duressPinManageBody, style = MaterialTheme.typography.bodyMedium)
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showDuressManageDialog = false
+                            onOpenDuressPinSetup()
+                        }) { Text(strings.duressPinReplaceAction) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            container.vault.clearDuressPin()
+                            refreshTick++
+                            showDuressManageDialog = false
+                        }) {
+                            Text(
+                                strings.duressPinRemoveAction,
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 )
@@ -627,6 +655,7 @@ fun SecurityPinGate(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer),
                 title = { Text(strings.securitySettingsTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -634,7 +663,7 @@ fun SecurityPinGate(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )

@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
@@ -94,8 +95,9 @@ fun StadeyScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                    containerColor = Color.Transparent
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {

@@ -21,11 +21,15 @@ import androidx.compose.ui.Modifier
 import dev.stade.ui.i18n.LocalStrings
 import kotlinx.coroutines.launch
 
+private const val SCROLL_BUTTON_MESSAGES_AWAY = 5
+
 @Composable
 fun ScrollToBottomButton(listState: LazyListState, modifier: Modifier = Modifier) {
     val strings = LocalStrings.current
     val scope = rememberCoroutineScope()
-    val visible by remember(listState) { derivedStateOf { listState.canScrollBackward } }
+    val visible by remember(listState) {
+        derivedStateOf { listState.firstVisibleItemIndex >= SCROLL_BUTTON_MESSAGES_AWAY }
+    }
 
     AnimatedVisibility(
         visible = visible,

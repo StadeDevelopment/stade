@@ -471,8 +471,9 @@ fun StadiumScreen(
         topBar = {
             if (chatSearch.active) {
                 TopAppBar(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = Color.Transparent
                     ),
                     title = { ChatSearchBar(chatSearch) },
                     navigationIcon = {
@@ -489,8 +490,9 @@ fun StadiumScreen(
                 )
             } else if (inSelectionMode) {
                 TopAppBar(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = Color.Transparent
                     ),
                     title = {
                         Text(
@@ -574,6 +576,7 @@ fun StadiumScreen(
                 )
             } else {
                 TopAppBar(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer),
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Avatar(
@@ -620,7 +623,7 @@ fun StadiumScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        containerColor = Color.Transparent,
                         titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer

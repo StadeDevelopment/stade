@@ -347,8 +347,8 @@ object TurkishStrings : AppStrings() {
     override val scrambleKeypadOffSubtitle = "Rakamlar standart sırada gösterilir"
     override val sessionSection = "Oturum"
     override val autoLockTitle = "Otomatik kilit"
-    override val lockOnShutdownTitle = "Cihaz kapanınca kilitle"
-    override val lockOnShutdownSubtitle = "Yeniden başlatma veya kapanmada çözülmüş kopyayı sil"
+    override val lockOnShutdownTitle = "Ekran kapanınca kilitle"
+    override val lockOnShutdownSubtitle = "Cihaz kilitlendiğinde veya kapandığında oturumu sonlandır"
     override fun autoLockSubtitle(label: String) = "Arka plana geçildikten sonra: $label"
     override fun sessionTimeoutLabel(seconds: Int) = when (seconds) {
         SessionTimeout.IMMEDIATE -> "Hemen"
@@ -383,6 +383,10 @@ object TurkishStrings : AppStrings() {
         "Uyarı ya da onay yoktur ve sonrasında hiçbir şey geri getirilemez. " +
         "Kişilerine bildirim gitmez."
     override val clearDuressPinAction = "Tehlike PIN'ini kaldır"
+    override val duressPinManageTitle = "Acil durum PIN'i ayarlı"
+    override val duressPinManageBody = "Bu cihazda zaten bir acil durum PIN'i var. Yenisiyle değiştirebilir ya da kaldırıp yalnızca gerçek PIN'inizi bırakabilirsiniz."
+    override val duressPinReplaceAction = "Yenisini ayarla"
+    override val duressPinRemoveAction = "Kaldır"
     override val biometricUnlockTitle = "Parmak iziyle aç"
     override val biometricUnlockOnSubtitle = "Parmak iziniz, PIN yerine Stade'in kilidini açabilir"
     override val biometricUnlockOffSubtitle = "Her seferinde PIN gerekir"

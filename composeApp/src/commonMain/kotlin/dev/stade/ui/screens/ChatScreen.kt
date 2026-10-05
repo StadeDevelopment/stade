@@ -870,8 +870,9 @@ fun ChatScreen(
         topBar = {
             if (chatSearch.active) {
                 TopAppBar(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = Color.Transparent
                     ),
                     title = { ChatSearchBar(chatSearch) },
                     navigationIcon = {
@@ -888,8 +889,9 @@ fun ChatScreen(
                 )
             } else if (inSelectionMode) {
                 TopAppBar(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = Color.Transparent
                     ),
                     title = {
                         Text(
@@ -964,7 +966,7 @@ fun ChatScreen(
             } else {
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = Color.Transparent
                     ),
                     title = {
                         Row(

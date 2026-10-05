@@ -338,8 +338,8 @@ object PersianStrings : AppStrings() {
     override val scrambleKeypadOffSubtitle = "ارقام به ترتیب استاندارد نمایش داده می‌شوند"
     override val sessionSection = "نشست"
     override val autoLockTitle = "قفل خودکار"
-    override val lockOnShutdownTitle = "قفل هنگام خاموش شدن دستگاه"
-    override val lockOnShutdownSubtitle = "پاک کردن نسخهٔ رمزگشایی‌شده هنگام راه‌اندازی دوباره یا خاموش شدن"
+    override val lockOnShutdownTitle = "قفل هنگام خاموش شدن صفحه"
+    override val lockOnShutdownSubtitle = "وقتی دستگاه قفل یا خاموش شد، نشست را پایان بده"
     override fun autoLockSubtitle(label: String) = "پس از رفتن به پس‌زمینه: $label"
     override fun sessionTimeoutLabel(seconds: Int) = when (seconds) {
         SessionTimeout.IMMEDIATE -> "بلافاصله"
@@ -370,6 +370,10 @@ object PersianStrings : AppStrings() {
     override val duressPinInfoBody =
         "این پین را به‌جای پین واقعی در صفحهٔ قفل وارد کنید و Stade بلافاصله همه‌چیز را روی این دستگاه پاک می‌کند — هویت، مخاطبان، پیام‌ها، گروه‌ها و Stadiumهای شما. سپس برنامه دقیقاً مثل یک نصب تازه به نظر می‌رسد، بدون هیچ نشانه‌ای از استفاده از پین اضطراری. هیچ هشدار و تأییدی در کار نیست و بعد از آن هیچ‌چیز قابل بازیابی نیست. به مخاطبان شما اطلاع داده نمی‌شود."
     override val clearDuressPinAction = "حذف پین اضطراری"
+    override val duressPinManageTitle = "پین اضطراری تنظیم شده است"
+    override val duressPinManageBody = "روی این دستگاه از پیش یک پین اضطراری تنظیم شده است. می‌توانید آن را با پین تازه‌ای جایگزین کنید یا حذفش کنید تا تنها پین واقعی شما بماند."
+    override val duressPinReplaceAction = "تنظیم پین تازه"
+    override val duressPinRemoveAction = "حذف"
     override val biometricUnlockTitle = "باز کردن با اثر انگشت"
     override val biometricUnlockOnSubtitle = "اثر انگشت شما می‌تواند به‌جای پین، قفل Stade را باز کند"
     override val biometricUnlockOffSubtitle = "هر بار پین لازم است"

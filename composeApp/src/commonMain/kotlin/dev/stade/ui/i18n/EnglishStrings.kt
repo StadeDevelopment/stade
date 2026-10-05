@@ -346,8 +346,8 @@ object EnglishStrings : AppStrings() {
     override val scrambleKeypadOffSubtitle = "Digits shown in standard order"
     override val sessionSection = "Session"
     override val autoLockTitle = "Auto-lock"
-    override val lockOnShutdownTitle = "Lock when the device shuts down"
-    override val lockOnShutdownSubtitle = "Clear the decrypted copy on restart or power off"
+    override val lockOnShutdownTitle = "Lock when the screen turns off"
+    override val lockOnShutdownSubtitle = "End the session when the device is locked or powered off"
     override fun autoLockSubtitle(label: String) = "After going to background: $label"
     override fun sessionTimeoutLabel(seconds: Int) = when (seconds) {
         SessionTimeout.IMMEDIATE -> "Immediately"
@@ -382,6 +382,10 @@ object EnglishStrings : AppStrings() {
         "There is no warning, no confirmation, and nothing can be recovered afterwards. " +
         "Your contacts are not notified."
     override val clearDuressPinAction = "Remove duress PIN"
+    override val duressPinManageTitle = "Duress PIN is set"
+    override val duressPinManageBody = "A duress PIN is already set on this device. You can replace it with a new one, or remove it so only your real PIN remains."
+    override val duressPinReplaceAction = "Set a new one"
+    override val duressPinRemoveAction = "Remove it"
     override val biometricUnlockTitle = "Unlock with fingerprint"
     override val biometricUnlockOnSubtitle = "Your fingerprint can unlock Stade instead of your PIN"
     override val biometricUnlockOffSubtitle = "Your PIN is required every time"

@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Grid3x3
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
@@ -45,6 +44,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Save
@@ -104,7 +104,6 @@ import dev.stade.ui.rememberMediaPickerLauncher
 import dev.stade.ui.theme.getDynamicColorEnabled
 import dev.stade.ui.theme.isDynamicColorSupported
 import dev.stade.ui.theme.setDynamicColorEnabled
-import dev.stade.ui.i18n.AppLocale
 import dev.stade.ui.i18n.localeDisplayName
 import dev.stade.ui.BackupOutcome
 import dev.stade.ui.rememberBackupIo
@@ -112,7 +111,6 @@ import dev.stade.ui.components.BackupPassphraseDialog
 import dev.stade.ui.components.UpdateSettingsSection
 import dev.stade.ui.i18n.LocalStrings
 import dev.stade.ui.i18n.getLocalePreference
-import dev.stade.ui.i18n.setLocalePreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -127,6 +125,7 @@ fun SettingsScreen(
     onOpenTransports: () -> Unit,
     onOpenSecurity: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
+    onOpenLanguage: () -> Unit = {},
     onLogout: () -> Unit,
     listState: LazyListState = rememberLazyListState()
 ) {
@@ -152,7 +151,6 @@ fun SettingsScreen(
     val clipboardManager = LocalClipboardManager.current
     var fingerprintCopied by remember { mutableStateOf(false) }
     val currentLocale by getLocalePreference()
-    var showLanguageMenu by remember { mutableStateOf(false) }
     val stadeyVisible by getStadeyVisible()
     var showActivateStadeyConfirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -306,6 +304,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer),
                 title = { Text(strings.settingsTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -313,7 +312,7 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -377,34 +376,13 @@ fun SettingsScreen(
                 SettingsSectionLabel(strings.languageSection)
                 SettingsGroup {
                     row {
-                        Box {
-                            NavigationSettingsRow(
-                                icon = Icons.Default.Grid3x3,
-                                iconTint = MaterialTheme.colorScheme.primary,
-                                title = strings.languageTitle,
-                                subtitle = strings.languageSubtitle,
-                                onClick = { showLanguageMenu = true }
-                            )
-                            DropdownMenu(
-                                expanded = showLanguageMenu,
-                                onDismissRequest = { showLanguageMenu = false }
-                            ) {
-                                AppLocale.entries.forEach { locale ->
-                                    DropdownMenuItem(
-                                        text = { Text(localeDisplayName(locale)) },
-                                        trailingIcon = {
-                                            if (locale == currentLocale) {
-                                                Icon(Icons.Default.Check, contentDescription = null)
-                                            }
-                                        },
-                                        onClick = {
-                                            setLocalePreference(locale)
-                                            showLanguageMenu = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
+                        NavigationSettingsRow(
+                            icon = Icons.Default.Translate,
+                            iconTint = MaterialTheme.colorScheme.primary,
+                            title = strings.languageTitle,
+                            subtitle = localeDisplayName(currentLocale),
+                            onClick = onOpenLanguage
+                        )
                     }
                 }
             }

@@ -338,8 +338,8 @@ object KoreanStrings : AppStrings() {
     override val scrambleKeypadOffSubtitle = "숫자가 일반 순서로 표시됩니다"
     override val sessionSection = "세션"
     override val autoLockTitle = "자동 잠금"
-    override val lockOnShutdownTitle = "기기가 꺼질 때 잠그기"
-    override val lockOnShutdownSubtitle = "재시작하거나 전원을 끌 때 복호화된 사본을 지웁니다"
+    override val lockOnShutdownTitle = "화면이 꺼지면 잠그기"
+    override val lockOnShutdownSubtitle = "기기가 잠기거나 꺼지면 세션을 종료합니다"
     override fun autoLockSubtitle(label: String) = "백그라운드로 전환된 후: $label"
     override fun sessionTimeoutLabel(seconds: Int) = when (seconds) {
         SessionTimeout.IMMEDIATE -> "즉시"
@@ -370,6 +370,10 @@ object KoreanStrings : AppStrings() {
     override val duressPinInfoBody =
         "잠금 화면에서 실제 PIN 대신 이 PIN을 입력하면 Stade가 이 기기의 모든 것을 즉시 지웁니다 — 신원, 연락처, 메시지, 그룹, Stadium까지 전부입니다. 그 후 앱은 새로 설치한 것과 똑같아 보이며, 비상 PIN이 사용되었다는 흔적도 남지 않습니다. 경고도 확인 절차도 없고, 이후에는 아무것도 복구할 수 없습니다. 연락처에도 알림이 가지 않습니다."
     override val clearDuressPinAction = "비상 PIN 삭제"
+    override val duressPinManageTitle = "강제 해제 PIN이 설정됨"
+    override val duressPinManageBody = "이 기기에는 이미 강제 해제 PIN이 설정되어 있습니다. 새 PIN으로 바꾸거나, 제거해 실제 PIN만 남길 수 있습니다."
+    override val duressPinReplaceAction = "새로 설정"
+    override val duressPinRemoveAction = "제거"
     override val biometricUnlockTitle = "지문으로 잠금 해제"
     override val biometricUnlockOnSubtitle = "PIN 대신 지문으로 Stade 잠금을 해제할 수 있습니다"
     override val biometricUnlockOffSubtitle = "매번 PIN이 필요합니다"
