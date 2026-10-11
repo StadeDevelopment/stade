@@ -30,6 +30,7 @@ import dev.stade.group.GroupManager
 import dev.stade.group.GroupMemberEntry
 import dev.stade.identity.LocalIdentity
 import dev.stade.identity.StadeId
+import dev.stade.identity.sanitizeDisplayName
 import dev.stade.message.AVATAR_BODY_PREFIX
 import dev.stade.message.MessageManager
 import dev.stade.message.REACTION_BODY_PREFIX
@@ -290,6 +291,16 @@ class SyncEngine(
         val existingBeforeAuth = contacts.findByStadeId(peerHello.stadeId)
             ?: contacts.findByPublicKey(peerHello.signingPublicKey)
 
+        if (existingBeforeAuth != null &&
+            (!existingBeforeAuth.publicSigningKey.contentEquals(peerHello.signingPublicKey) ||
+                !existingBeforeAuth.publicMlDsaKey.contentEquals(peerHello.mldsaPublicKey))
+        ) {
+            _events.tryEmit(
+                SyncEvent.HandshakeRejected(I18n.current.hsIdentityKeyMismatch, peerHello.stadeId)
+            )
+            return null
+        }
+
         val authMessage = AUTH_PREFIX + peerHello.nonce + ourTc + peerHello.transcriptCommitment
         val ourEdSig = crypto.sign(owner.privateSigningKey, authMessage)
         val ourDsaSig = pq.signMlDsa(owner.privateMlDsaKey, owner.publicMlDsaKey, authMessage)
@@ -344,9 +355,11 @@ class SyncEngine(
         }
 
         var priorKind: Int? = null
+        var priorVerified = false
         if (existing != null && peerAuth.noExistingContact) {
             if (existing.ownerId != owner.id) return null
             priorKind = existing.kind
+            priorVerified = existing.verified
             runCatching { ratchet.forget(existing.id) }
             runCatching { contacts.delete(existing.id) }
         }
@@ -355,6 +368,7 @@ class SyncEngine(
             owner, connection, peerHello, peerAuth.isStadiumJoin, priorKind, ourEphemeral, peerEphemeral
         )
         if (established == null) return null
+        if (priorVerified) runCatching { contacts.verify(established.first.id) }
         pendingReAdds = pendingReAdds - peerHello.stadeId
         noteGroupProtocol(established.first.id, peerHello.groupProtocol)
         return Negotiated(established.first, established.second, peerHello.wireProtocol)
@@ -429,7 +443,7 @@ class SyncEngine(
     ): Pair<Contact, Boolean>? {
         val invite = InvitePayload(
             stadeId = peerHello.stadeId,
-            nickname = peerHello.nickname.ifBlank { I18n.current.unknownNickname },
+            nickname = sanitizeDisplayName(peerHello.nickname).ifBlank { I18n.current.unknownNickname },
             signingPublicKey = peerHello.signingPublicKey,
             handshakePublicKey = peerHello.handshakePublicKey,
             mlkemPublicKey = peerHello.mlkemPublicKey,
@@ -464,7 +478,8 @@ class SyncEngine(
             handshakeService.deriveRootKey(owner, invite, ourEphemeral, peerEphemeral, kemCt, kemSs)
         }.getOrNull() ?: return null
 
-        val nickname = peerHello.nickname.ifBlank { I18n.current.contactNameFallback(peerHello.stadeId.takeLast(4)) }
+        val nickname = sanitizeDisplayName(peerHello.nickname)
+            .ifBlank { I18n.current.contactNameFallback(peerHello.stadeId.takeLast(4)) }
         val weAreStadiumJoining = stadiumManager?.getPendingJoinForContact(peerHello.stadeId) != null
         val reAdd = peerHello.reAddRequest || peerHello.stadeId in pendingReAdds
         val stadiumKind = when {

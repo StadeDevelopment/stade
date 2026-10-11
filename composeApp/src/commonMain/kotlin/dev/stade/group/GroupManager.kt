@@ -10,6 +10,7 @@ import dev.stade.crypto.Encoding
 import dev.stade.db.StadeDb
 import dev.stade.identity.LocalIdentity
 import dev.stade.identity.StadeId
+import dev.stade.identity.sanitizeDisplayName
 import dev.stade.message.SearchResult
 import dev.stade.message.previewBody
 import dev.stade.notification.ShortcutEntityKind
@@ -25,10 +26,10 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 private const val MAX_ROSTER_FIELD_LEN = 120
 
 private fun sanitizeRosterField(value: String): String =
-    value.asSequence()
-        .filter { it != GRP_ROSTER_FIELD_SEP && it != '\n' && it != '\r' }
-        .take(MAX_ROSTER_FIELD_LEN)
-        .joinToString("")
+    sanitizeDisplayName(
+        value.asSequence().filter { it != GRP_ROSTER_FIELD_SEP }.joinToString(""),
+        MAX_ROSTER_FIELD_LEN
+    )
 
 class GroupManager(
     private val db: StadeDb,
@@ -112,11 +113,17 @@ class GroupManager(
         val signing = entry.signingKey ?: return false
         val mldsa = entry.mldsaKey ?: return false
         if (StadeId.derive(signing, mldsa, crypto::hash) != entry.memberId) return false
+        val known = memberIdentity(groupId, entry.memberId)
+        val knownSigning = known?.signingKey
+        val knownMldsa = known?.mldsaKey
+        if (knownSigning != null && knownMldsa != null &&
+            (!knownSigning.contentEquals(signing) || !knownMldsa.contentEquals(mldsa))
+        ) {
+            return false
+        }
         addMember(groupId, entry.memberId)
         val announced = sanitizeRosterField(entry.nickname)
-        val nickname = announced.ifBlank {
-            memberIdentity(groupId, entry.memberId)?.nickname.orEmpty()
-        }
+        val nickname = announced.ifBlank { known?.nickname.orEmpty() }
         db.stadeDbQueries.setGroupMemberIdentity(nickname, signing, mldsa, groupId, entry.memberId)
         return true
     }

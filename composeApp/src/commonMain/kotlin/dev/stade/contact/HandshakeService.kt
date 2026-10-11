@@ -249,7 +249,7 @@ class HandshakeService(
         dsaPub.copyInto(out, o); o += 1952
         writeU16(out, o, addrBytes.size); o += 2
         addrBytes.copyInto(out, o); o += addrBytes.size
-        check(o == total) { "TBS uzunluk uyumsuz: $o != $total" }
+        check(o == total) { "TBS length mismatch: $o != $total" }
         return out
     }
 
