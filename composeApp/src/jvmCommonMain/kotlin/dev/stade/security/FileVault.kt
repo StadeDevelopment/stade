@@ -1,5 +1,7 @@
 ﻿package dev.stade.security
 
+import org.bouncycastle.crypto.generators.Argon2BytesGenerator
+import org.bouncycastle.crypto.params.Argon2Parameters
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
@@ -44,7 +46,13 @@ class FileVault(private val rootDir: File) : Vault {
         var duressSalt: ByteArray = ByteArray(SALT_LEN),
         var duressIterations: Int = 0,
         var duressVerifierNonce: ByteArray = ByteArray(NONCE_LEN),
-        var duressVerifierCipher: ByteArray = ByteArray(VERIFIER_CT_LEN)
+        var duressVerifierCipher: ByteArray = ByteArray(VERIFIER_CT_LEN),
+        val kdfKind: Int = KDF_PBKDF2,
+        val kdfMemoryKib: Int = 0,
+        val kdfParallelism: Int = 0,
+        var duressKdfKind: Int = KDF_PBKDF2,
+        var duressKdfMemoryKib: Int = 0,
+        var duressKdfParallelism: Int = 0
     )
 
     override fun isInitialized(): Boolean = metaFile.exists() && metaFile.length() >= MIN_META_SIZE_LEGACY
@@ -62,8 +70,8 @@ class FileVault(private val rootDir: File) : Vault {
     override fun setup(password: String) {
         require(password.isNotEmpty()) { "password" }
         val salt = ByteArray(SALT_LEN).also { rng.nextBytes(it) }
-        val iters = KDF_ITERS
-        val kek = deriveKey(password, salt, iters)
+        val iters = ARGON_TIME_COST
+        val kek = deriveArgon2(password, salt, iters, ARGON_MEMORY_KIB, ARGON_PARALLELISM)
         val newDek = ByteArray(DEK_LEN).also { rng.nextBytes(it) }
         val verifierNonce = ByteArray(NONCE_LEN).also { rng.nextBytes(it) }
         val dekNonce = ByteArray(NONCE_LEN).also { rng.nextBytes(it) }
@@ -79,7 +87,10 @@ class FileVault(private val rootDir: File) : Vault {
             failedAttempts = 0,
             lockoutUntilMillis = 0L,
             scrambleKeypad = false,
-            sessionTimeoutSeconds = SessionTimeout.IMMEDIATE
+            sessionTimeoutSeconds = SessionTimeout.IMMEDIATE,
+            kdfKind = KDF_ARGON2ID,
+            kdfMemoryKib = ARGON_MEMORY_KIB,
+            kdfParallelism = ARGON_PARALLELISM
         )
         writeMeta(meta)
         cached = meta
@@ -101,7 +112,7 @@ class FileVault(private val rootDir: File) : Vault {
             return UnlockOutcome.LockedOut(meta.lockoutUntilMillis)
         }
         val kek = try {
-            deriveKey(password, meta.salt, meta.iterations)
+            deriveWith(password, meta.salt, meta.kdfKind, meta.iterations, meta.kdfMemoryKib, meta.kdfParallelism)
         } catch (t: Throwable) {
             return UnlockOutcome.Error(t.message ?: dev.stade.ui.i18n.I18n.current.vaultKeyDerivationFailed)
         }
@@ -131,10 +142,14 @@ class FileVault(private val rootDir: File) : Vault {
         zero(kek)
         meta.failedAttempts = 0
         meta.lockoutUntilMillis = 0L
-        val finalMeta: Meta = if (meta.iterations > KDF_ITERS) {
+        val needsKdfUpgrade = meta.kdfKind != KDF_ARGON2ID ||
+            meta.kdfMemoryKib != ARGON_MEMORY_KIB ||
+            meta.iterations != ARGON_TIME_COST ||
+            meta.kdfParallelism != ARGON_PARALLELISM
+        val finalMeta: Meta = if (needsKdfUpgrade) {
             runCatching {
                 val newSalt = ByteArray(SALT_LEN).also { rng.nextBytes(it) }
-                val newKek = deriveKey(password, newSalt, KDF_ITERS)
+                val newKek = deriveArgon2(password, newSalt, ARGON_TIME_COST, ARGON_MEMORY_KIB, ARGON_PARALLELISM)
                 val newVerifierNonce = ByteArray(NONCE_LEN).also { rng.nextBytes(it) }
                 val newDekNonce = ByteArray(NONCE_LEN).also { rng.nextBytes(it) }
                 val newVerifierCt = gcmEncrypt(newKek, newVerifierNonce, VERIFIER_PLAIN)
@@ -142,11 +157,14 @@ class FileVault(private val rootDir: File) : Vault {
                 zero(newKek)
                 meta.copy(
                     salt = newSalt,
-                    iterations = KDF_ITERS,
+                    iterations = ARGON_TIME_COST,
                     verifierNonce = newVerifierNonce,
                     verifierCipher = newVerifierCt,
                     dekNonce = newDekNonce,
-                    dekCipher = newDekCt
+                    dekCipher = newDekCt,
+                    kdfKind = KDF_ARGON2ID,
+                    kdfMemoryKib = ARGON_MEMORY_KIB,
+                    kdfParallelism = ARGON_PARALLELISM
                 )
             }.getOrDefault(meta)
         } else meta
@@ -183,7 +201,9 @@ class FileVault(private val rootDir: File) : Vault {
     override fun changePassword(currentPassword: String, newPassword: String): Boolean {
         if (!isInitialized()) return false
         val meta = readMeta() ?: return false
-        val kek = deriveKey(currentPassword, meta.salt, meta.iterations)
+        val kek = deriveWith(
+            currentPassword, meta.salt, meta.kdfKind, meta.iterations, meta.kdfMemoryKib, meta.kdfParallelism
+        )
         val verifierOk = runCatching {
             val pt = gcmDecrypt(kek, meta.verifierNonce, meta.verifierCipher)
             java.security.MessageDigest.isEqual(pt, VERIFIER_PLAIN)
@@ -200,7 +220,7 @@ class FileVault(private val rootDir: File) : Vault {
         }
         zero(kek)
         val newSalt = ByteArray(SALT_LEN).also { rng.nextBytes(it) }
-        val newKek = deriveKey(newPassword, newSalt, KDF_ITERS)
+        val newKek = deriveArgon2(newPassword, newSalt, ARGON_TIME_COST, ARGON_MEMORY_KIB, ARGON_PARALLELISM)
         val newVerifierNonce = ByteArray(NONCE_LEN).also { rng.nextBytes(it) }
         val newDekNonce = ByteArray(NONCE_LEN).also { rng.nextBytes(it) }
         val newVerifierCt = gcmEncrypt(newKek, newVerifierNonce, VERIFIER_PLAIN)
@@ -208,7 +228,10 @@ class FileVault(private val rootDir: File) : Vault {
         zero(newKek)
         val updated = meta.copy(
             salt = newSalt,
-            iterations = KDF_ITERS,
+            iterations = ARGON_TIME_COST,
+            kdfKind = KDF_ARGON2ID,
+            kdfMemoryKib = ARGON_MEMORY_KIB,
+            kdfParallelism = ARGON_PARALLELISM,
             verifierNonce = newVerifierNonce,
             verifierCipher = newVerifierCt,
             dekNonce = newDekNonce,
@@ -229,13 +252,16 @@ class FileVault(private val rootDir: File) : Vault {
         require(pin.isNotEmpty()) { "pin" }
         val meta = readMeta() ?: return
         val salt = ByteArray(SALT_LEN).also { rng.nextBytes(it) }
-        val kek = deriveKey(pin, salt, KDF_ITERS)
+        val kek = deriveArgon2(pin, salt, ARGON_TIME_COST, ARGON_MEMORY_KIB, ARGON_PARALLELISM)
         val nonce = ByteArray(NONCE_LEN).also { rng.nextBytes(it) }
         val ct = gcmEncrypt(kek, nonce, DURESS_VERIFIER_PLAIN)
         zero(kek)
         meta.hasDuress = true
         meta.duressSalt = salt
-        meta.duressIterations = KDF_ITERS
+        meta.duressIterations = ARGON_TIME_COST
+        meta.duressKdfKind = KDF_ARGON2ID
+        meta.duressKdfMemoryKib = ARGON_MEMORY_KIB
+        meta.duressKdfParallelism = ARGON_PARALLELISM
         meta.duressVerifierNonce = nonce
         meta.duressVerifierCipher = ct
         writeMeta(meta)
@@ -246,7 +272,10 @@ class FileVault(private val rootDir: File) : Vault {
         val meta = cached ?: readMeta() ?: return false
         if (!meta.hasDuress) return false
         val kek = try {
-            deriveKey(candidate, meta.duressSalt, meta.duressIterations)
+            deriveWith(
+                candidate, meta.duressSalt, meta.duressKdfKind,
+                meta.duressIterations, meta.duressKdfMemoryKib, meta.duressKdfParallelism
+            )
         } catch (t: Throwable) {
             return false
         }
@@ -265,6 +294,9 @@ class FileVault(private val rootDir: File) : Vault {
         meta.duressIterations = 0
         meta.duressVerifierNonce = ByteArray(NONCE_LEN)
         meta.duressVerifierCipher = ByteArray(VERIFIER_CT_LEN)
+        meta.duressKdfKind = KDF_PBKDF2
+        meta.duressKdfMemoryKib = 0
+        meta.duressKdfParallelism = 0
         writeMeta(meta)
         cached = meta
     }
@@ -368,6 +400,37 @@ class FileVault(private val rootDir: File) : Vault {
         return encoded
     }
 
+    private fun deriveArgon2(
+        password: String,
+        salt: ByteArray,
+        iterations: Int,
+        memoryKib: Int,
+        parallelism: Int
+    ): ByteArray {
+        val params = Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
+            .withVersion(Argon2Parameters.ARGON2_VERSION_13)
+            .withSalt(salt)
+            .withIterations(iterations)
+            .withMemoryAsKB(memoryKib)
+            .withParallelism(parallelism)
+            .build()
+        val generator = Argon2BytesGenerator().apply { init(params) }
+        val out = ByteArray(KEY_BITS / 8)
+        generator.generateBytes(password.toCharArray(), out)
+        return out
+    }
+
+    private fun deriveWith(
+        password: String,
+        salt: ByteArray,
+        kind: Int,
+        iterations: Int,
+        memoryKib: Int,
+        parallelism: Int
+    ): ByteArray =
+        if (kind == KDF_ARGON2ID) deriveArgon2(password, salt, iterations, memoryKib, parallelism)
+        else deriveKey(password, salt, iterations)
+
     private fun gcmEncrypt(key: ByteArray, nonce: ByteArray, plaintext: ByteArray): ByteArray {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(TAG_BITS, nonce))
@@ -418,7 +481,7 @@ class FileVault(private val rootDir: File) : Vault {
         val magic = ByteArray(4).also { buf.get(it) }
         if (!magic.contentEquals(META_MAGIC)) return null
         val version = buf.get()
-        if (version != META_VERSION) return null
+        if (version != META_VERSION && version != META_VERSION_LEGACY) return null
         val salt = ByteArray(SALT_LEN).also { buf.get(it) }
         val iterations = buf.int
         val verifierNonce = ByteArray(NONCE_LEN).also { buf.get(it) }
@@ -448,6 +511,27 @@ class FileVault(private val rootDir: File) : Vault {
             duressVerifierNonce = ByteArray(NONCE_LEN)
             duressVerifierCipher = ByteArray(VERIFIER_CT_LEN)
         }
+        val kdfKind: Int
+        val kdfMemoryKib: Int
+        val kdfParallelism: Int
+        val duressKdfKind: Int
+        val duressKdfMemoryKib: Int
+        val duressKdfParallelism: Int
+        if (buf.remaining() >= KDF_SUFFIX_LEN) {
+            kdfKind = buf.get().toInt()
+            kdfMemoryKib = buf.int
+            kdfParallelism = buf.int
+            duressKdfKind = buf.get().toInt()
+            duressKdfMemoryKib = buf.int
+            duressKdfParallelism = buf.int
+        } else {
+            kdfKind = KDF_PBKDF2
+            kdfMemoryKib = 0
+            kdfParallelism = 0
+            duressKdfKind = KDF_PBKDF2
+            duressKdfMemoryKib = 0
+            duressKdfParallelism = 0
+        }
         return Meta(
             salt = salt,
             iterations = iterations,
@@ -464,13 +548,19 @@ class FileVault(private val rootDir: File) : Vault {
             duressSalt = duressSalt,
             duressIterations = duressIterations,
             duressVerifierNonce = duressVerifierNonce,
-            duressVerifierCipher = duressVerifierCipher
+            duressVerifierCipher = duressVerifierCipher,
+            kdfKind = kdfKind,
+            kdfMemoryKib = kdfMemoryKib,
+            kdfParallelism = kdfParallelism,
+            duressKdfKind = duressKdfKind,
+            duressKdfMemoryKib = duressKdfMemoryKib,
+            duressKdfParallelism = duressKdfParallelism
         )
     }
 
     @Synchronized
     private fun writeMeta(meta: Meta) {
-        val out = ByteArray(MIN_META_SIZE)
+        val out = ByteArray(FULL_META_SIZE)
         val buf = ByteBuffer.wrap(out)
         buf.put(META_MAGIC)
         buf.put(META_VERSION)
@@ -490,6 +580,12 @@ class FileVault(private val rootDir: File) : Vault {
         buf.putInt(meta.duressIterations)
         buf.put(meta.duressVerifierNonce)
         buf.put(meta.duressVerifierCipher)
+        buf.put(meta.kdfKind.toByte())
+        buf.putInt(meta.kdfMemoryKib)
+        buf.putInt(meta.kdfParallelism)
+        buf.put(meta.duressKdfKind.toByte())
+        buf.putInt(meta.duressKdfMemoryKib)
+        buf.putInt(meta.duressKdfParallelism)
         val tmp = File(metaFile.parentFile, metaFile.name + ".tmp")
         tmp.writeBytes(out)
         if (tmp.renameTo(metaFile)) return
@@ -549,7 +645,8 @@ class FileVault(private val rootDir: File) : Vault {
 
     companion object {
         private val META_MAGIC = byteArrayOf('S'.code.toByte(), 'T'.code.toByte(), 'D'.code.toByte(), 'V'.code.toByte())
-        private const val META_VERSION: Byte = 0x01
+        private const val META_VERSION: Byte = 0x02
+        private const val META_VERSION_LEGACY: Byte = 0x01
         private val DB_MAGIC = byteArrayOf('S'.code.toByte(), 'T'.code.toByte(), 'D'.code.toByte(), 'D'.code.toByte())
         private const val DB_VERSION: Byte = 0x01
         private const val DB_HEADER_LEN: Int = 4 + 1 + 12
@@ -561,11 +658,18 @@ class FileVault(private val rootDir: File) : Vault {
         private const val KEY_BITS = 256
         private const val TAG_BITS = 128
         private const val KDF_ITERS = 210_000
+        private const val KDF_PBKDF2 = 0
+        private const val KDF_ARGON2ID = 1
+        private const val ARGON_MEMORY_KIB = 19_456
+        private const val ARGON_TIME_COST = 2
+        private const val ARGON_PARALLELISM = 1
+        private const val KDF_SUFFIX_LEN = (1 + 4 + 4) * 2
         private const val LOCKOUT_THRESHOLD = 5
         private const val DURESS_SUFFIX_LEN = 1 + SALT_LEN + 4 + NONCE_LEN + VERIFIER_CT_LEN
         private const val MIN_META_SIZE_PRE_DURESS =
             4 + 1 + SALT_LEN + 4 + NONCE_LEN + VERIFIER_CT_LEN + NONCE_LEN + DEK_CT_LEN + 4 + 8 + 1 + 4 + 1
         private const val MIN_META_SIZE = MIN_META_SIZE_PRE_DURESS + DURESS_SUFFIX_LEN
+        private const val FULL_META_SIZE = MIN_META_SIZE + KDF_SUFFIX_LEN
         private const val MIN_META_SIZE_LEGACY = MIN_META_SIZE_PRE_DURESS - 1
         private val VERIFIER_PLAIN = byteArrayOf(
             'S'.code.toByte(), 'T'.code.toByte(), 'A'.code.toByte(), 'D'.code.toByte(),
