@@ -15,7 +15,12 @@ class BackupTargets(
     val onionKeyPath: String
 )
 
-enum class RestoreFailure { WrongPassphrase, NotABackup, Damaged, Incomplete, WriteFailed }
+enum class RestoreFailure { WrongPassphrase, NotABackup, Damaged, Incomplete, WriteFailed, NewerVersion }
+
+sealed interface VerifyOutcome {
+    data class Valid(val entries: List<BackupEntry>, val payloadBytes: Long, val onionKeyIncluded: Boolean) : VerifyOutcome
+    data class Failed(val reason: RestoreFailure) : VerifyOutcome
+}
 
 sealed interface RestoreOutcome {
     data class Restored(val onionKeyIncluded: Boolean) : RestoreOutcome
@@ -52,6 +57,26 @@ object StadeBackup {
         return true
     }
 
+    fun verify(input: InputStream, passphrase: CharArray): VerifyOutcome {
+        val outcome = BackupArchive.verify(input, passphrase)
+        val ok = when (outcome) {
+            is BackupVerifyOutcome.Ok -> outcome
+            BackupVerifyOutcome.WrongPassphrase -> return VerifyOutcome.Failed(RestoreFailure.WrongPassphrase)
+            BackupVerifyOutcome.NotABackup -> return VerifyOutcome.Failed(RestoreFailure.NotABackup)
+            BackupVerifyOutcome.Damaged -> return VerifyOutcome.Failed(RestoreFailure.Damaged)
+            BackupVerifyOutcome.NewerVersion -> return VerifyOutcome.Failed(RestoreFailure.NewerVersion)
+        }
+        val byName = ok.entries.associateBy { it.name }
+        if (byName[ENTRY_VAULT] == null || byName[ENTRY_DB] == null) {
+            return VerifyOutcome.Failed(RestoreFailure.Incomplete)
+        }
+        return VerifyOutcome.Valid(
+            entries = ok.entries,
+            payloadBytes = ok.payloadBytes,
+            onionKeyIncluded = byName[ENTRY_ONION] != null
+        )
+    }
+
     fun restore(
         input: InputStream,
         passphrase: CharArray,
@@ -64,6 +89,7 @@ object StadeBackup {
             BackupReadOutcome.WrongPassphrase -> return RestoreOutcome.Failed(RestoreFailure.WrongPassphrase)
             BackupReadOutcome.NotABackup -> return RestoreOutcome.Failed(RestoreFailure.NotABackup)
             BackupReadOutcome.Damaged -> return RestoreOutcome.Failed(RestoreFailure.Damaged)
+            BackupReadOutcome.NewerVersion -> return RestoreOutcome.Failed(RestoreFailure.NewerVersion)
         }
 
         try {

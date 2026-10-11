@@ -1,5 +1,7 @@
 package dev.stade.backup
 
+import org.bouncycastle.crypto.generators.Argon2BytesGenerator
+import org.bouncycastle.crypto.params.Argon2Parameters
 import java.io.DataInputStream
 import java.io.EOFException
 import java.io.File
@@ -27,6 +29,15 @@ sealed interface BackupReadOutcome {
     data object WrongPassphrase : BackupReadOutcome
     data object Damaged : BackupReadOutcome
     data object NotABackup : BackupReadOutcome
+    data object NewerVersion : BackupReadOutcome
+}
+
+sealed interface BackupVerifyOutcome {
+    class Ok(val entries: List<BackupEntry>, val payloadBytes: Long) : BackupVerifyOutcome
+    data object WrongPassphrase : BackupVerifyOutcome
+    data object Damaged : BackupVerifyOutcome
+    data object NotABackup : BackupVerifyOutcome
+    data object NewerVersion : BackupVerifyOutcome
 }
 
 object BackupArchive {
@@ -35,15 +46,22 @@ object BackupArchive {
         'S'.code.toByte(), 'T'.code.toByte(), 'D'.code.toByte(),
         'B'.code.toByte(), 'K'.code.toByte(), '1'.code.toByte()
     )
-    private const val VERSION: Byte = 1
+    private const val VERSION_PBKDF2: Byte = 1
+    private const val VERSION_ARGON2: Byte = 2
+    private const val VERSION_CURRENT: Byte = VERSION_ARGON2
     private const val SALT_LEN = 16
     private const val PREFIX_LEN = 8
     private const val KEY_BITS = 256
     private const val TAG_BITS = 128
     private const val TAG_LEN = TAG_BITS / 8
-    private const val HEADER_LEN = 6 + 1 + SALT_LEN + 4 + PREFIX_LEN + 8 + 4
+    private const val LEAD_LEN = 6 + 1
+    private const val HEADER_LEN_V1 = LEAD_LEN + SALT_LEN + 4 + PREFIX_LEN + 8 + 4
+    private const val HEADER_LEN_V2 = HEADER_LEN_V1 + 4 + 4
 
     const val KDF_ITERS = 310_000
+    const val ARGON_MEMORY_KIB = 65_536
+    const val ARGON_TIME_COST = 3
+    const val ARGON_PARALLELISM = 1
     const val CHUNK_SIZE = 1 shl 20
     const val MAX_PAYLOAD_BYTES = 4L * 1024 * 1024 * 1024
     const val MAX_NAME_LEN = 64
@@ -59,18 +77,20 @@ object BackupArchive {
 
         val salt = ByteArray(SALT_LEN).also { rng.nextBytes(it) }
         val prefix = ByteArray(PREFIX_LEN).also { rng.nextBytes(it) }
-        val header = ByteBuffer.allocate(HEADER_LEN).apply {
+        val header = ByteBuffer.allocate(HEADER_LEN_V2).apply {
             put(MAGIC)
-            put(VERSION)
+            put(VERSION_CURRENT)
             put(salt)
-            putInt(KDF_ITERS)
+            putInt(ARGON_TIME_COST)
+            putInt(ARGON_MEMORY_KIB)
+            putInt(ARGON_PARALLELISM)
             put(prefix)
             putLong(payloadLength)
             putInt(CHUNK_SIZE)
         }.array()
         out.write(header)
 
-        val key = deriveKey(passphrase, salt, KDF_ITERS)
+        val key = deriveArgon2(passphrase, salt, ARGON_TIME_COST, ARGON_MEMORY_KIB, ARGON_PARALLELISM)
         try {
             val payload = PayloadReader(sources)
             val buffer = ByteArray(CHUNK_SIZE)
@@ -91,23 +111,78 @@ object BackupArchive {
         out.flush()
     }
 
-    fun read(input: InputStream, passphrase: CharArray, scratch: File): BackupReadOutcome {
-        val header = ByteArray(HEADER_LEN)
-        if (!readFully(input, header, HEADER_LEN)) return BackupReadOutcome.NotABackup
-        val buf = ByteBuffer.wrap(header)
-        val magic = ByteArray(6).also { buf.get(it) }
-        if (!magic.contentEquals(MAGIC)) return BackupReadOutcome.NotABackup
-        if (buf.get() != VERSION) return BackupReadOutcome.NotABackup
+    private class ParsedHeader(
+        val raw: ByteArray,
+        val salt: ByteArray,
+        val prefix: ByteArray,
+        val payloadLength: Long,
+        val chunkSize: Int,
+        val version: Byte,
+        val iterations: Int,
+        val memoryKib: Int,
+        val parallelism: Int
+    )
+
+    private sealed interface HeaderResult {
+        class Ok(val header: ParsedHeader) : HeaderResult
+        data object NotABackup : HeaderResult
+        data object NewerVersion : HeaderResult
+    }
+
+    private fun readHeader(input: InputStream): HeaderResult {
+        val lead = ByteArray(LEAD_LEN)
+        if (!readFully(input, lead, LEAD_LEN)) return HeaderResult.NotABackup
+        if (!lead.copyOfRange(0, 6).contentEquals(MAGIC)) return HeaderResult.NotABackup
+        val version = lead[6]
+        val totalLen = when (version) {
+            VERSION_PBKDF2 -> HEADER_LEN_V1
+            VERSION_ARGON2 -> HEADER_LEN_V2
+            else -> return if (version > VERSION_CURRENT) HeaderResult.NewerVersion else HeaderResult.NotABackup
+        }
+        val rest = ByteArray(totalLen - LEAD_LEN)
+        if (!readFully(input, rest, rest.size)) return HeaderResult.NotABackup
+        val raw = lead + rest
+        val buf = ByteBuffer.wrap(rest)
         val salt = ByteArray(SALT_LEN).also { buf.get(it) }
         val iterations = buf.int
+        val memoryKib = if (version == VERSION_ARGON2) buf.int else 0
+        val parallelism = if (version == VERSION_ARGON2) buf.int else 0
         val prefix = ByteArray(PREFIX_LEN).also { buf.get(it) }
         val payloadLength = buf.long
         val chunkSize = buf.int
-        if (iterations !in 1..2_000_000) return BackupReadOutcome.NotABackup
-        if (payloadLength < 0 || payloadLength > MAX_PAYLOAD_BYTES) return BackupReadOutcome.NotABackup
-        if (chunkSize !in 1..(1 shl 26)) return BackupReadOutcome.NotABackup
+        if (payloadLength < 0 || payloadLength > MAX_PAYLOAD_BYTES) return HeaderResult.NotABackup
+        if (chunkSize !in 1..(1 shl 26)) return HeaderResult.NotABackup
+        if (version == VERSION_PBKDF2) {
+            if (iterations !in 1..2_000_000) return HeaderResult.NotABackup
+        } else {
+            if (iterations !in 1..16) return HeaderResult.NotABackup
+            if (memoryKib !in 8..(1 shl 21)) return HeaderResult.NotABackup
+            if (parallelism !in 1..16) return HeaderResult.NotABackup
+        }
+        return HeaderResult.Ok(
+            ParsedHeader(raw, salt, prefix, payloadLength, chunkSize, version, iterations, memoryKib, parallelism)
+        )
+    }
 
-        val key = deriveKey(passphrase, salt, iterations)
+    private fun deriveFor(parsed: ParsedHeader, passphrase: CharArray): ByteArray =
+        if (parsed.version == VERSION_ARGON2) {
+            deriveArgon2(passphrase, parsed.salt, parsed.iterations, parsed.memoryKib, parsed.parallelism)
+        } else {
+            deriveKey(passphrase, parsed.salt, parsed.iterations)
+        }
+
+    fun read(input: InputStream, passphrase: CharArray, scratch: File): BackupReadOutcome {
+        val parsed = when (val h = readHeader(input)) {
+            is HeaderResult.Ok -> h.header
+            HeaderResult.NewerVersion -> return BackupReadOutcome.NewerVersion
+            HeaderResult.NotABackup -> return BackupReadOutcome.NotABackup
+        }
+        val header = parsed.raw
+        val prefix = parsed.prefix
+        val payloadLength = parsed.payloadLength
+        val chunkSize = parsed.chunkSize
+
+        val key = deriveFor(parsed, passphrase)
         val cipherBuf = ByteArray(chunkSize + TAG_LEN)
         var authFailed = false
         try {
@@ -145,6 +220,113 @@ object BackupArchive {
                 return BackupReadOutcome.Damaged
             }
         return BackupReadOutcome.Ok(scratch, entries)
+    }
+
+    fun verify(input: InputStream, passphrase: CharArray): BackupVerifyOutcome {
+        val parsed = when (val h = readHeader(input)) {
+            is HeaderResult.Ok -> h.header
+            HeaderResult.NewerVersion -> return BackupVerifyOutcome.NewerVersion
+            HeaderResult.NotABackup -> return BackupVerifyOutcome.NotABackup
+        }
+        val key = deriveFor(parsed, passphrase)
+        val cipherBuf = ByteArray(parsed.chunkSize + TAG_LEN)
+        val scanner = EntryScanner()
+        try {
+            var remaining = parsed.payloadLength
+            var index = 0
+            while (remaining > 0) {
+                val want = minOf(remaining, parsed.chunkSize.toLong()).toInt()
+                if (!readFully(input, cipherBuf, want + TAG_LEN)) return BackupVerifyOutcome.Damaged
+                val plain = try {
+                    open(key, parsed.prefix, index, parsed.raw, cipherBuf, want + TAG_LEN)
+                } catch (_: AEADBadTagException) {
+                    return BackupVerifyOutcome.WrongPassphrase
+                }
+                scanner.feed(plain, plain.size)
+                remaining -= want
+                index++
+            }
+        } catch (_: Exception) {
+            return BackupVerifyOutcome.Damaged
+        } finally {
+            key.fill(0)
+        }
+        val entries = runCatching { scanner.finish(parsed.payloadLength) }.getOrNull()
+            ?: return BackupVerifyOutcome.Damaged
+        return BackupVerifyOutcome.Ok(entries, parsed.payloadLength)
+    }
+
+    private class EntryScanner {
+        private val entries = mutableListOf<BackupEntry>()
+        private var state = STATE_NAME_LEN
+        private var need = 2
+        private val acc = ByteArray(MAX_NAME_LEN + 8)
+        private var accLen = 0
+        private var pendingName = ""
+        private var dataRemaining = 0L
+        private var consumed = 0L
+
+        fun feed(buf: ByteArray, len: Int) {
+            var pos = 0
+            while (pos < len) {
+                if (state == STATE_DATA) {
+                    val take = minOf((len - pos).toLong(), dataRemaining).toInt()
+                    pos += take
+                    consumed += take
+                    dataRemaining -= take
+                    if (dataRemaining == 0L) {
+                        state = STATE_NAME_LEN
+                        need = 2
+                        accLen = 0
+                    }
+                    continue
+                }
+                val take = minOf(len - pos, need - accLen)
+                buf.copyInto(acc, accLen, pos, pos + take)
+                accLen += take
+                pos += take
+                consumed += take
+                if (accLen < need) continue
+                when (state) {
+                    STATE_NAME_LEN -> {
+                        val nameLen = ((acc[0].toInt() and 0xff) shl 8) or (acc[1].toInt() and 0xff)
+                        require(nameLen in 1..MAX_NAME_LEN) { "bad entry name" }
+                        state = STATE_NAME
+                        need = nameLen
+                        accLen = 0
+                    }
+                    STATE_NAME -> {
+                        pendingName = acc.copyOfRange(0, need).decodeToString()
+                        state = STATE_LENGTH
+                        need = 8
+                        accLen = 0
+                    }
+                    STATE_LENGTH -> {
+                        var length = 0L
+                        for (i in 0 until 8) length = (length shl 8) or (acc[i].toLong() and 0xff)
+                        require(length >= 0) { "bad entry length" }
+                        entries.add(BackupEntry(pendingName, length, consumed))
+                        dataRemaining = length
+                        state = if (length == 0L) STATE_NAME_LEN else STATE_DATA
+                        need = 2
+                        accLen = 0
+                    }
+                }
+            }
+        }
+
+        fun finish(payloadLength: Long): List<BackupEntry> {
+            require(consumed == payloadLength) { "payload length mismatch" }
+            require(state == STATE_NAME_LEN && accLen == 0) { "truncated entry" }
+            return entries
+        }
+
+        private companion object {
+            const val STATE_NAME_LEN = 0
+            const val STATE_NAME = 1
+            const val STATE_LENGTH = 2
+            const val STATE_DATA = 3
+        }
     }
 
     private fun indexEntries(payload: File, payloadLength: Long): List<BackupEntry> {
@@ -262,6 +444,26 @@ object BackupArchive {
 
     private fun aad(header: ByteArray, index: Int): ByteArray =
         ByteBuffer.allocate(header.size + 4).put(header).putInt(index).array()
+
+    private fun deriveArgon2(
+        passphrase: CharArray,
+        salt: ByteArray,
+        iterations: Int,
+        memoryKib: Int,
+        parallelism: Int
+    ): ByteArray {
+        val params = Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
+            .withVersion(Argon2Parameters.ARGON2_VERSION_13)
+            .withSalt(salt)
+            .withIterations(iterations)
+            .withMemoryAsKB(memoryKib)
+            .withParallelism(parallelism)
+            .build()
+        val generator = Argon2BytesGenerator().apply { init(params) }
+        val out = ByteArray(KEY_BITS / 8)
+        generator.generateBytes(passphrase, out)
+        return out
+    }
 
     private fun deriveKey(passphrase: CharArray, salt: ByteArray, iterations: Int): ByteArray {
         val spec = PBEKeySpec(passphrase, salt, iterations, KEY_BITS)

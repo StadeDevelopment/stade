@@ -8,6 +8,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import dev.stade.backup.RestoreFailure
 import dev.stade.backup.RestoreOutcome
 import dev.stade.backup.StadeBackup
+import dev.stade.backup.VerifyOutcome
 import dev.stade.security.Vault
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,10 +19,12 @@ import java.io.File
 
 actual class BackupIoLauncher(
     private val onExport: (String) -> Unit,
-    private val onImport: (String) -> Unit
+    private val onImport: (String) -> Unit,
+    private val onVerify: (String) -> Unit
 ) {
     actual fun exportBackup(passphrase: String) = onExport(passphrase)
     actual fun importBackup(passphrase: String) = onImport(passphrase)
+    actual fun verifyBackup(passphrase: String) = onVerify(passphrase)
 }
 
 private fun chooseFile(save: Boolean, suggested: String?): File? {
@@ -94,6 +97,20 @@ actual fun rememberBackupIo(
                     }
                     callback(outcome)
                 }
+            },
+            onVerify = { passphrase ->
+                scope.launch {
+                    val outcome = withContext(Dispatchers.IO) {
+                        val source = chooseFile(save = false, suggested = null)
+                            ?: return@withContext BackupOutcome.Cancelled
+                        runCatching {
+                            source.inputStream().use { input ->
+                                StadeBackup.verify(input, passphrase.toCharArray())
+                            }
+                        }.getOrNull().toBackupOutcome()
+                    }
+                    callback(outcome)
+                }
             }
         )
     }
@@ -108,5 +125,19 @@ internal fun RestoreOutcome?.toBackupOutcome(): BackupOutcome = when (this) {
         RestoreFailure.Damaged -> BackupOutcome.Damaged
         RestoreFailure.Incomplete -> BackupOutcome.Damaged
         RestoreFailure.WriteFailed -> BackupOutcome.Failed
+        RestoreFailure.NewerVersion -> BackupOutcome.NewerVersion
+    }
+}
+
+internal fun VerifyOutcome?.toBackupOutcome(): BackupOutcome = when (this) {
+    null -> BackupOutcome.Failed
+    is VerifyOutcome.Valid -> BackupOutcome.Verified(onionKeyIncluded, payloadBytes)
+    is VerifyOutcome.Failed -> when (reason) {
+        RestoreFailure.WrongPassphrase -> BackupOutcome.WrongPassphrase
+        RestoreFailure.NotABackup -> BackupOutcome.NotABackup
+        RestoreFailure.Damaged -> BackupOutcome.Damaged
+        RestoreFailure.Incomplete -> BackupOutcome.Damaged
+        RestoreFailure.WriteFailed -> BackupOutcome.Failed
+        RestoreFailure.NewerVersion -> BackupOutcome.NewerVersion
     }
 }

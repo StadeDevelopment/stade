@@ -17,11 +17,14 @@ sealed interface BackupOutcome {
     data object NotABackup : BackupOutcome
     data object Damaged : BackupOutcome
     data object Failed : BackupOutcome
+    data object NewerVersion : BackupOutcome
+    data class Verified(val onionKeyIncluded: Boolean, val payloadBytes: Long) : BackupOutcome
 }
 
 expect class BackupIoLauncher {
     fun exportBackup(passphrase: String)
     fun importBackup(passphrase: String)
+    fun verifyBackup(passphrase: String)
 }
 
 @Composable

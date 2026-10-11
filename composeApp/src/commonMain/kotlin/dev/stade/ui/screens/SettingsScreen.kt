@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -137,6 +138,7 @@ fun SettingsScreen(
     val runInBackgroundEnabled by getRunInBackgroundEnabledCommon()
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showBackupDialog by remember { mutableStateOf(false) }
+    var showVerifyDialog by remember { mutableStateOf(false) }
     var backupMessage by remember { mutableStateOf<String?>(null) }
     val backupIo = rememberBackupIo(container.vault) { outcome ->
         backupMessage = when (outcome) {
@@ -145,6 +147,14 @@ fun SettingsScreen(
             is BackupOutcome.WrongPassphrase -> strings.backupWrongPassphrase
             is BackupOutcome.NotABackup -> strings.backupNotABackup
             is BackupOutcome.Damaged -> strings.backupDamaged
+            is BackupOutcome.NewerVersion -> strings.backupNewerVersion
+            is BackupOutcome.Verified -> buildString {
+                append(strings.backupVerifyOk(formatBackupSize(outcome.payloadBytes)))
+                if (!outcome.onionKeyIncluded) {
+                    append("\n\n")
+                    append(strings.backupVerifyOkNoOnion)
+                }
+            }
             else -> strings.backupFailed
         }
     }
@@ -180,6 +190,20 @@ fun SettingsScreen(
                 backupIo.exportBackup(passphrase)
             },
             onDismiss = { showBackupDialog = false }
+        )
+    }
+
+    if (showVerifyDialog) {
+        BackupPassphraseDialog(
+            title = strings.backupVerifyDialogTitle,
+            body = strings.backupVerifyDialogBody,
+            confirmLabel = strings.backupVerifyAction,
+            requireConfirmation = false,
+            onConfirm = { passphrase ->
+                showVerifyDialog = false
+                backupIo.verifyBackup(passphrase)
+            },
+            onDismiss = { showVerifyDialog = false }
         )
     }
 
@@ -515,6 +539,15 @@ fun SettingsScreen(
                             onClick = { showBackupDialog = true }
                         )
                     }
+                    row {
+                        NavigationSettingsRow(
+                            icon = Icons.Default.FactCheck,
+                            iconTint = MaterialTheme.colorScheme.primary,
+                            title = strings.backupVerifyTitle,
+                            subtitle = strings.backupVerifySubtitle,
+                            onClick = { showVerifyDialog = true }
+                        )
+                    }
                 }
             }
 
@@ -807,3 +840,10 @@ private fun ActionSettingsRow(
 }
 
 
+
+private fun formatBackupSize(bytes: Long): String = when {
+    bytes >= 1024L * 1024 * 1024 -> "${bytes / (1024L * 1024 * 1024)} GB"
+    bytes >= 1024L * 1024 -> "${bytes / (1024L * 1024)} MB"
+    bytes >= 1024L -> "${bytes / 1024L} KB"
+    else -> "$bytes B"
+}

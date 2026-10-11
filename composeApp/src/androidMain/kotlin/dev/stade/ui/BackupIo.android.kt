@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import dev.stade.backup.RestoreFailure
 import dev.stade.backup.RestoreOutcome
 import dev.stade.backup.StadeBackup
+import dev.stade.backup.VerifyOutcome
 import dev.stade.security.Vault
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -20,10 +21,12 @@ import java.io.File
 
 actual class BackupIoLauncher(
     private val onExport: (String) -> Unit,
-    private val onImport: (String) -> Unit
+    private val onImport: (String) -> Unit,
+    private val onVerify: (String) -> Unit
 ) {
     actual fun exportBackup(passphrase: String) = onExport(passphrase)
     actual fun importBackup(passphrase: String) = onImport(passphrase)
+    actual fun verifyBackup(passphrase: String) = onVerify(passphrase)
 }
 
 @Composable
@@ -96,7 +99,28 @@ actual fun rememberBackupIo(
         }
     }
 
-    return remember(createDocument, openDocument) {
+    val verifyDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val passphrase = pending[0]
+        pending[0] = null
+        if (uri == null || passphrase == null) {
+            callback(BackupOutcome.Cancelled)
+            return@rememberLauncherForActivityResult
+        }
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        StadeBackup.verify(input, passphrase.toCharArray())
+                    }
+                }.getOrNull()
+            }
+            callback(outcome.toBackupOutcome())
+        }
+    }
+
+    return remember(createDocument, openDocument, verifyDocument) {
         BackupIoLauncher(
             onExport = { passphrase ->
                 pending[0] = passphrase
@@ -105,6 +129,10 @@ actual fun rememberBackupIo(
             onImport = { passphrase ->
                 pending[0] = passphrase
                 openDocument.launch(arrayOf("*/*"))
+            },
+            onVerify = { passphrase ->
+                pending[0] = passphrase
+                verifyDocument.launch(arrayOf("*/*"))
             }
         )
     }
@@ -119,5 +147,19 @@ internal fun RestoreOutcome?.toBackupOutcome(): BackupOutcome = when (this) {
         RestoreFailure.Damaged -> BackupOutcome.Damaged
         RestoreFailure.Incomplete -> BackupOutcome.Damaged
         RestoreFailure.WriteFailed -> BackupOutcome.Failed
+        RestoreFailure.NewerVersion -> BackupOutcome.NewerVersion
+    }
+}
+
+internal fun VerifyOutcome?.toBackupOutcome(): BackupOutcome = when (this) {
+    null -> BackupOutcome.Failed
+    is VerifyOutcome.Valid -> BackupOutcome.Verified(onionKeyIncluded, payloadBytes)
+    is VerifyOutcome.Failed -> when (reason) {
+        RestoreFailure.WrongPassphrase -> BackupOutcome.WrongPassphrase
+        RestoreFailure.NotABackup -> BackupOutcome.NotABackup
+        RestoreFailure.Damaged -> BackupOutcome.Damaged
+        RestoreFailure.Incomplete -> BackupOutcome.Damaged
+        RestoreFailure.WriteFailed -> BackupOutcome.Failed
+        RestoreFailure.NewerVersion -> BackupOutcome.NewerVersion
     }
 }
