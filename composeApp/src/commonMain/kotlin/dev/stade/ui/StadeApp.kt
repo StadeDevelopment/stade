@@ -187,6 +187,7 @@ fun StadeApp(boot: BootContext) {
             var locking by remember { mutableStateOf(false) }
             var lockTarget by remember { mutableStateOf<AppContainer?>(null) }
             var databaseSchemaFailed by remember { mutableStateOf(false) }
+            var databaseDowngrade by remember { mutableStateOf(false) }
             val scope = rememberCoroutineScope()
 
             LaunchedEffect(initialized) {
@@ -291,6 +292,7 @@ fun StadeApp(boot: BootContext) {
                         boot.buildContainer().also { container = it }
                     } catch (error: DatabaseSchemaException) {
                         databaseSchemaFailed = true
+                        databaseDowngrade = error.downgrade
                         null
                     }
                     if (databaseSchemaFailed || active == null) {
@@ -301,7 +303,12 @@ fun StadeApp(boot: BootContext) {
                                 unlocked = false
                             },
                             title = { Text(activeStrings.databaseSchemaFailedTitle) },
-                            text = { Text(activeStrings.databaseSchemaFailedBody) },
+                            text = {
+                                Text(
+                                    if (databaseDowngrade) activeStrings.databaseDowngradeBody
+                                    else activeStrings.databaseSchemaFailedBody
+                                )
+                            },
                             confirmButton = {
                                 TextButton(onClick = {
                                     databaseSchemaFailed = false

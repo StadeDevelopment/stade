@@ -30,6 +30,7 @@ abstract class AppStrings {
     abstract val vaultLockFailedBody: String
     abstract val databaseSchemaFailedTitle: String
     abstract val databaseSchemaFailedBody: String
+    abstract val databaseDowngradeBody: String
     abstract fun wrongPinRemaining(remaining: Int): String
     abstract val wrongPin: String
     abstract val wiping: String
@@ -174,6 +175,7 @@ abstract class AppStrings {
     abstract val hsKeySizeBad: String
     abstract val hsSelfConnected: String
     abstract val hsStadeIdMismatch: String
+    abstract val hsIdentityKeyMismatch: String
     abstract val hsTranscriptMismatch: String
     abstract val hsAuthStadeIdMismatch: String
     abstract val hsSignaturesInvalid: String
@@ -455,6 +457,14 @@ abstract class AppStrings {
     abstract val backupSection: String
     abstract val backupExportTitle: String
     abstract val backupExportSubtitle: String
+    abstract val backupVerifyTitle: String
+    abstract val backupVerifySubtitle: String
+    abstract val backupVerifyDialogTitle: String
+    abstract val backupVerifyDialogBody: String
+    abstract val backupVerifyAction: String
+    abstract fun backupVerifyOk(size: String): String
+    abstract val backupVerifyOkNoOnion: String
+    abstract val backupNewerVersion: String
     abstract val backupExportDialogTitle: String
     abstract val backupExportDialogBody: String
     abstract val backupExportAction: String

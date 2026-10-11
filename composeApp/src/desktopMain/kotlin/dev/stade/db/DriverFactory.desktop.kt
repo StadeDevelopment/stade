@@ -30,6 +30,7 @@ internal object DesktopSchemaUpgrade {
         }
 
         val stamped = readVersion(driver)
+        DatabaseSchema.requireNotDowngrade(stamped)
         val current = if (stamped > 0L) stamped else inferVersion(driver)
 
         if (current >= target) {
