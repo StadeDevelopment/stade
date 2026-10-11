@@ -164,14 +164,22 @@ fun LockScreen(
     }
 
     fun tryUnlock() {
-        if (pin.length < PIN_MIN || error != null || isVerifying || lockedNow) return
+        if (pin.length < PIN_MIN || error != null || isVerifying) return
         val currentPin = pin
+        val wasLocked = lockedNow
         isVerifying = true
         scope.launch {
             val isDuress = withContext(Dispatchers.Default) { vault.isDuressPin(currentPin) }
             if (isDuress && onDuressTriggered != null) {
                 withContext(Dispatchers.Default) { onDuressTriggered() }
                 isVerifying = false
+                return@launch
+            }
+            if (wasLocked) {
+                isVerifying = false
+                launch { shakeOffset.shake() }
+                delay(700)
+                pin = ""
                 return@launch
             }
             val outcome = withContext(Dispatchers.Default) { vault.unlock(currentPin) }
@@ -237,7 +245,7 @@ fun LockScreen(
                         }
                         when {
                             digit != null -> {
-                                if (!lockedNow && pin.length < PIN_MAX && error == null && !isVerifying) {
+                                if (pin.length < PIN_MAX && error == null && !isVerifying) {
                                     pin += digit
                                     if (pin.length >= PIN_MAX) tryUnlock()
                                 }
@@ -306,7 +314,7 @@ fun LockScreen(
             if (isKeypadSupported) {
                 PinKeypad(
                     onDigit = { d ->
-                        if (!lockedNow && pin.length < PIN_MAX && error == null && !isVerifying) {
+                        if (pin.length < PIN_MAX && error == null && !isVerifying) {
                             pin += d
                             if (pin.length >= PIN_MAX) tryUnlock()
                         }
@@ -314,14 +322,14 @@ fun LockScreen(
                     onBackspace = {
                         if (pin.isNotEmpty() && !isVerifying) pin = pin.dropLast(1)
                     },
-                    actionIsCheck = pin.length >= PIN_MIN && error == null && !isVerifying && !lockedNow,
+                    actionIsCheck = pin.length >= PIN_MIN && error == null && !isVerifying,
                     onAction = { tryUnlock() },
                     scrambled = scrambleEnabled
                 )
             }
             if (!isKeypadSupported) {
                 PinConfirmAction(
-                    enabled = pin.length >= PIN_MIN && error == null && !isVerifying && !lockedNow,
+                    enabled = pin.length >= PIN_MIN && error == null && !isVerifying,
                     label = strings.confirmAction,
                     onClick = { tryUnlock() }
                 )
