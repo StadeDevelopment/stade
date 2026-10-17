@@ -71,3 +71,14 @@ private fun epochDays(d: LocalDateTime): Long {
     return day + (153 * m2 + 2) / 5 + 365 * y2 + y2 / 4 - y2 / 100 + y2 / 400 - 32045
 }
 
+
+fun formatExactTimestamp(epochMillis: Long): String {
+    val tz = TimeZone.currentSystemDefault()
+    val at = kotlinx.datetime.Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(tz)
+    val month = at.monthNumber.toString().padStart(2, '0')
+    val day = at.dayOfMonth.toString().padStart(2, '0')
+    val hh = at.hour.toString().padStart(2, '0')
+    val mm = at.minute.toString().padStart(2, '0')
+    val ss = at.second.toString().padStart(2, '0')
+    return "${at.year}-$month-$day  $hh:$mm:$ss"
+}

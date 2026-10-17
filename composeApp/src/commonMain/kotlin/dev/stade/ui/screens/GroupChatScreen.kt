@@ -152,7 +152,6 @@ import dev.stade.ui.components.rememberMessageEntrance
 import dev.stade.ui.components.BottomInsetPanel
 import dev.stade.ui.components.rememberPanelHeightState
 import dev.stade.ui.components.EmojiStickerPanel
-import dev.stade.ui.components.PadPanel
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -162,6 +161,7 @@ import dev.stade.ui.components.onSecondaryClick
 import dev.stade.ui.components.reactionBarOffsetY
 import kotlinx.coroutines.flow.flowOf
 import dev.stade.ui.components.AnimatedImage
+import dev.stade.ui.components.StickerDetailsDialog
 import dev.stade.ui.components.UnsupportedMessageBubble
 import dev.stade.chat.StarScope
 import androidx.compose.material.icons.filled.Star
@@ -182,7 +182,6 @@ import dev.stade.ui.components.ChatComposerReplyPreview
 import dev.stade.ui.components.ScrollToBottomButton
 import dev.stade.ui.components.StickerMakerDialog
 import dev.stade.ui.components.DeliveryStatusDots
-import dev.stade.ui.components.PadSoundBubble
 import dev.stade.ui.components.formatChatTime
 import dev.stade.ui.components.formatVoiceDuration
 import dev.stade.ui.copyImageToClipboard
@@ -217,6 +216,7 @@ fun GroupChatScreen(
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
+    var stickerDetailsMsg by remember { mutableStateOf<GroupMessage?>(null) }
 
     val group = remember(groupId) { container.groups.getGroup(groupId) }
     val memberIds by remember(groupId) { container.groups.observeMembers(groupId) }
@@ -278,7 +278,6 @@ fun GroupChatScreen(
         }
     }
 
-    var padOpen by remember { mutableStateOf(false) }
     var showAddMembersDialog by remember { mutableStateOf(false) }
     var showDeleteGroupDialog by remember { mutableStateOf(false) }
     var showLeaveGroupDialog by remember { mutableStateOf(false) }
@@ -704,15 +703,39 @@ fun GroupChatScreen(
         )
     }
 
-    val anyPanelOpen = showEmojiDrawer || padOpen
+    val anyPanelOpen = showEmojiDrawer
 
     fun closePanels() {
         showEmojiDrawer = false
-        padOpen = false
     }
 
     PlatformBackHandler(enabled = anyPanelOpen) { closePanels() }
     PlatformBackHandler(enabled = inSelectionMode) { clearSelection() }
+
+    val stickerDetails = stickerDetailsMsg
+    if (stickerDetails != null) {
+        var detailBytes by remember(stickerDetails.id) { mutableStateOf<ByteArray?>(null) }
+        LaunchedEffect(stickerDetails.id) {
+            detailBytes = withContext(Dispatchers.Default) {
+                runCatching { stickerDetails.stickerBytes() }.getOrNull()
+            }
+        }
+        StickerDetailsDialog(
+            bytes = detailBytes,
+            timestamp = stickerDetails.timestamp,
+            canSave = detailBytes != null,
+            onSave = {
+                val bytes = detailBytes
+                stickerDetailsMsg = null
+                if (bytes != null) {
+                    runCatching { container.stickers.create(owner.id, bytes) }
+                        .onSuccess { notify(strings.stickerSavedToPack, GroupBannerKind.Success) }
+                        .onFailure { notify(strings.stickerCreationFailed, GroupBannerKind.Error) }
+                }
+            },
+            onDismiss = { stickerDetailsMsg = null }
+        )
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -1067,16 +1090,6 @@ fun GroupChatScreen(
                                                         }
                                                     }
                                                 )
-                                            } else if (msg.type == MessageType.PAD_SOUND) {
-                                                PadSoundMessage(
-                                                    label = msg.padLabel,
-                                                    durationMs = msg.padDurationMs,
-                                                    bytes = rememberAttachmentBytes(msg.id) { msg.padSoundBytes() },
-                                                    outgoing = msg.isOwn,
-                                                    senderName = senderName,
-                                                    showSender = !msg.isOwn && !tight,
-                                                    delivered = if (msg.isOwn) delivered else null
-                                                )
                                             } else if (msg.type == MessageType.UNSUPPORTED) {
                                                 UnsupportedMessageBubble(outgoing = msg.isOwn)
                                             } else if (msg.type == MessageType.VOICE) {
@@ -1125,7 +1138,10 @@ fun GroupChatScreen(
                                                     inSelectionMode = inSelectionMode,
                                                     quoted = quoted,
                                                     reactions = reactions,
-                                                    onShortClick = { if (inSelectionMode) toggleSelection(msg.id) },
+                                                    onShortClick = {
+                                                        if (inSelectionMode) toggleSelection(msg.id)
+                                                        else stickerDetailsMsg = msg
+                                                    },
                                                     onLongClick = {
                                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                         toggleSelection(msg.id)
@@ -1250,42 +1266,20 @@ fun GroupChatScreen(
                         }
                     },
                     onPickMedia = { mediaPicker.launch() },
-                    onOpenPaddy = {
-                        keyboardController?.hide()
-                        showEmojiDrawer = false
-                        padOpen = true
-                    },
                     onToggleRecording = { toggleRecording() },
                     onInputFocused = { closePanels() },
                     onOpenEmojiPicker = {
                         keyboardController?.hide()
-                        padOpen = false
                         showEmojiDrawer = true
                     },
                     onCloseEmojiPicker = {
                         showEmojiDrawer = false
-                        padOpen = false
                     },
-                    drawerOpen = showEmojiDrawer || padOpen
+                    drawerOpen = showEmojiDrawer
                 )
 
                                 BottomInsetPanel(visible = anyPanelOpen, state = panelState) {
-                    if (padOpen && group != null) {
-                        PadPanel(
-                            container = container,
-                                                        onDismiss = { padOpen = false },
-                            onSend = { asset, bytes ->
-                                padOpen = false
-                                scope.launch {
-                                    runCatching {
-                                        container.groupChat.sendPadSound(
-                                            owner, groupId, bytes, asset.name, asset.durationMs
-                                        )
-                                    }
-                                }
-                            }
-                        )
-                    } else if (showEmojiDrawer) {
+                    if (showEmojiDrawer) {
                         EmojiStickerPanel(
                             stickers = stickers,
                             packs = stickerPacks,
@@ -2312,46 +2306,4 @@ private fun GroupVideoBubble(
 }
 
 
-@Composable
-private fun PadSoundMessage(
-    label: String,
-    durationMs: Long,
-    bytes: ByteArray?,
-    outgoing: Boolean,
-    senderName: String,
-    showSender: Boolean,
-    delivered: Boolean?
-) {
-    val player = rememberAudioPlayer()
-    var playing by remember(label) { mutableStateOf(false) }
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
-        horizontalAlignment = if (outgoing) Alignment.End else Alignment.Start
-    ) {
-        if (showSender) {
-            Text(
-                senderName,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 6.dp, bottom = 2.dp)
-            )
-        }
-        PadSoundBubble(
-            label = label,
-            durationMs = durationMs,
-            playing = playing && player.isPlaying,
-            delivered = delivered,
-            onToggle = {
-                if (bytes == null) return@PadSoundBubble
-                if (player.isPlaying) {
-                    player.stop()
-                    playing = false
-                } else {
-                    runCatching { player.play(bytes) }
-                    playing = true
-                }
-            }
-        )
-    }
-}
 

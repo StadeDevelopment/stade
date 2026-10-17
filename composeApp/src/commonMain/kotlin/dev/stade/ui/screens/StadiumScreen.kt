@@ -131,8 +131,8 @@ import dev.stade.ui.components.rememberMessageEntrance
 import dev.stade.ui.components.BottomInsetPanel
 import dev.stade.ui.components.rememberPanelHeightState
 import dev.stade.ui.components.EmojiStickerPanel
-import dev.stade.ui.components.PadPanel
 import dev.stade.ui.components.AnimatedImage
+import dev.stade.ui.components.StickerDetailsDialog
 import dev.stade.ui.components.UnsupportedMessageBubble
 import dev.stade.ui.components.onSecondaryClick
 import dev.stade.chat.StarScope
@@ -152,7 +152,6 @@ import dev.stade.ui.components.ChatComposerBar
 import dev.stade.ui.components.FullScreenImageViewer
 import dev.stade.ui.components.ScrollToBottomButton
 import dev.stade.ui.components.StickerMakerDialog
-import dev.stade.ui.components.PadSoundBubble
 import dev.stade.audio.rememberAudioPlayer
 import dev.stade.ui.components.formatChatTime
 import dev.stade.ui.components.formatVoiceDuration
@@ -180,7 +179,6 @@ fun StadiumScreen(
     val scope = rememberCoroutineScope()
     val stadiums by remember(owner.id) { container.stadiums.observeStadiums(owner.id) }.collectAsState(initial = emptyList())
     val stadium = remember(stadiums, stadiumId) { stadiums.find { it.id == stadiumId } }
-    var padOpen by remember { mutableStateOf(false) }
     val rawMessages by remember(stadiumId) { container.stadiums.observeMessages(stadiumId) }.collectAsState(initial = null)
     val messages = rawMessages ?: emptyList()
     val messageEntrance = rememberMessageEntrance(stadiumId)
@@ -268,6 +266,8 @@ fun StadiumScreen(
             banner = null
         }
     }
+    var stickerDetailsMsg by remember { mutableStateOf<StadiumMessage?>(null) }
+
     fun notify(message: String, kind: StadiumBannerKind = StadiumBannerKind.Info) {
         banner = StadiumBannerData(message, kind)
         bannerKey++
@@ -456,15 +456,39 @@ fun StadiumScreen(
         )
     }
 
-    val anyPanelOpen = showEmojiDrawer || padOpen
+    val anyPanelOpen = showEmojiDrawer
 
     fun closePanels() {
         showEmojiDrawer = false
-        padOpen = false
     }
 
     PlatformBackHandler(enabled = anyPanelOpen) { closePanels() }
     PlatformBackHandler(enabled = inSelectionMode) { clearSelection() }
+
+    val stickerDetails = stickerDetailsMsg
+    if (stickerDetails != null) {
+        var detailBytes by remember(stickerDetails.id) { mutableStateOf<ByteArray?>(null) }
+        LaunchedEffect(stickerDetails.id) {
+            detailBytes = withContext(Dispatchers.Default) {
+                runCatching { stickerDetails.stickerBytes() }.getOrNull()
+            }
+        }
+        StickerDetailsDialog(
+            bytes = detailBytes,
+            timestamp = stickerDetails.timestamp,
+            canSave = detailBytes != null,
+            onSave = {
+                val bytes = detailBytes
+                stickerDetailsMsg = null
+                if (bytes != null) {
+                    runCatching { container.stickers.create(owner.id, bytes) }
+                        .onSuccess { notify(strings.stickerSavedToPack, StadiumBannerKind.Success) }
+                        .onFailure { notify(strings.stickerCreationFailed, StadiumBannerKind.Error) }
+                }
+            },
+            onDismiss = { stickerDetailsMsg = null }
+        )
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -724,7 +748,6 @@ fun StadiumScreen(
                                                     }
                                                 }
                                             )
-                                            MessageType.PAD_SOUND -> StadiumPadSoundBubble(msg = msg)
                                             MessageType.UNSUPPORTED -> UnsupportedMessageBubble(outgoing = msg.isOwn)
                                             MessageType.VOICE -> StadiumVoiceBubble(
                                                 msg = msg,
@@ -744,7 +767,10 @@ fun StadiumScreen(
                                                 msg = msg,
                                                 selected = isSelected,
                                                 inSelectionMode = inSelectionMode,
-                                                onShortClick = onShortClick,
+                                                onShortClick = {
+                                                    if (inSelectionMode) toggleSelection(msg.id)
+                                                    else stickerDetailsMsg = msg
+                                                },
                                                 onLongClick = onLongClick
                                             )
                                             else -> StadiumTextBubble(
@@ -811,44 +837,21 @@ fun StadiumScreen(
                                 }
                             },
                             onPickMedia = { mediaPicker.launch() },
-                            onOpenPaddy = {
-                                keyboardController?.hide()
-                                showEmojiDrawer = false
-                                padOpen = true
-                            },
                             onToggleRecording = { toggleRecording() },
                             onInputFocused = { closePanels() },
                             onOpenEmojiPicker = {
                                 keyboardController?.hide()
-                                padOpen = false
                                 showEmojiDrawer = true
                             },
                             onCloseEmojiPicker = {
                                 showEmojiDrawer = false
-                                padOpen = false
                             },
-                            drawerOpen = showEmojiDrawer || padOpen
+                            drawerOpen = showEmojiDrawer
                         )
 
-                                                val padStadium = current
                         val emojiStadium = current
                         BottomInsetPanel(visible = anyPanelOpen, state = panelState) {
-                            if (padOpen && padStadium != null) {
-                                PadPanel(
-                                    container = container,
-                                                                        onDismiss = { padOpen = false },
-                                    onSend = { asset, bytes ->
-                                        padOpen = false
-                                        scope.launch {
-                                            runCatching {
-                                                container.stadiumChat.postPadSound(
-                                                    owner, padStadium, bytes, asset.name, asset.durationMs
-                                                )
-                                            }
-                                        }
-                                    }
-                                )
-                            } else if (showEmojiDrawer && emojiStadium != null) {
+                            if (showEmojiDrawer && emojiStadium != null) {
                                 EmojiStickerPanel(
                                     stickers = stickers,
                                     packs = stickerPacks,
@@ -911,7 +914,7 @@ private fun StadiumTextBubble(
         else MaterialTheme.colorScheme.onSurface
 
     val tint by animateColorAsState(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else Color.Transparent)
-    val currentOnTap by rememberUpdatedState { if (inSelectionMode) onShortClick() }
+    val currentOnTap by rememberUpdatedState { onShortClick() }
     val currentOnLongClick by rememberUpdatedState(onLongClick)
 
     Box(
@@ -1402,30 +1405,4 @@ private fun StadiumTopBanner(
     }
 }
 
-@Composable
-private fun StadiumPadSoundBubble(msg: dev.stade.stadium.StadiumMessage) {
-    val player = rememberAudioPlayer()
-    var playing by remember(msg.id) { mutableStateOf(false) }
-    val bytes = rememberAttachmentBytes(msg.id) { msg.padSoundBytes() }
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
-        horizontalArrangement = if (msg.isOwn) Arrangement.End else Arrangement.Start
-    ) {
-        PadSoundBubble(
-            label = msg.padLabel,
-            durationMs = msg.padDurationMs,
-            playing = playing && player.isPlaying,
-            onToggle = {
-                if (bytes == null) return@PadSoundBubble
-                if (player.isPlaying) {
-                    player.stop()
-                    playing = false
-                } else {
-                    runCatching { player.play(bytes) }
-                    playing = true
-                }
-            }
-        )
-    }
-}
 

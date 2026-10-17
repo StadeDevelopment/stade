@@ -183,7 +183,6 @@ import dev.stade.ui.components.ScrollToBottomButton
 import dev.stade.ui.components.StickerMakerDialog
 import dev.stade.ui.components.TypingBubble
 import dev.stade.ui.components.VanishDurationSheet
-import dev.stade.ui.components.PadSoundBubble
 import dev.stade.ui.components.LinkifiedText
 import dev.stade.ui.components.HIGHLIGHT_FLASH_MS
 import dev.stade.ui.components.centerOnChatMessage
@@ -202,7 +201,6 @@ import dev.stade.ui.components.rememberMessageEntrance
 import dev.stade.ui.components.BottomInsetPanel
 import dev.stade.ui.components.rememberPanelHeightState
 import dev.stade.ui.components.EmojiStickerPanel
-import dev.stade.ui.components.PadPanel
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -211,6 +209,7 @@ import dev.stade.ui.components.onSecondaryClick
 import dev.stade.ui.components.reactionBarOffsetY
 import kotlinx.coroutines.flow.flowOf
 import dev.stade.ui.components.AnimatedImage
+import dev.stade.ui.components.StickerDetailsDialog
 import dev.stade.ui.components.UnsupportedMessageBubble
 import dev.stade.chat.StarScope
 import androidx.compose.material.icons.filled.Star
@@ -259,6 +258,7 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
+    var stickerDetailsMsg by remember { mutableStateOf<Message?>(null) }
     val contact = remember(contactId) { container.contacts.get(contactId) }
     val rawMessages by remember(contactId) { container.messages.observeMessages(contactId) }.collectAsState(initial = null)
     val messages = rawMessages ?: emptyList()
@@ -269,7 +269,6 @@ fun ChatScreen(
     val connected by container.sync.connectedContacts.collectAsState()
     val isOnline by remember(contactId) { derivedStateOf { connected.contains(contactId) } }
     val diagnostics by container.connections.diagnostics.collectAsState()
-    var padOpen by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val linkPreviewsEnabled = remember { getLinkPreviewsEnabled(container.db) }
     var draft by remember(contactId) { mutableStateOf(TextFieldValue("")) }
@@ -855,15 +854,39 @@ fun ChatScreen(
         )
     }
 
-    val anyPanelOpen = showEmojiDrawer || padOpen
+    val anyPanelOpen = showEmojiDrawer
 
     fun closePanels() {
         showEmojiDrawer = false
-        padOpen = false
     }
 
     PlatformBackHandler(enabled = anyPanelOpen) { closePanels() }
     PlatformBackHandler(enabled = inSelectionMode) { clearSelection() }
+
+    val stickerDetails = stickerDetailsMsg
+    if (stickerDetails != null) {
+        var detailBytes by remember(stickerDetails.id) { mutableStateOf<ByteArray?>(null) }
+        LaunchedEffect(stickerDetails.id) {
+            detailBytes = withContext(Dispatchers.Default) {
+                runCatching { stickerDetails.stickerBytes() }.getOrNull()
+            }
+        }
+        StickerDetailsDialog(
+            bytes = detailBytes,
+            timestamp = stickerDetails.timestamp,
+            canSave = detailBytes != null,
+            onSave = {
+                val bytes = detailBytes
+                stickerDetailsMsg = null
+                if (bytes != null) {
+                    runCatching { container.stickers.create(owner.id, bytes) }
+                        .onSuccess { showNotification(strings.stickerSavedToPack, NotificationKind.Success) }
+                        .onFailure { showNotification(strings.stickerCreationFailed, NotificationKind.Error) }
+                }
+            },
+            onDismiss = { stickerDetailsMsg = null }
+        )
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -1205,14 +1228,6 @@ fun ChatScreen(
                                                         }
                                                     }
                                                 )
-                                            } else if (msg.type == MessageType.PAD_SOUND) {
-                                                PadSoundMessage(
-                                                    label = msg.padLabel,
-                                                    durationMs = msg.padDurationMs,
-                                                    bytes = rememberAttachmentBytes(msg.id) { msg.padSoundBytes() },
-                                                    outgoing = msg.direction == MessageDirection.OUT,
-                                                    delivered = if (msg.direction == MessageDirection.OUT) msg.delivered else null
-                                                )
                                             } else if (msg.type == MessageType.UNSUPPORTED) {
                                                 UnsupportedMessageBubble(
                                                     outgoing = msg.direction == MessageDirection.OUT
@@ -1258,7 +1273,10 @@ fun ChatScreen(
                                                     inSelectionMode = inSelectionMode,
                                                     quoted = quoted,
                                                     reactions = reactions,
-                                                    onShortClick = { if (inSelectionMode) toggleSelection(msg.id) },
+                                                    onShortClick = {
+                                                        if (inSelectionMode) toggleSelection(msg.id)
+                                                        else stickerDetailsMsg = msg
+                                                    },
                                                     onLongClick = {
                                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                         toggleSelection(msg.id)
@@ -1441,44 +1459,21 @@ fun ChatScreen(
                         }
                     },
                     onPickMedia = { mediaPicker.launch() },
-                    onOpenPaddy = {
-                        keyboardController?.hide()
-                        showEmojiDrawer = false
-                        padOpen = true
-                    },
                     onToggleRecording = { toggleRecording() },
                     onInputFocused = { closePanels() },
                     onOpenEmojiPicker = {
                         keyboardController?.hide()
-                        padOpen = false
                         showEmojiDrawer = true
                     },
                     onCloseEmojiPicker = {
                         showEmojiDrawer = false
-                        padOpen = false
                     },
-                    drawerOpen = showEmojiDrawer || padOpen
+                    drawerOpen = showEmojiDrawer
                 )
 
-                val padContact = contact
                                 val emojiContact = contact
                 BottomInsetPanel(visible = anyPanelOpen, state = panelState) {
-                    if (padOpen && padContact != null) {
-                        PadPanel(
-                            container = container,
-                                                        onDismiss = { padOpen = false },
-                            onSend = { asset, bytes ->
-                                padOpen = false
-                                scope.launch {
-                                    runCatching {
-                                        container.chat.sendPadSound(
-                                            owner, padContact, bytes, asset.name, asset.durationMs
-                                        )
-                                    }
-                                }
-                            }
-                        )
-                    } else if (showEmojiDrawer && emojiContact != null) {
+                    if (showEmojiDrawer && emojiContact != null) {
                         EmojiStickerPanel(
                             stickers = stickers,
                             packs = stickerPacks,
@@ -2792,36 +2787,4 @@ private fun VideoBubble(
 }
 
 
-@Composable
-private fun PadSoundMessage(
-    label: String,
-    durationMs: Long,
-    bytes: ByteArray?,
-    outgoing: Boolean,
-    delivered: Boolean?
-) {
-    val player = rememberAudioPlayer()
-    var playing by remember(label) { mutableStateOf(false) }
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
-        horizontalArrangement = if (outgoing) Arrangement.End else Arrangement.Start
-    ) {
-        PadSoundBubble(
-            label = label,
-            durationMs = durationMs,
-            playing = playing && player.isPlaying,
-            delivered = delivered,
-            onToggle = {
-                if (bytes == null) return@PadSoundBubble
-                if (player.isPlaying) {
-                    player.stop()
-                    playing = false
-                } else {
-                    runCatching { player.play(bytes) }
-                    playing = true
-                }
-            }
-        )
-    }
-}
 
