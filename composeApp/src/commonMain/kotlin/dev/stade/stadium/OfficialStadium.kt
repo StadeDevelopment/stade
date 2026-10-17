@@ -20,7 +20,29 @@ object OfficialConfig {
 val StadiumInfo.isOfficial: Boolean
     get() = creatorStadeId.isNotEmpty() && creatorStadeId == OfficialConfig.creatorStadeId
 
+private const val OFFICIAL_STADIUM_CHOICE_KEY = "official.stadium.choice"
+
+fun officialStadiumChoiceMade(container: AppContainer): Boolean =
+    runCatching {
+        container.db.stadeDbQueries.getKv(OFFICIAL_STADIUM_CHOICE_KEY).executeAsOneOrNull()
+    }.getOrNull() != null
+
+fun setOfficialStadiumChoice(container: AppContainer, join: Boolean) {
+    runCatching {
+        container.db.stadeDbQueries.putKv(
+            OFFICIAL_STADIUM_CHOICE_KEY,
+            (if (join) "1" else "0").encodeToByteArray()
+        )
+    }
+}
+
+fun officialStadiumOptedIn(container: AppContainer): Boolean =
+    runCatching {
+        container.db.stadeDbQueries.getKv(OFFICIAL_STADIUM_CHOICE_KEY).executeAsOneOrNull()
+    }.getOrNull()?.decodeToString() == "1"
+
 suspend fun joinOfficialStadiumIfNeeded(container: AppContainer, owner: LocalIdentity) {
+    if (!officialStadiumOptedIn(container)) return
     val code = OfficialConfig.STADIUM_INVITE_CODE
     if (code.isBlank()) return
 
