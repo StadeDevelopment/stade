@@ -56,7 +56,7 @@ import dev.stade.ui.components.BrandIcons
 import dev.stade.ui.i18n.LocalStrings
 import kotlinx.coroutines.launch
 
-private const val DISCORD_INVITE_URL = "https://discord.gg/MScqr7KeSP"
+private const val DISCORD_INVITE_URL = "https://discord.gg/stade"
 
 private sealed class StadeyBubble {
     data class Question(val text: String) : StadeyBubble()
