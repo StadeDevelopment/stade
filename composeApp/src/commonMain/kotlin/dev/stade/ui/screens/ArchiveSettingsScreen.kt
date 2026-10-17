@@ -17,6 +17,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.runtime.collectAsState
+import dev.stade.identity.LocalIdentity
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -37,12 +42,16 @@ import dev.stade.ui.i18n.LocalStrings
 @Composable
 fun ArchiveSettingsScreen(
     container: AppContainer,
+    owner: LocalIdentity,
     onBack: () -> Unit
 ) {
     val strings = LocalStrings.current
     var keepArchived by remember {
         mutableStateOf(!container.archivedChats.autoUnarchiveOnMessage())
     }
+    val archivedKeys by remember(owner.id) { container.archivedChats.observeArchived(owner.id) }
+        .collectAsState(initial = remember(owner.id) { container.archivedChats.archived(owner.id) })
+    var showUnarchiveAll by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -61,7 +70,7 @@ fun ArchiveSettingsScreen(
             )
         }
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -90,6 +99,56 @@ fun ArchiveSettingsScreen(
                     }
                 )
             }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = archivedKeys.isNotEmpty()) { showUnarchiveAll = true }
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        strings.unarchiveAllTitle,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (archivedKeys.isEmpty()) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                    Spacer(Modifier.width(2.dp))
+                    Text(
+                        if (archivedKeys.isEmpty()) strings.noArchivedChats else strings.unarchiveAllSubtitle,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
+    }
+
+    if (showUnarchiveAll) {
+        AlertDialog(
+            onDismissRequest = { showUnarchiveAll = false },
+            icon = { Icon(Icons.Default.Unarchive, contentDescription = null) },
+            title = { Text(strings.unarchiveAllConfirmTitle) },
+            text = {
+                Text(
+                    strings.unarchiveAllConfirmBody(archivedKeys.size),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val keys = archivedKeys.toList()
+                    showUnarchiveAll = false
+                    keys.forEach { container.archivedChats.setArchived(owner.id, it, false) }
+                }) { Text(strings.unarchiveChatAction) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnarchiveAll = false }) { Text(strings.cancel) }
+            }
+        )
     }
 }
