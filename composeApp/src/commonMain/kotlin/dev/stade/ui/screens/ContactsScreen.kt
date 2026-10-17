@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Podcasts
 import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -68,9 +69,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.alpha
-import dev.stade.ui.components.StarIntroOverlay
-import dev.stade.ui.components.markStarIntroSeen
-import dev.stade.ui.components.starIntroPending
 import dev.stade.transport.TransportType
 import dev.stade.ui.components.TorBootstrapCard
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -229,9 +227,6 @@ fun ContactsScreen(
             torLastPhase = info.bootstrapPhase
         }
     }
-    var starIntroRunning by remember { mutableStateOf(starIntroPending(container.db)) }
-    LaunchedEffect(Unit) { bar.starPlaced = !starIntroRunning }
-    LaunchedEffect(starIntroRunning) { if (!starIntroRunning) bar.starPlaced = true }
     val autoUnarchive by remember { container.archivedChats.observeAutoUnarchive() }
         .collectAsState(initial = remember { container.archivedChats.autoUnarchiveOnMessage() })
     val unreadContactIds by remember {
@@ -277,6 +272,8 @@ fun ContactsScreen(
 
     var actionItem by remember { mutableStateOf<ChatListItem?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showLeaveConfirm by remember { mutableStateOf(false) }
+    var leaving by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
 
     val stadeyVisible by getStadeyVisible()
@@ -428,10 +425,94 @@ fun ContactsScreen(
                             Text(strings.deleteContact)
                         }
                     }
+
+                    if (item is ChatListItem.GroupItem || item is ChatListItem.StadiumItem) {
+                        OutlinedButton(
+                            onClick = { showLeaveConfirm = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
+                            ),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Logout,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                if (item is ChatListItem.StadiumItem) strings.leaveStadiumAction
+                                else strings.leaveGroupAction
+                            )
+                        }
+                    }
                 }
             },
 
             confirmButton = {}
+        )
+    }
+
+    val leaveTarget = actionItem
+    if (showLeaveConfirm && (leaveTarget is ChatListItem.GroupItem || leaveTarget is ChatListItem.StadiumItem)) {
+        val isStadium = leaveTarget is ChatListItem.StadiumItem
+        AlertDialog(
+            onDismissRequest = {
+                if (!leaving) {
+                    showLeaveConfirm = false
+                    actionItem = null
+                }
+            },
+            icon = {
+                Icon(
+                    Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(if (isStadium) strings.leaveStadiumConfirmTitle else strings.leaveGroupTitle)
+            },
+            text = {
+                Text(
+                    if (isStadium) strings.leaveStadiumConfirmBody else strings.leaveGroupBody,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !leaving,
+                    onClick = {
+                        leaving = true
+                        scope.launch {
+                            withContext(Dispatchers.Default) {
+                                runCatching {
+                                    when (leaveTarget) {
+                                        is ChatListItem.StadiumItem ->
+                                            container.stadiumChat.leave(owner, leaveTarget.stadium)
+                                        is ChatListItem.GroupItem ->
+                                            container.groupChat.leaveGroup(owner, leaveTarget.group)
+                                        else -> Unit
+                                    }
+                                }
+                            }
+                            leaving = false
+                            showLeaveConfirm = false
+                            actionItem = null
+                        }
+                    }
+                ) { Text(strings.leaveAction, color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(enabled = !leaving, onClick = { showLeaveConfirm = false }) {
+                    Text(strings.cancel)
+                }
+            }
         )
     }
 
@@ -721,14 +802,6 @@ fun ContactsScreen(
                             }
                         }
                     } else {
-                        if (!bar.searchActive && archivedKeys.isNotEmpty()) {
-                            item(key = "archived-entry") {
-                                ArchivedEntryRow(
-                                    unreadCount = archivedUnreadCount,
-                                    onClick = onOpenArchived
-                                )
-                            }
-                        }
                         if (stadeyVisible && !(bar.searchActive && bar.query.isNotBlank())) {
                             item(key = "stadey") {
                                 StadeyRow(
@@ -838,16 +911,6 @@ fun ContactsScreen(
             }
         }
 
-    if (starIntroRunning) {
-        StarIntroOverlay(
-            targetCenter = bar.starPillCenter,
-            onStarPlaced = { bar.starPlaced = true },
-            onFinished = {
-                markStarIntroSeen(container.db)
-                starIntroRunning = false
-            }
-        )
-    }
     }
 }
 
@@ -1261,41 +1324,6 @@ private fun StadiumRow(
 }
 
 
-
-@Composable
-private fun ArchivedEntryRow(
-    unreadCount: Int,
-    onClick: () -> Unit
-) {
-    val strings = LocalStrings.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.Archive,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(Modifier.width(18.dp))
-        Text(
-            strings.archivedChatsTitle,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
-        )
-        if (unreadCount > 0) {
-            Text(
-                unreadCount.toString(),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
 
 @Composable
 private fun ArchiveNoticeBanner(autoUnarchive: Boolean, onClick: () -> Unit) {

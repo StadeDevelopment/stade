@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.Spring
@@ -42,8 +41,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,8 +71,6 @@ val LocalHomeTopBarClearance = compositionLocalOf { 0.dp }
 class HomeTopBarState {
     var searchActive by mutableStateOf(false)
     var query by mutableStateOf("")
-    var starPillCenter by mutableStateOf<Offset?>(null)
-    var starPlaced by mutableStateOf(true)
     val searchFocus = FocusRequester()
 
     fun closeSearch() {
@@ -239,7 +236,7 @@ fun HomeTopBarActions(
     state: HomeTopBarState,
     barWidth: Dp,
     showSearch: Boolean,
-    onOpenStarred: () -> Unit,
+    onOpenArchived: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenRadarSettings: () -> Unit
 ) {
@@ -258,21 +255,11 @@ fun HomeTopBarActions(
                     }
                 )
             }
-            Box(
-                modifier = Modifier.onGloballyPositioned { coords ->
-                    val bounds = coords.boundsInRoot()
-                    state.starPillCenter = Offset(bounds.center.x, bounds.center.y)
-                }
-            ) {
-                Box(Modifier.alpha(if (state.starPlaced) 1f else 0f)) {
-                    TopBarPill(
-                        icon = Icons.Default.Star,
-                        contentDescription = strings.starredMessagesTitle,
-                        sparkleOnClick = true,
-                        onClick = onOpenStarred
-                    )
-                }
-            }
+            TopBarPill(
+                icon = Icons.Default.Archive,
+                contentDescription = strings.archivedChatsTitle,
+                onClick = onOpenArchived
+            )
             TopBarPill(
                 icon = Icons.Default.Settings,
                 contentDescription = strings.settingsAction,

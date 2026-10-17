@@ -873,6 +873,7 @@ fun TwoPanelLayout(
                     onOpenSecurity = { right = PanelRight.Security },
                     onOpenAbout = { right = PanelRight.About },
                     onOpenLanguage = { right = PanelRight.Language },
+                    onOpenStarred = { right = PanelRight.Starred },
                     onLogout = onLogout,
                     listState = settingsListState
                 )
@@ -910,6 +911,7 @@ fun TwoPanelLayout(
                 )
                 is PanelRight.ArchiveSettings -> ArchiveSettingsScreen(
                     container = container,
+                    owner = owner,
                     onBack = { right = PanelRight.Empty }
                 )
 

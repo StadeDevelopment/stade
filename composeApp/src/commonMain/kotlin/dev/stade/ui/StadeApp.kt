@@ -27,6 +27,9 @@ import dev.stade.db.DatabaseSchemaException
 import dev.stade.identity.LocalIdentity
 import dev.stade.ui.beginAcceptStadiumInvite
 import dev.stade.stadium.joinOfficialStadiumIfNeeded
+import dev.stade.stadium.officialStadiumChoiceMade
+import dev.stade.stadium.setOfficialStadiumChoice
+import dev.stade.stadium.isOfficial
 import dev.stade.ui.screens.AboutScreen
 import dev.stade.ui.screens.AddContactScreen
 import dev.stade.ui.screens.ChatScreen
@@ -369,6 +372,7 @@ private fun UnlockedApp(
     var identity by remember { mutableStateOf<LocalIdentity?>(null) }
     var screen by remember { mutableStateOf<Screen>(Screen.Onboarding) }
     var barIntroPlayed by remember { mutableStateOf(false) }
+    var officialStadiumPrompt by remember { mutableStateOf(false) }
     var measuredBarHeight by remember { mutableStateOf(HOME_BAR_HEIGHT) }
     val settingsListState = rememberLazyListState()
 
@@ -430,6 +434,33 @@ private fun UnlockedApp(
         }
     }
 
+    val promptOwner = identity
+    val promptStrings = LocalStrings.current
+    if (officialStadiumPrompt && promptOwner != null) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(promptStrings.officialStadiumPromptTitle) },
+            text = {
+                Text(promptStrings.officialStadiumPromptBody, style = MaterialTheme.typography.bodyMedium)
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    officialStadiumPrompt = false
+                    setOfficialStadiumChoice(container, true)
+                    scope.launch {
+                        runCatching { joinOfficialStadiumIfNeeded(container, promptOwner) }
+                    }
+                }) { Text(promptStrings.officialStadiumJoinAction) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    officialStadiumPrompt = false
+                    setOfficialStadiumChoice(container, false)
+                }) { Text(promptStrings.officialStadiumSkipAction) }
+            }
+        )
+    }
+
     LaunchedEffect(identity?.id) {
         val current = identity
         if (current != null) {
@@ -440,7 +471,15 @@ private fun UnlockedApp(
             container.avatars.start(current, this)
             container.typing.start(container.sync, this)
             container.scheduler.start(current, container.appScope)
-            launch { runCatching { joinOfficialStadiumIfNeeded(container, current) } }
+            if (officialStadiumChoiceMade(container)) {
+                launch { runCatching { joinOfficialStadiumIfNeeded(container, current) } }
+            } else {
+                val alreadyFollowing = runCatching {
+                    container.stadiums.allStadiums(current.id).any { it.isOfficial }
+                }.getOrDefault(false)
+                if (alreadyFollowing) setOfficialStadiumChoice(container, true)
+                else officialStadiumPrompt = true
+            }
         } else {
             container.scheduler.stop()
             container.connections.stop()
@@ -466,11 +505,10 @@ private fun UnlockedApp(
                     val sender = contact?.nickname ?: "Stade"
                     val preview = runCatching { container.messages.lastMessage(event.contactId)?.body }
                         .getOrNull()
-                        ?.let { when (dev.stade.message.padPreviewKind(it)) {
-                            dev.stade.message.MessageType.PAD_SOUND -> notifStrings.padSentSound(null, false)
-                            dev.stade.message.MessageType.UNSUPPORTED -> notifStrings.unsupportedMessage
-                            else -> dev.stade.message.previewBody(it, notifStrings.photoMessage, notifStrings.voiceMessage, notifStrings.videoMessage, notifStrings.stickerMessage)
-                        } }
+                        ?.let {
+                            if (dev.stade.message.isRetiredBody(it)) notifStrings.unsupportedMessage
+                            else dev.stade.message.previewBody(it, notifStrings.photoMessage, notifStrings.voiceMessage, notifStrings.videoMessage, notifStrings.stickerMessage)
+                        }
                         ?: notifStrings.notifNewMessageFallback
                     val total = runCatching { container.messages.totalUnread() }.getOrDefault(0L).toInt()
                     val privacy = dev.stade.notification.getNotificationPrivacyEnabled().value
@@ -501,11 +539,10 @@ private fun UnlockedApp(
                     val group = container.groups.getGroup(event.groupId)
                     val name = group?.name ?: "Stade"
                     val preview = container.groups.lastMessage(event.groupId)?.body
-                        ?.let { when (dev.stade.message.padPreviewKind(it)) {
-                            dev.stade.message.MessageType.PAD_SOUND -> notifStrings.padSentSound(null, false)
-                            dev.stade.message.MessageType.UNSUPPORTED -> notifStrings.unsupportedMessage
-                            else -> dev.stade.message.previewBody(it, notifStrings.photoMessage, notifStrings.voiceMessage, notifStrings.videoMessage, notifStrings.stickerMessage)
-                        } }
+                        ?.let {
+                            if (dev.stade.message.isRetiredBody(it)) notifStrings.unsupportedMessage
+                            else dev.stade.message.previewBody(it, notifStrings.photoMessage, notifStrings.voiceMessage, notifStrings.videoMessage, notifStrings.stickerMessage)
+                        }
                         ?: notifStrings.notifNewMessageFallback
                     val privacy = dev.stade.notification.getNotificationPrivacyEnabled().value
                     dev.stade.notification.showIncomingMessageNotification(
@@ -524,11 +561,10 @@ private fun UnlockedApp(
                     val notifStrings = dev.stade.ui.i18n.I18n.current
                     val preview = runCatching { container.stadiums.lastMessage(event.stadiumId)?.body }
                         .getOrNull()
-                        ?.let { when (dev.stade.message.padPreviewKind(it)) {
-                            dev.stade.message.MessageType.PAD_SOUND -> notifStrings.padSentSound(null, false)
-                            dev.stade.message.MessageType.UNSUPPORTED -> notifStrings.unsupportedMessage
-                            else -> dev.stade.message.previewBody(it, notifStrings.photoMessage, notifStrings.voiceMessage, notifStrings.videoMessage, notifStrings.stickerMessage)
-                        } }
+                        ?.let {
+                            if (dev.stade.message.isRetiredBody(it)) notifStrings.unsupportedMessage
+                            else dev.stade.message.previewBody(it, notifStrings.photoMessage, notifStrings.voiceMessage, notifStrings.videoMessage, notifStrings.stickerMessage)
+                        }
                         ?: notifStrings.notifNewMessageFallback
                     val privacy = dev.stade.notification.getNotificationPrivacyEnabled().value
                     dev.stade.notification.showIncomingMessageNotification(
@@ -695,6 +731,7 @@ private fun UnlockedApp(
                         onOpenSecurity = { screen = Screen.Security },
                         onOpenAbout = { screen = Screen.About },
                         onOpenLanguage = { screen = Screen.Language },
+                        onOpenStarred = { screen = Screen.Starred },
                         onLogout = {
                             scope.launch {
                                 container.connections.stop()
@@ -728,6 +765,7 @@ private fun UnlockedApp(
                     )
                     target == Screen.ArchiveSettings -> ArchiveSettingsScreen(
                         container = container,
+                        owner = identity!!,
                         onBack = { screen = Screen.Archived }
                     )
                     target == Screen.Starred -> StarredMessagesScreen(
@@ -910,7 +948,7 @@ private fun UnlockedApp(
                             state = homeBar,
                             barWidth = barWidth,
                             showSearch = homeContactsPresent,
-                            onOpenStarred = { screen = Screen.Starred },
+                            onOpenArchived = { screen = Screen.Archived },
                             onOpenSettings = { screen = Screen.Settings },
                             onOpenRadarSettings = { radarSettingsTicket++ }
                         )

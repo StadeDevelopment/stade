@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -127,6 +128,7 @@ fun SettingsScreen(
     onOpenSecurity: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLanguage: () -> Unit = {},
+    onOpenStarred: () -> Unit = {},
     onLogout: () -> Unit,
     listState: LazyListState = rememberLazyListState()
 ) {
@@ -522,6 +524,21 @@ fun SettingsScreen(
                             title = strings.aboutTitle,
                             subtitle = strings.aboutSubtitle,
                             onClick = onOpenAbout
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingsSectionLabel(strings.starredMessagesTitle)
+                SettingsGroup {
+                    row {
+                        NavigationSettingsRow(
+                            icon = Icons.Default.Star,
+                            iconTint = MaterialTheme.colorScheme.primary,
+                            title = strings.starredMessagesTitle,
+                            subtitle = strings.starredMessagesSubtitle,
+                            onClick = onOpenStarred
                         )
                     }
                 }
