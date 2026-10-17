@@ -110,6 +110,10 @@ object TurkishStrings : AppStrings() {
     override val torStatusFailed = "Tor bağlanamadı"
     override val archiveNoticeBanner = "Yeni mesaj geldiğinde bu sohbetler arşivde kalır. Değiştirmek için dokun."
     override val archiveNoticeUnarchiveBanner = "Yeni mesaj geldiğinde bu sohbetler sohbet listesine geri döner. Değiştirmek için dokun."
+    override val unarchiveAllTitle = "Tümünü arşivden çıkar"
+    override val unarchiveAllSubtitle = "Arşivdeki tüm sohbetleri listeye geri taşı"
+    override val unarchiveAllConfirmTitle = "Tümü arşivden çıkarılsın mı?"
+    override fun unarchiveAllConfirmBody(count: Int) = "${count} sohbet sohbet listene geri taşınacak."
     override val keepChatsArchivedTitle = "Sohbetleri arşivde tut"
     override val keepChatsArchivedSubtitle = "Yeni mesaj geldiğinde arşivlenmiş sohbetler arşivde kalır."
     override val noArchivedChats = "Arşivlenmiş sohbet yok."
@@ -230,6 +234,13 @@ object TurkishStrings : AppStrings() {
     override val notifBootReminderText = "Stade'de aktif kalmak için giriş yap"
 
     override val addContactTitle = "Kişi ekle"
+    override val officialStadiumPromptTitle = "Stade Official takip edilsin mi?"
+    override val officialStadiumPromptBody = "Stade Official, sürüm notları ve güvenlik duyuruları için salt okunur bir kanaldır. Katılmak seni diğer eşler gibi Tor üzerinden ona bağlar. İstediğin zaman ayrılabilirsin; atlamak başka hiçbir şeyi değiştirmez."
+    override val officialStadiumJoinAction = "Takip et"
+    override val officialStadiumSkipAction = "Şimdi değil"
+    override val addContactTipAction = "İpucu"
+    override val addContactTipTitle = "Karşı taraf yakınında mı?"
+    override val addContactTipBody = "İkiniz de aynı yerdeyseniz Radar, davet kodu alışverişinden daha hızlıdır. Çevrendeki Stade kullanıcılarını Bluetooth ile bulur ve hiçbiriniz bir şey kopyalamadan birkaç dokunuşla ekler."
     override val step1Title = "Kendi davetini paylaş"
     override val step1Description =
         "Bağlantı kurmak için aşağıdaki butona basıp davet kodunu paylaş. "
@@ -776,23 +787,6 @@ object TurkishStrings : AppStrings() {
     override val padAttachMedia = "Medya"
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "Ses efektleri"
-    override val padUnavailable = "Kitaplığa ulaşılamadı. Bağlantını kontrol edip tekrar dene."
-    override val padSoundUnsupported = "Bu ses, Stade’nin okuyamadığı bir biçimde. WAV dosyası olmalı."
-    override val padDownloadFailed = "Bu öğe indirilemedi. Çok büyük olabilir veya bağlantı zaman aşımına uğradı."
-    override val padRefresh = "Yenile"
-    override val padEmpty = "Burada henüz bir şey yok."
-    override val padRetry = "Tekrar dene"
-    override val padDownloading = "İndiriliyor…"
-    override val padSendFailed = "Bu gönderilemedi."
-    override val padSoundTag = "PADDY"
-    override val padTapToPlay = "Oynatmak için dokun"
-    override val padTorNotReady =
-        "Tor henüz başlatılıyor. Paddy Tor üzerinden yüklenir, biraz bekle."
-    override fun padSentSound(sender: String?, isSelf: Boolean) = when {
-        isSelf -> "Ses efekti gönderdin"
-        !sender.isNullOrBlank() -> "$sender ses efekti gönderdi"
-        else -> "Ses efekti gönderdi"
-    }
     override val unsupportedMessage = "Bu mesaj türü artık desteklenmiyor"
 }
 

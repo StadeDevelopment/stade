@@ -361,15 +361,12 @@ class StadeService : Service() {
 
 private fun padAwarePreview(body: String): String {
     val strings = dev.stade.ui.i18n.I18n.current
-    return when (dev.stade.message.padPreviewKind(body)) {
-        dev.stade.message.MessageType.PAD_SOUND -> strings.padSentSound(null, false)
-        dev.stade.message.MessageType.UNSUPPORTED -> strings.unsupportedMessage
-        else -> dev.stade.message.previewBody(
-            body,
-            strings.photoMessage,
-            strings.voiceMessage,
-            strings.videoMessage,
-            strings.stickerMessage
-        )
-    }
+    if (dev.stade.message.isRetiredBody(body)) return strings.unsupportedMessage
+    return dev.stade.message.previewBody(
+        body,
+        strings.photoMessage,
+        strings.voiceMessage,
+        strings.videoMessage,
+        strings.stickerMessage
+    )
 }

@@ -5,7 +5,7 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 enum class MessageDirection { IN, OUT }
-enum class MessageType { TEXT, IMAGE, VOICE, VIDEO, STICKER, PAD_SOUND, UNSUPPORTED }
+enum class MessageType { TEXT, IMAGE, VOICE, VIDEO, STICKER, UNSUPPORTED }
 const val IMAGE_BODY_PREFIX = "STADE_IMG_V1:"
 const val VOICE_BODY_PREFIX = "STADE_VOI_V1:"
 const val VIDEO_BODY_PREFIX = "STADE_VID_V1:"
@@ -20,7 +20,7 @@ const val TYPING_BODY_PREFIX = "STADE_TYP_V1:"
 const val PAD_SOUND_BODY_PREFIX = "STADE_PAD_V1:"
 const val MAX_PAD_NAME_LEN = 48
 
-val RETIRED_BODY_PREFIXES = listOf("STADE_MEM_V1:")
+val RETIRED_BODY_PREFIXES = listOf("STADE_MEM_V1:", PAD_SOUND_BODY_PREFIX)
 
 fun isRetiredBody(body: String): Boolean = RETIRED_BODY_PREFIXES.any { body.startsWith(it) }
 
@@ -61,7 +61,6 @@ data class Message(
             effectiveBody.startsWith(VOICE_BODY_PREFIX) -> MessageType.VOICE
             effectiveBody.startsWith(VIDEO_BODY_PREFIX) -> MessageType.VIDEO
             effectiveBody.startsWith(STICKER_BODY_PREFIX) -> MessageType.STICKER
-            effectiveBody.startsWith(PAD_SOUND_BODY_PREFIX) -> MessageType.PAD_SOUND
             isRetiredBody(effectiveBody) -> MessageType.UNSUPPORTED
             else -> MessageType.TEXT
         }
@@ -110,20 +109,6 @@ data class Message(
             }.getOrNull()
         else null
 
-    fun padSoundBytes(): ByteArray? =
-        if (type == MessageType.PAD_SOUND) parsePadBytes(effectiveBody, PAD_SOUND_BODY_PREFIX) else null
-
-    val padLabel: String
-        get() = when (type) {
-            MessageType.PAD_SOUND -> parsePadName(effectiveBody, PAD_SOUND_BODY_PREFIX)
-            else -> ""
-        }
-
-    val padDurationMs: Long
-        get() = when (type) {
-            MessageType.PAD_SOUND -> parsePadDurationMs(effectiveBody, PAD_SOUND_BODY_PREFIX)
-            else -> 0L
-        }
 }
 
 @OptIn(ExperimentalEncodingApi::class)
@@ -249,43 +234,4 @@ fun parseVanishTag(body: String): VanishTagWrapper? {
     val sessionId = header.substring(0, pipeIdx)
     val deadlineAtMs = header.substring(pipeIdx + 1).toLongOrNull() ?: return null
     return VanishTagWrapper(sessionId, deadlineAtMs, inner)
-}
-
-@OptIn(ExperimentalEncodingApi::class)
-fun encodePadBody(prefix: String, bytes: ByteArray, name: String, durationMs: Long): String {
-    val safeName = name.asSequence()
-        .filter { it != '\n' && it != '\r' }
-        .take(MAX_PAD_NAME_LEN)
-        .joinToString("")
-    return prefix + durationMs.coerceAtLeast(0) + ":" + Base64.Default.encode(bytes) + "\n" + safeName
-}
-
-private fun padSection(body: String, prefix: String): Pair<String, String>? {
-    if (!body.startsWith(prefix)) return null
-    val rest = body.substring(prefix.length)
-    val colon = rest.indexOf(':')
-    if (colon < 0) return null
-    val payload = rest.substring(colon + 1)
-    val newline = payload.indexOf('\n')
-    val encoded = if (newline >= 0) payload.substring(0, newline) else payload
-    val name = if (newline >= 0) payload.substring(newline + 1) else ""
-    return rest.substring(0, colon) to (encoded + "\u0000" + name)
-}
-
-@OptIn(ExperimentalEncodingApi::class)
-fun parsePadBytes(body: String, prefix: String): ByteArray? {
-    val section = padSection(body, prefix) ?: return null
-    val encoded = section.second.substringBefore('\u0000')
-    if (encoded.isEmpty()) return null
-    return runCatching { Base64.Default.decode(encoded) }.getOrNull()
-}
-
-fun parsePadName(body: String, prefix: String): String {
-    val section = padSection(body, prefix) ?: return ""
-    return section.second.substringAfter('\u0000', "")
-}
-
-fun parsePadDurationMs(body: String, prefix: String): Long {
-    val section = padSection(body, prefix) ?: return 0L
-    return section.first.toLongOrNull() ?: 0L
 }

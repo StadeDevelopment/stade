@@ -106,6 +106,10 @@ abstract class AppStrings {
     abstract val torStatusFailed: String
     abstract val archiveNoticeBanner: String
     abstract val archiveNoticeUnarchiveBanner: String
+    abstract val unarchiveAllTitle: String
+    abstract val unarchiveAllSubtitle: String
+    abstract val unarchiveAllConfirmTitle: String
+    abstract fun unarchiveAllConfirmBody(count: Int): String
     abstract val keepChatsArchivedTitle: String
     abstract val keepChatsArchivedSubtitle: String
     abstract val noArchivedChats: String
@@ -217,6 +221,13 @@ abstract class AppStrings {
     abstract val notifBootReminderText: String
 
     abstract val addContactTitle: String
+    abstract val officialStadiumPromptTitle: String
+    abstract val officialStadiumPromptBody: String
+    abstract val officialStadiumJoinAction: String
+    abstract val officialStadiumSkipAction: String
+    abstract val addContactTipAction: String
+    abstract val addContactTipTitle: String
+    abstract val addContactTipBody: String
     abstract val step1Title: String
     abstract val step1Description: String
     abstract fun copyInviteCode(length: Int): String
@@ -700,18 +711,6 @@ abstract class AppStrings {
     abstract val padAttachMedia: String
     abstract val padPaddyTitle: String
     abstract val padPaddySubtitle: String
-    abstract val padUnavailable: String
-    abstract val padSoundUnsupported: String
-    abstract val padDownloadFailed: String
-    abstract val padRefresh: String
-    abstract val padEmpty: String
-    abstract val padRetry: String
-    abstract val padDownloading: String
-    abstract val padSendFailed: String
-    abstract val padSoundTag: String
-    abstract val padTapToPlay: String
-    abstract val padTorNotReady: String
-    abstract fun padSentSound(sender: String?, isSelf: Boolean): String
     abstract val unsupportedMessage: String
 }
 

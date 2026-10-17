@@ -5,9 +5,6 @@ import dev.stade.message.decodeInboundAttachment
 import dev.stade.message.MessageType
 import dev.stade.message.isRetiredBody
 import dev.stade.message.PAD_SOUND_BODY_PREFIX
-import dev.stade.message.parsePadBytes
-import dev.stade.message.parsePadDurationMs
-import dev.stade.message.parsePadName
 import dev.stade.message.STICKER_BODY_PREFIX
 import dev.stade.message.VIDEO_BODY_PREFIX
 import dev.stade.message.VOICE_BODY_PREFIX
@@ -42,7 +39,6 @@ data class StadiumMessage(
             body.startsWith(VOICE_BODY_PREFIX) -> MessageType.VOICE
             body.startsWith(VIDEO_BODY_PREFIX) -> MessageType.VIDEO
             body.startsWith(STICKER_BODY_PREFIX) -> MessageType.STICKER
-            body.startsWith(PAD_SOUND_BODY_PREFIX) -> MessageType.PAD_SOUND
             isRetiredBody(body) -> MessageType.UNSUPPORTED
             else -> MessageType.TEXT
         }
@@ -91,20 +87,6 @@ data class StadiumMessage(
             }.getOrNull()
         else null
 
-    fun padSoundBytes(): ByteArray? =
-        if (type == MessageType.PAD_SOUND) parsePadBytes(body, PAD_SOUND_BODY_PREFIX) else null
-
-    val padLabel: String
-        get() = when (type) {
-            MessageType.PAD_SOUND -> parsePadName(body, PAD_SOUND_BODY_PREFIX)
-            else -> ""
-        }
-
-    val padDurationMs: Long
-        get() = when (type) {
-            MessageType.PAD_SOUND -> parsePadDurationMs(body, PAD_SOUND_BODY_PREFIX)
-            else -> 0L
-        }
 }
 
 data class StadiumInviteData(

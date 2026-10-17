@@ -109,6 +109,10 @@ object PersianStrings : AppStrings() {
     override val torStatusFailed = "Tor نتوانست متصل شود"
     override val archiveNoticeBanner = "این گفت‌وگوها با دریافت پیام جدید در بایگانی می‌مانند. برای تغییر ضربه بزنید."
     override val archiveNoticeUnarchiveBanner = "این گفت‌وگوها با دریافت پیام جدید به صندوق ورودی بازمی‌گردند. برای تغییر ضربه بزنید."
+    override val unarchiveAllTitle = "خارج کردن همه از بایگانی"
+    override val unarchiveAllSubtitle = "همه گفت‌وگوهای بایگانی‌شده را به فهرست برگردان"
+    override val unarchiveAllConfirmTitle = "همه از بایگانی خارج شوند؟"
+    override fun unarchiveAllConfirmBody(count: Int) = "${count} گفت‌وگو به فهرست شما برمی‌گردد."
     override val keepChatsArchivedTitle = "نگه داشتن گفت‌وگوها در بایگانی"
     override val keepChatsArchivedSubtitle = "گفت‌وگوهای بایگانی‌شده با رسیدن پیام جدید در بایگانی می‌مانند."
     override val noArchivedChats = "گفت‌وگوی بایگانی‌شده‌ای نیست."
@@ -227,6 +231,13 @@ object PersianStrings : AppStrings() {
     override val notifBootReminderText = "وارد شوید تا در Stade فعال بمانید"
 
     override val addContactTitle = "افزودن مخاطب"
+    override val officialStadiumPromptTitle = "Stade Official دنبال شود؟"
+    override val officialStadiumPromptBody = "Stade Official کانالی فقط-خواندنی برای یادداشت‌های انتشار و هشدارهای امنیتی است. پیوستن شما را مانند هر همتای دیگری از طریق Tor به آن متصل می‌کند. هر زمان می‌توانید ترک کنید و رد کردن چیز دیگری را تغییر نمی‌دهد."
+    override val officialStadiumJoinAction = "دنبال کردن"
+    override val officialStadiumSkipAction = "حالا نه"
+    override val addContactTipAction = "نکته"
+    override val addContactTipTitle = "طرف مقابل نزدیک شماست؟"
+    override val addContactTipBody = "اگر هر دو در یک مکان هستید، Radar از رد و بدل کردن کد دعوت سریع‌تر است. کاربران Stade اطراف شما را با بلوتوث پیدا می‌کند و بدون اینکه کسی چیزی کپی کند، با چند ضربه آن‌ها را اضافه می‌کند."
     override val step1Title = "دعوت خود را به اشتراک بگذارید"
     override val step1Description =
         "دکمهٔ زیر را بزنید و کد دعوت را برای برقراری اتصال به اشتراک بگذارید. "
@@ -759,23 +770,6 @@ object PersianStrings : AppStrings() {
     override val padAttachMedia = "رسانه"
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "جلوه‌های صوتی"
-    override val padUnavailable = "کتابخانه در دسترس نبود. اتصال خود را بررسی کنید و دوباره تلاش کنید."
-    override val padSoundUnsupported = "قالب آن صدا برای Stade خوانا نیست. باید یک فایل WAV باشد."
-    override val padDownloadFailed = "آن مورد دانلود نشد. ممکن است خیلی بزرگ باشد یا زمان اتصال تمام شده باشد."
-    override val padRefresh = "تازه‌سازی"
-    override val padEmpty = "هنوز چیزی اینجا نیست."
-    override val padRetry = "دوباره تلاش کنید"
-    override val padDownloading = "در حال دانلود…"
-    override val padSendFailed = "آن یکی فرستاده نشد."
-    override val padSoundTag = "PADDY"
-    override val padTapToPlay = "برای پخش ضربه بزنید"
-    override val padTorNotReady =
-        "Tor هنوز در حال راه‌اندازی است. Paddy از روی Tor بارگذاری می‌شود، پس کمی صبر کنید."
-    override fun padSentSound(sender: String?, isSelf: Boolean) = when {
-        isSelf -> "شما یک جلوهٔ صوتی فرستادید"
-        !sender.isNullOrBlank() -> "$sender یک جلوهٔ صوتی فرستاد"
-        else -> "یک جلوهٔ صوتی فرستاد"
-    }
     override val unsupportedMessage = "این نوع پیام دیگر پشتیبانی نمی‌شود"
 }
 

@@ -109,6 +109,10 @@ object KoreanStrings : AppStrings() {
     override val torStatusFailed = "Tor에 연결하지 못했습니다"
     override val archiveNoticeBanner = "새 메시지가 와도 이 채팅은 보관함에 남아 있습니다. 변경하려면 누르세요."
     override val archiveNoticeUnarchiveBanner = "새 메시지가 오면 이 채팅은 채팅 목록으로 돌아옵니다. 변경하려면 누르세요."
+    override val unarchiveAllTitle = "전체 보관 해제"
+    override val unarchiveAllSubtitle = "보관된 모든 채팅을 목록으로 되돌립니다"
+    override val unarchiveAllConfirmTitle = "전체 보관을 해제할까요?"
+    override fun unarchiveAllConfirmBody(count: Int) = "채팅 ${count}개가 채팅 목록으로 돌아갑니다."
     override val keepChatsArchivedTitle = "채팅을 보관함에 유지"
     override val keepChatsArchivedSubtitle = "새 메시지가 와도 보관한 채팅이 보관함에 남아 있습니다."
     override val noArchivedChats = "보관한 채팅이 없습니다."
@@ -227,6 +231,13 @@ object KoreanStrings : AppStrings() {
     override val notifBootReminderText = "Stade에서 계속 활동하려면 로그인하세요"
 
     override val addContactTitle = "연락처 추가"
+    override val officialStadiumPromptTitle = "Stade Official을 구독할까요?"
+    override val officialStadiumPromptBody = "Stade Official은 릴리스 노트와 보안 공지를 위한 읽기 전용 채널입니다. 참여하면 다른 피어와 마찬가지로 Tor를 통해 연결됩니다. 언제든지 나갈 수 있으며, 건너뛰어도 다른 것은 바뀌지 않습니다."
+    override val officialStadiumJoinAction = "구독"
+    override val officialStadiumSkipAction = "나중에"
+    override val addContactTipAction = "도움말"
+    override val addContactTipTitle = "상대방이 가까이 있나요?"
+    override val addContactTipBody = "두 사람이 같은 장소에 있다면 초대 코드를 주고받는 것보다 Radar가 더 빠릅니다. 블루투스로 주변의 Stade 사용자를 찾아, 아무것도 복사하지 않고 몇 번의 탭으로 추가합니다."
     override val step1Title = "내 초대 코드 공유하기"
     override val step1Description =
         "아래 버튼을 누르고 초대 코드를 공유해 연결을 시작하세요. "
@@ -759,23 +770,6 @@ object KoreanStrings : AppStrings() {
     override val padAttachMedia = "미디어"
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "효과음"
-    override val padUnavailable = "라이브러리에 연결하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도하세요."
-    override val padSoundUnsupported = "Stade가 읽을 수 없는 형식의 사운드입니다. WAV 파일이어야 합니다."
-    override val padDownloadFailed = "해당 항목을 내려받지 못했습니다. 파일이 너무 크거나 연결 시간이 초과되었을 수 있습니다."
-    override val padRefresh = "새로 고침"
-    override val padEmpty = "아직 아무것도 없습니다."
-    override val padRetry = "다시 시도"
-    override val padDownloading = "내려받는 중…"
-    override val padSendFailed = "이 항목을 보내지 못했습니다."
-    override val padSoundTag = "PADDY"
-    override val padTapToPlay = "눌러서 재생"
-    override val padTorNotReady =
-        "Tor가 아직 시작 중입니다. Paddy는 Tor를 통해 불러오니 잠시만 기다려 주세요."
-    override fun padSentSound(sender: String?, isSelf: Boolean) = when {
-        isSelf -> "효과음을 보냈습니다"
-        !sender.isNullOrBlank() -> "$sender 님이 효과음을 보냈습니다"
-        else -> "효과음을 보냈습니다"
-    }
     override val unsupportedMessage = "더 이상 지원하지 않는 메시지 형식입니다"
 }
 

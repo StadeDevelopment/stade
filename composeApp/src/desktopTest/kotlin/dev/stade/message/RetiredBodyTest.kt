@@ -39,7 +39,6 @@ class RetiredBodyTest {
     @Test
     fun ordinaryBodiesAreNotRetired() {
         assertFalse(isRetiredBody("hello there"))
-        assertFalse(isRetiredBody(PAD_SOUND_BODY_PREFIX + "whistle|900|QQ=="))
         assertTrue(isRetiredBody(RETIRED_MEME_BODY))
     }
 
@@ -52,11 +51,13 @@ class RetiredBodyTest {
     }
 
     @Test
-    fun padPreviewKindIgnoresRetiredBodies() {
-        assertEquals(null, padPreviewKind(RETIRED_MEME_BODY))
+    fun retiredPadSoundsAreTreatedAsUnsupported() {
+        val padBody = PAD_SOUND_BODY_PREFIX + "whistle|900|QQ=="
+        assertTrue(isRetiredBody(padBody))
+        assertEquals(MessageType.UNSUPPORTED, message(padBody).type)
         assertEquals(
-            MessageType.PAD_SOUND,
-            padPreviewKind(PAD_SOUND_BODY_PREFIX + "whistle|900|QQ==")
+            "not supported",
+            previewBody(padBody, "photo", unsupportedLabel = "not supported")
         )
     }
 }

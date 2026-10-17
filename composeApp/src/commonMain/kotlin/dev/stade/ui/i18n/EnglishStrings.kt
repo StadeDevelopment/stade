@@ -110,6 +110,12 @@ object EnglishStrings : AppStrings() {
     override val torStatusFailed = "Tor could not connect"
     override val archiveNoticeBanner = "These chats stay archived when new messages are received. Tap to change."
     override val archiveNoticeUnarchiveBanner = "These chats move back to your inbox when new messages are received. Tap to change."
+    override val unarchiveAllTitle = "Unarchive everything"
+    override val unarchiveAllSubtitle = "Move every archived chat back to the list"
+    override val unarchiveAllConfirmTitle = "Unarchive everything?"
+    override fun unarchiveAllConfirmBody(count: Int) =
+        if (count == 1) "1 chat will move back to your chat list."
+        else "${count} chats will move back to your chat list."
     override val keepChatsArchivedTitle = "Keep chats archived"
     override val keepChatsArchivedSubtitle = "Archived chats stay archived when a new message arrives."
     override val noArchivedChats = "No archived chats."
@@ -230,6 +236,13 @@ object EnglishStrings : AppStrings() {
     override val notifBootReminderText = "Log in to stay active on Stade"
 
     override val addContactTitle = "Add contact"
+    override val officialStadiumPromptTitle = "Follow Stade Official?"
+    override val officialStadiumPromptBody = "Stade Official is a read-only channel for release notes and security advisories. Joining connects you to it over Tor like any other peer. You can leave at any time, and skipping changes nothing else."
+    override val officialStadiumJoinAction = "Follow"
+    override val officialStadiumSkipAction = "Not now"
+    override val addContactTipAction = "Tip"
+    override val addContactTipTitle = "Is the other person nearby?"
+    override val addContactTipBody = "If you are both in the same place, Radar is quicker than swapping invite codes. It finds other Stade users around you over Bluetooth and adds them in a couple of taps, without either of you copying anything."
     override val step1Title = "Share your own invite"
     override val step1Description =
         "Press the button below and share the invite code to establish a connection. "
@@ -777,23 +790,6 @@ object EnglishStrings : AppStrings() {
     override val padAttachMedia = "Media"
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "Sound effects"
-    override val padUnavailable = "Could not reach the library. Check your connection and try again."
-    override val padSoundUnsupported = "That sound is in a format Stade cannot read. It must be a WAV file."
-    override val padDownloadFailed = "Could not download that item. It may be too large, or the connection timed out."
-    override val padRefresh = "Refresh"
-    override val padEmpty = "Nothing here yet."
-    override val padRetry = "Try again"
-    override val padDownloading = "Downloading…"
-    override val padSendFailed = "That one could not be sent."
-    override val padSoundTag = "PADDY"
-    override val padTapToPlay = "Tap to play"
-    override val padTorNotReady =
-        "Tor is still starting up. Paddy loads over Tor, so give it a moment."
-    override fun padSentSound(sender: String?, isSelf: Boolean) = when {
-        isSelf -> "You sent a sound effect"
-        !sender.isNullOrBlank() -> "$sender sent a sound effect"
-        else -> "Sent a sound effect"
-    }
     override val unsupportedMessage = "This message type is no longer supported"
 }
 

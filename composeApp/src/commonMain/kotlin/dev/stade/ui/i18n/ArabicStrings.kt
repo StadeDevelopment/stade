@@ -109,6 +109,10 @@ object ArabicStrings : AppStrings() {
     override val torStatusFailed = "تعذّر اتصال Tor"
     override val archiveNoticeBanner = "تبقى هذه المحادثات مؤرشفة عند وصول رسائل جديدة. اضغط للتغيير."
     override val archiveNoticeUnarchiveBanner = "تعود هذه المحادثات إلى صندوق الوارد عند وصول رسائل جديدة. اضغط للتغيير."
+    override val unarchiveAllTitle = "إلغاء أرشفة الكل"
+    override val unarchiveAllSubtitle = "إعادة كل المحادثات المؤرشفة إلى القائمة"
+    override val unarchiveAllConfirmTitle = "إلغاء أرشفة الكل؟"
+    override fun unarchiveAllConfirmBody(count: Int) = "ستعود ${count} محادثة إلى قائمة محادثاتك."
     override val keepChatsArchivedTitle = "إبقاء المحادثات مؤرشفة"
     override val keepChatsArchivedSubtitle = "تبقى المحادثات المؤرشفة كما هي عند وصول رسالة جديدة."
     override val noArchivedChats = "لا توجد محادثات مؤرشفة."
@@ -227,6 +231,13 @@ object ArabicStrings : AppStrings() {
     override val notifBootReminderText = "سجّل الدخول لتبقى نشطًا على Stade"
 
     override val addContactTitle = "إضافة جهة اتصال"
+    override val officialStadiumPromptTitle = "متابعة Stade Official؟"
+    override val officialStadiumPromptBody = "‏Stade Official قناة للقراءة فقط لملاحظات الإصدارات والتنبيهات الأمنية. الانضمام يصلك بها عبر Tor مثل أي نظير آخر. يمكنك المغادرة في أي وقت، والتخطي لا يغيّر أي شيء آخر."
+    override val officialStadiumJoinAction = "متابعة"
+    override val officialStadiumSkipAction = "ليس الآن"
+    override val addContactTipAction = "تلميح"
+    override val addContactTipTitle = "هل الشخص الآخر قريب منك؟"
+    override val addContactTipBody = "إن كنتما في المكان نفسه، فإن Radar أسرع من تبادل رموز الدعوة. يعثر على مستخدمي Stade من حولك عبر البلوتوث ويضيفهم بنقرات قليلة، دون أن ينسخ أي منكما شيئًا."
     override val step1Title = "شارك دعوتك الخاصة"
     override val step1Description =
         "اضغط الزر أدناه وشارك رمز الدعوة لإنشاء اتصال. "
@@ -759,23 +770,6 @@ object ArabicStrings : AppStrings() {
     override val padAttachMedia = "وسائط"
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "مؤثرات صوتية"
-    override val padUnavailable = "تعذّر الوصول إلى المكتبة. تحقق من اتصالك وأعد المحاولة."
-    override val padSoundUnsupported = "صيغة ذلك الصوت لا يستطيع Stade قراءتها. يجب أن يكون ملف WAV."
-    override val padDownloadFailed = "تعذّر تنزيل ذلك العنصر. قد يكون كبيرًا جدًا، أو انتهت مهلة الاتصال."
-    override val padRefresh = "تحديث"
-    override val padEmpty = "لا يوجد شيء هنا بعد."
-    override val padRetry = "أعد المحاولة"
-    override val padDownloading = "جارٍ التنزيل…"
-    override val padSendFailed = "تعذّر إرسال ذلك."
-    override val padSoundTag = "PADDY"
-    override val padTapToPlay = "اضغط للتشغيل"
-    override val padTorNotReady =
-        "ما زال Tor قيد التشغيل. يُحمَّل Paddy عبر Tor، فامنحه لحظة."
-    override fun padSentSound(sender: String?, isSelf: Boolean) = when {
-        isSelf -> "أرسلت مؤثرًا صوتيًا"
-        !sender.isNullOrBlank() -> "أرسل $sender مؤثرًا صوتيًا"
-        else -> "أرسل مؤثرًا صوتيًا"
-    }
     override val unsupportedMessage = "لم يعد هذا النوع من الرسائل مدعومًا"
 }
 
