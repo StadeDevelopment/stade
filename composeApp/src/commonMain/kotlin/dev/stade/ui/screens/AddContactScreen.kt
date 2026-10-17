@@ -26,6 +26,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.outlined.Lightbulb
+import dev.stade.radar.isRadarSupported
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -94,6 +98,7 @@ fun AddContactScreen(
     var alias by remember { mutableStateOf("") }
     var pastedCode by remember { mutableStateOf("") }
     var status by remember { mutableStateOf<String?>(null) }
+    var showRadarTip by remember { mutableStateOf(false) }
     var statusSticky by remember { mutableStateOf(false) }
     val scroll = rememberScrollState()
 
@@ -117,6 +122,20 @@ fun AddContactScreen(
         }
     }
 
+    if (showRadarTip) {
+        AlertDialog(
+            onDismissRequest = { showRadarTip = false },
+            icon = { Icon(Icons.Outlined.Lightbulb, contentDescription = null) },
+            title = { Text(strings.addContactTipTitle) },
+            text = {
+                Text(strings.addContactTipBody, style = MaterialTheme.typography.bodyMedium)
+            },
+            confirmButton = {
+                TextButton(onClick = { showRadarTip = false }) { Text(strings.closeAction) }
+            }
+        )
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
@@ -135,6 +154,19 @@ fun AddContactScreen(
                         HomeIdentityHeader(container = container, owner = owner)
                     }
                 },
+                actions = {
+                    if (isRadarSupported) {
+                        TextButton(onClick = { showRadarTip = true }) {
+                            Icon(
+                                Icons.Outlined.Lightbulb,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(strings.addContactTipAction)
+                        }
+                    }
+                }
             )
         }
     ) { padding ->
