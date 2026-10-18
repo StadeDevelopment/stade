@@ -266,7 +266,7 @@ fun StadeRadarScreen(
                 title = { HomeIdentityHeader(container = container, owner = owner) },
                 actions = {
                     Row(
-                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest).then(Modifier.padding(end = 4.dp)),
+                        modifier = Modifier.padding(end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TopBarPill(
@@ -295,7 +295,8 @@ fun StadeRadarScreen(
                 WindowInsets.navigationBars.getBottom(density).toDp()
             }
             val chromeBottom =
-                if (hideTopBar) systemBottom + HOME_BAR_HEIGHT else padding.calculateBottomPadding()
+                if (hideTopBar) systemBottom + HOME_BAR_HEIGHT
+                else maxOf(padding.calculateBottomPadding(), systemBottom)
             if (session.status == RadarStatus.Scanning) {
                 Column(Modifier.fillMaxSize()) {
                     RadarStage(
