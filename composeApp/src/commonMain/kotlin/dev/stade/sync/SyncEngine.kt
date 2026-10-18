@@ -82,6 +82,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 
+private const val HANDSHAKE_STEP_MS = 45_000L
 private const val PING_INTERVAL_MS = 20_000L
 private const val WATCHDOG_TICK_MS = 10_000L
 private const val SILENCE_LIMIT_MS = 60_000L
@@ -235,9 +236,12 @@ class SyncEngine(
             ephemeralHandshakeKey = ourEphemeral.dh.publicKey,
             ephemeralMlKemKey = ourEphemeral.kem.publicKey
         )
-        runCatching {
-            connection.send(FrameCodec.encode(SyncRecord(RecordType.HELLO, json.encodeToString(HelloPayload.serializer(), ourHello).encodeToByteArray())))
-        }.getOrElse { return null }
+        val helloSent = withTimeoutOrNull(HANDSHAKE_STEP_MS) {
+            runCatching {
+                connection.send(FrameCodec.encode(SyncRecord(RecordType.HELLO, json.encodeToString(HelloPayload.serializer(), ourHello).encodeToByteArray())))
+            }.isSuccess
+        }
+        if (helloSent != true) return null
 
         val helloFrame = withTimeoutOrNull(45_000) { connection.receive() } ?: return null
         val helloRecord = FrameCodec.decode(helloFrame) ?: return null
@@ -323,9 +327,12 @@ class SyncEngine(
             isStadiumJoin = weAreStadiumJoining,
             noExistingContact = existingBeforeAuth == null
         )
-        runCatching {
-            connection.send(FrameCodec.encode(SyncRecord(RecordType.AUTH, json.encodeToString(AuthPayload.serializer(), ourAuth).encodeToByteArray())))
-        }.getOrElse { return null }
+        val authSent = withTimeoutOrNull(HANDSHAKE_STEP_MS) {
+            runCatching {
+                connection.send(FrameCodec.encode(SyncRecord(RecordType.AUTH, json.encodeToString(AuthPayload.serializer(), ourAuth).encodeToByteArray())))
+            }.isSuccess
+        }
+        if (authSent != true) return null
 
         val authFrame = withTimeoutOrNull(45_000) { connection.receive() } ?: return null
         val authRecord = FrameCodec.decode(authFrame) ?: return null
@@ -472,7 +479,10 @@ class SyncEngine(
             kemSs = enc.sharedSecret
             val rec = SyncRecord(RecordType.KEM_OFFER,
                 json.encodeToString(KemOfferPayload.serializer(), KemOfferPayload(kemCt)).encodeToByteArray())
-            runCatching { connection.send(FrameCodec.encode(rec)) }.getOrElse { return null }
+            val offerSent = withTimeoutOrNull(HANDSHAKE_STEP_MS) {
+                runCatching { connection.send(FrameCodec.encode(rec)) }.isSuccess
+            }
+            if (offerSent != true) return null
         } else {
             val frame = withTimeoutOrNull(45_000) { connection.receive() } ?: return null
             val rec = FrameCodec.decode(frame) ?: return null
