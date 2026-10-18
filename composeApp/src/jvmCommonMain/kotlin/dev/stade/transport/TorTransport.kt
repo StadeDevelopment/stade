@@ -40,6 +40,7 @@ class TorTransport(
     @Volatile private var socksHost: String = defaultSocksHost
     @Volatile private var socksPort: Int = defaultSocksPort
     @Volatile private var lastRepublishAt: Long = 0L
+    @Volatile private var embeddedWatchersStarted: Boolean = false
 
     override suspend fun start(handler: suspend (Connection) -> Unit) {
         if (embedded != null) {
@@ -51,6 +52,11 @@ class TorTransport(
 
     private suspend fun startEmbedded(handler: suspend (Connection) -> Unit) {
         state.value = TransportInfo(type, "Tor", available = false, running = false, message = "starting Tor…")
+        if (embeddedWatchersStarted) {
+            bringUpEmbedded(handler)
+            return
+        }
+        embeddedWatchersStarted = true
         scope.launch {
             embedded!!.statusFlow.collectLatest { st ->
                 when (st) {
