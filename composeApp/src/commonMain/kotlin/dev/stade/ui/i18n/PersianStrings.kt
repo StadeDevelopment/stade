@@ -784,6 +784,14 @@ object PersianStrings : AppStrings() {
     override val profileAboutEmpty = "هنوز چیزی اینجا نیست"
     override val profileSharedNote = "درباره و وضعیت تو با مخاطبانت به اشتراک گذاشته می‌شود."
     override val profileSaved = "نمایه ذخیره شد"
+    override val stadiumInfoTitle = "اطلاعات Stadium"
+    override val stadiumAboutPlaceholder = "این Stadium درباره چیست؟"
+    override val stadiumAboutEmpty = "هنوز توضیحی نیست"
+    override val stadiumAboutOwnerHint = "مشترکان این را در صفحه اطلاعات Stadium می‌بینند."
+    override val stadiumAboutSaved = "توضیح ذخیره شد"
+    override val stadiumCreatedLabel = "ایجاد شده"
+    override val stadiumRoleOwner = "مالک این Stadium هستی"
+    override val stadiumRoleSubscriber = "این Stadium را دنبال می‌کنی"
 
 
 

@@ -801,6 +801,14 @@ object TurkishStrings : AppStrings() {
     override val profileAboutEmpty = "Burada henüz bir şey yok"
     override val profileSharedNote = "Hakkında ve durumun kişilerinle paylaşılır."
     override val profileSaved = "Profil kaydedildi"
+    override val stadiumInfoTitle = "Stadium bilgisi"
+    override val stadiumAboutPlaceholder = "Bu Stadium ne hakkında?"
+    override val stadiumAboutEmpty = "Henüz açıklama yok"
+    override val stadiumAboutOwnerHint = "Aboneler bunu Stadium bilgi sayfasında görür."
+    override val stadiumAboutSaved = "Açıklama kaydedildi"
+    override val stadiumCreatedLabel = "Oluşturuldu"
+    override val stadiumRoleOwner = "Bu Stadium'un sahibisin"
+    override val stadiumRoleSubscriber = "Bu Stadium'u takip ediyorsun"
 
 
 

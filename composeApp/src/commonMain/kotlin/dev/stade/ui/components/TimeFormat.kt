@@ -82,3 +82,12 @@ fun formatExactTimestamp(epochMillis: Long): String {
     val ss = at.second.toString().padStart(2, '0')
     return "${at.year}-$month-$day  $hh:$mm:$ss"
 }
+
+
+fun formatExactDate(epochMillis: Long): String {
+    val tz = TimeZone.currentSystemDefault()
+    val at = kotlinx.datetime.Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(tz)
+    val month = at.monthNumber.toString().padStart(2, '0')
+    val day = at.dayOfMonth.toString().padStart(2, '0')
+    return "${at.year}-$month-$day"
+}

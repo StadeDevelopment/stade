@@ -20,7 +20,8 @@ data class StadiumInfo(
     val inviteToken: String,
     val memberCount: Long,
     val createdAt: Long,
-    val muted: Boolean = false
+    val muted: Boolean = false,
+    val about: String = ""
 )
 
 data class StadiumMessage(
@@ -111,4 +112,6 @@ const val STD_MSG_DELETE_PREFIX = "STDMX:"
 const val STD_INV_PREFIX = "STDI:"
 const val STD_COUNT_PREFIX = "STDC:"
 const val STD_COUNT_REQUEST_PREFIX = "STDQ:"
+const val STD_ABOUT_PREFIX = "STDA:"
+const val MAX_STADIUM_ABOUT_LEN = 300
 const val STADIUM_INVITE_SUFFIX_MARKER = "::STD::"

@@ -16,6 +16,7 @@ private val PROFILE_COLUMNS = listOf(
     "LocalIdentity" to "status",
     "Contact" to "bio",
     "Contact" to "status",
+    "Stadium" to "about"
 )
 
 private val MIGRATION_COLUMNS = PROFILE_COLUMNS + listOf("Contact" to "addresses")

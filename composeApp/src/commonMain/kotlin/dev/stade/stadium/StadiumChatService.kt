@@ -64,7 +64,10 @@ class StadiumChatService(
         stadiums.stadiumsForContact(contact.id)
             .mapNotNull { stadiums.getStadium(it) }
             .filter { it.isOwner }
-            .forEach { pushSubscriberCount(owner, contact, it) }
+            .forEach {
+                pushSubscriberCount(owner, contact, it)
+                pushAbout(owner, contact, it)
+            }
         stadiums.allStadiums(owner.id)
             .filter { !it.isOwner && it.creatorStadeId == contact.id }
             .forEach { requestSubscriberCount(owner, it) }
@@ -79,6 +82,31 @@ class StadiumChatService(
                 body,
                 Clock.System.now().toEpochMilliseconds()
             )
+        }
+    }
+
+    private suspend fun pushAbout(owner: LocalIdentity, contact: Contact, stadium: StadiumInfo) {
+        if (stadium.about.isBlank()) return
+        val body = stadiums.aboutBody(stadium.id) ?: return
+        runCatching {
+            sync.queueOutgoing(
+                owner, contact,
+                Encoding.toHex(crypto.randomBytes(16)),
+                body,
+                Clock.System.now().toEpochMilliseconds()
+            )
+        }
+    }
+
+    suspend fun setAbout(owner: LocalIdentity, stadium: StadiumInfo, about: String) {
+        if (!stadium.isOwner) return
+        stadiums.setAbout(stadium.id, about)
+        val body = stadiums.aboutBody(stadium.id) ?: return
+        val messageId = Encoding.toHex(crypto.randomBytes(16))
+        val timestamp = Clock.System.now().toEpochMilliseconds()
+        stadiums.getMemberContactIds(stadium.id).forEach { contactId ->
+            val contact = contacts.get(contactId) ?: return@forEach
+            runCatching { sync.queueOutgoing(owner, contact, messageId, body, timestamp) }
         }
     }
 

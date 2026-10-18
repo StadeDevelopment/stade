@@ -173,6 +173,7 @@ fun StadiumScreen(
     stadiumId: String,
     onBack: () -> Unit,
     onManage: () -> Unit,
+    onOpenInfo: () -> Unit,
     highlightMessageId: String? = null
 ) {
     val strings = LocalStrings.current
@@ -602,7 +603,16 @@ fun StadiumScreen(
                 TopAppBar(
                     modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer),
                     title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .clickable(
+                                    onClickLabel = strings.stadiumInfoTitle,
+                                    onClick = onOpenInfo
+                                )
+                                .padding(end = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Avatar(
                                 name = current?.name ?: "",
                                 size = 36.dp,

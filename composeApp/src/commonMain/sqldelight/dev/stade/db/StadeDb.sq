@@ -499,7 +499,8 @@ CREATE TABLE Stadium (
     inviteToken TEXT NOT NULL,
     memberCount INTEGER NOT NULL DEFAULT 0,
     createdAt INTEGER NOT NULL,
-    muted INTEGER NOT NULL DEFAULT 0
+    muted INTEGER NOT NULL DEFAULT 0,
+    about TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE StadiumMember (
@@ -527,6 +528,9 @@ SELECT * FROM Stadium WHERE ownerId = ? ORDER BY name;
 
 selectStadium:
 SELECT * FROM Stadium WHERE id = ?;
+
+setStadiumAbout:
+UPDATE Stadium SET about = ? WHERE id = ?;
 
 deleteStadium:
 DELETE FROM Stadium WHERE id = ?;

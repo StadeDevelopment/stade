@@ -725,6 +725,14 @@ abstract class AppStrings {
     abstract val profileAboutEmpty: String
     abstract val profileSharedNote: String
     abstract val profileSaved: String
+    abstract val stadiumInfoTitle: String
+    abstract val stadiumAboutPlaceholder: String
+    abstract val stadiumAboutEmpty: String
+    abstract val stadiumAboutOwnerHint: String
+    abstract val stadiumAboutSaved: String
+    abstract val stadiumCreatedLabel: String
+    abstract val stadiumRoleOwner: String
+    abstract val stadiumRoleSubscriber: String
 
     abstract val themeTitle: String
     abstract val themeSubtitle: String

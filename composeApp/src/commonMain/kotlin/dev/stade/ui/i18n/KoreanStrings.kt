@@ -784,6 +784,14 @@ object KoreanStrings : AppStrings() {
     override val profileAboutEmpty = "아직 내용이 없습니다"
     override val profileSharedNote = "소개와 상태는 연락처와 공유됩니다."
     override val profileSaved = "프로필을 저장했습니다"
+    override val stadiumInfoTitle = "Stadium 정보"
+    override val stadiumAboutPlaceholder = "이 Stadium은 무엇에 관한 곳인가요?"
+    override val stadiumAboutEmpty = "아직 설명이 없습니다"
+    override val stadiumAboutOwnerHint = "구독자는 Stadium 정보 페이지에서 이 내용을 봅니다."
+    override val stadiumAboutSaved = "설명을 저장했습니다"
+    override val stadiumCreatedLabel = "만든 날짜"
+    override val stadiumRoleOwner = "내가 만든 Stadium입니다"
+    override val stadiumRoleSubscriber = "구독 중인 Stadium입니다"
 
 
 

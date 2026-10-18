@@ -46,6 +46,7 @@ import dev.stade.message.parseTypingBody
 import dev.stade.message.parseVanishCancelBody
 import dev.stade.message.parseVanishStartBody
 import dev.stade.message.parseVanishTag
+import dev.stade.stadium.STD_ABOUT_PREFIX
 import dev.stade.stadium.STD_COUNT_PREFIX
 import dev.stade.stadium.STD_COUNT_REQUEST_PREFIX
 import dev.stade.stadium.STD_DELETE_PREFIX
@@ -1036,6 +1037,9 @@ class SyncEngine(
                         }
                         stadiumManager != null && bodyStr.startsWith(STD_COUNT_PREFIX) -> {
                             stadiumManager.handleCountUpdate(contact.id, bodyStr)
+                        }
+                        stadiumManager != null && bodyStr.startsWith(STD_ABOUT_PREFIX) -> {
+                            stadiumManager.handleAboutUpdate(contact.id, bodyStr)
                         }
                         stadiumManager != null && bodyStr.startsWith(STD_MSG_DELETE_PREFIX) -> {
                             val stripped = bodyStr.removePrefix(STD_MSG_DELETE_PREFIX)

@@ -804,6 +804,14 @@ object EnglishStrings : AppStrings() {
     override val profileAboutEmpty = "Nothing here yet"
     override val profileSharedNote = "Your About and status are shared with your contacts."
     override val profileSaved = "Profile saved"
+    override val stadiumInfoTitle = "Stadium info"
+    override val stadiumAboutPlaceholder = "What is this Stadium about?"
+    override val stadiumAboutEmpty = "No description yet"
+    override val stadiumAboutOwnerHint = "Subscribers see this on the Stadium info page."
+    override val stadiumAboutSaved = "About saved"
+    override val stadiumCreatedLabel = "Created"
+    override val stadiumRoleOwner = "You own this Stadium"
+    override val stadiumRoleSubscriber = "You follow this Stadium"
 
 
 

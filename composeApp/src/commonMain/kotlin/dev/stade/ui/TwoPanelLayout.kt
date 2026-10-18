@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Podcasts
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Archive
@@ -144,6 +145,7 @@ import dev.stade.ui.screens.LanguageScreen
 import dev.stade.ui.screens.StarredMessagesScreen
 import dev.stade.ui.screens.getStadeyVisible
 import dev.stade.ui.screens.setStadeyVisible
+import dev.stade.ui.screens.StadiumInfoScreen
 import dev.stade.ui.screens.StadiumScreen
 import dev.stade.ui.screens.SettingsScreen
 import dev.stade.ui.screens.TransportsScreen
@@ -169,6 +171,7 @@ private sealed class PanelRight {
     data class Stadium(val stadiumId: String, val highlightMessageId: String? = null) : PanelRight()
     data object CreateStadium : PanelRight()
     data class ManageStadium(val stadiumId: String) : PanelRight()
+    data class StadiumInfo(val stadiumId: String) : PanelRight()
     data object JoinStadium : PanelRight()
     data object Settings : PanelRight()
     data object Security : PanelRight()
@@ -710,6 +713,7 @@ fun TwoPanelLayout(
                                                     when (val r = right) {
                                                         is PanelRight.Stadium -> r.stadiumId == stadium.id
                                                         is PanelRight.ManageStadium -> r.stadiumId == stadium.id
+                                                        is PanelRight.StadiumInfo -> r.stadiumId == stadium.id
                                                         else -> false
                                                     }
                                                 }
@@ -719,6 +723,7 @@ fun TwoPanelLayout(
                                                 selected = isStadiumSelected,
                                                 pinned = item.pinnedAt != null,
                                                 onClick = { right = PanelRight.Stadium(stadium.id) },
+                                                onOpenInfo = { right = PanelRight.StadiumInfo(stadium.id) },
                                                 onTogglePin = {
                                                     scope.launch { withContext(Dispatchers.Default) { container.pinnedChats.setPinned(owner.id, item.key, item.pinnedAt == null) } }
                                                 },
@@ -994,7 +999,15 @@ fun TwoPanelLayout(
                     owner = owner,
                     stadiumId = rp.stadiumId,
                     onBack = { right = PanelRight.Empty },
-                    onManage = { right = PanelRight.ManageStadium(rp.stadiumId) }
+                    onManage = { right = PanelRight.ManageStadium(rp.stadiumId) },
+                    onOpenInfo = { right = PanelRight.StadiumInfo(rp.stadiumId) }
+                )
+
+                is PanelRight.StadiumInfo -> StadiumInfoScreen(
+                    container = container,
+                    owner = owner,
+                    stadiumId = rp.stadiumId,
+                    onBack = { right = PanelRight.Stadium(rp.stadiumId) }
                 )
 
                 is PanelRight.ManageStadium -> ManageStadiumScreen(
@@ -1686,6 +1699,7 @@ private fun PanelStadiumRow(
     selected: Boolean,
     pinned: Boolean,
     onClick: () -> Unit,
+    onOpenInfo: () -> Unit,
     onTogglePin: () -> Unit,
     onToggleMute: () -> Unit,
     archived: Boolean = false,
@@ -1845,6 +1859,20 @@ private fun PanelStadiumRow(
                     onToggleArchive()
                 }
             )
+            DropdownMenuItem(
+                text = { Text(strings.stadiumInfoTitle) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                onClick = {
+                    showContextMenu = false
+                    onOpenInfo()
+                }
+            )
         }
     }
 }
@@ -1895,6 +1923,7 @@ private fun panelKey(panel: PanelRight): String = when (panel) {
     is PanelRight.Stadium -> "stadium:${panel.stadiumId}"
     is PanelRight.CreateStadium -> "createStadium"
     is PanelRight.ManageStadium -> "manageStadium:${panel.stadiumId}"
+    is PanelRight.StadiumInfo -> "stadiumInfo:${panel.stadiumId}"
     is PanelRight.JoinStadium -> "joinStadium"
     is PanelRight.Settings -> "settings"
     is PanelRight.Security -> "security"
@@ -1926,6 +1955,7 @@ private fun panelDepth(panel: PanelRight): Int = when (panel) {
     is PanelRight.Radar -> 1
     is PanelRight.GroupMembers,
     is PanelRight.ManageStadium,
+    is PanelRight.StadiumInfo,
     is PanelRight.Verify,
     is PanelRight.Security,
     is PanelRight.Transports,

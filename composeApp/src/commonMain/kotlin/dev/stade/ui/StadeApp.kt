@@ -52,6 +52,7 @@ import dev.stade.ui.screens.StadeyScreen
 import dev.stade.ui.screens.SecuritySettingsScreen
 import dev.stade.ui.screens.LanguageScreen
 import dev.stade.ui.screens.SettingsScreen
+import dev.stade.ui.screens.StadiumInfoScreen
 import dev.stade.ui.screens.StadiumScreen
 import dev.stade.ui.screens.ThemeScreen
 import dev.stade.ui.screens.TransportsScreen
@@ -121,6 +122,7 @@ internal fun screenKey(s: Screen): String = when (s) {
     is Screen.Stadium -> "stadium:" + s.stadiumId
     is Screen.GroupMembers -> "members:" + s.groupId
     is Screen.ManageStadium -> "manage:" + s.stadiumId
+    is Screen.StadiumInfo -> "stadiumInfo:" + s.stadiumId
     is Screen.Verify -> "verify:" + s.contactId
     is Screen.PinSetup -> "pinSetup"
     else -> s.toString()
@@ -137,8 +139,8 @@ internal fun screenDepth(s: Screen): Int = when (s) {
     Screen.Security, Screen.Transports, Screen.About, Screen.Starred,
     Screen.Language, Screen.Theme -> 3
     Screen.ArchiveSettings -> 3
-    is Screen.GroupMembers, is Screen.ManageStadium, is Screen.Verify, is Screen.PinSetup -> 3
-    else -> 2
+    is Screen.GroupMembers, is Screen.ManageStadium, is Screen.StadiumInfo,
+    is Screen.Verify, is Screen.PinSetup -> 3
 }
 
 sealed interface Screen {
@@ -151,6 +153,7 @@ sealed interface Screen {
     data class Stadium(val stadiumId: String, val highlightMessageId: String? = null, val returnTo: Screen? = null) : Screen
     data object CreateStadium : Screen
     data class ManageStadium(val stadiumId: String) : Screen
+    data class StadiumInfo(val stadiumId: String, val returnTo: Screen? = null) : Screen
     data object JoinStadium : Screen
     data class Verify(val contactId: String, val fromScreen: Screen) : Screen
     data object Settings : Screen
@@ -608,6 +611,7 @@ private fun UnlockedApp(
                 Screen.CreateGroup -> screen = Screen.Contacts
                 is Screen.Stadium -> screen = s.returnTo ?: Screen.Contacts
                 is Screen.ManageStadium -> screen = Screen.Stadium(s.stadiumId)
+                is Screen.StadiumInfo -> screen = s.returnTo ?: Screen.Stadium(s.stadiumId)
                 Screen.CreateStadium -> screen = Screen.Contacts
                 Screen.JoinStadium -> screen = Screen.Contacts
 
@@ -873,7 +877,21 @@ private fun UnlockedApp(
                             stadiumId = currentStadium.stadiumId,
                             onBack = { screen = currentStadium.returnTo ?: Screen.Contacts },
                             onManage = { screen = Screen.ManageStadium(currentStadium.stadiumId) },
+                            onOpenInfo = {
+                                screen = Screen.StadiumInfo(currentStadium.stadiumId, currentStadium)
+                            },
                             highlightMessageId = currentStadium.highlightMessageId
+                        )
+                    }
+                    target is Screen.StadiumInfo -> {
+                        val currentInfo = target as Screen.StadiumInfo
+                        StadiumInfoScreen(
+                            container = container,
+                            owner = identity!!,
+                            stadiumId = currentInfo.stadiumId,
+                            onBack = {
+                                screen = currentInfo.returnTo ?: Screen.Stadium(currentInfo.stadiumId)
+                            }
                         )
                     }
                     target is Screen.ManageStadium -> {
@@ -922,6 +940,9 @@ private fun UnlockedApp(
                             onOpenRadar = if (isRadarSupported) ({ screen = Screen.Radar }) else null,
                             onLongPressVerify = { contactId ->
                                 screen = Screen.Verify(contactId = contactId, fromScreen = currentContactsScreen)
+                            },
+                            onOpenStadiumInfo = { stadiumId ->
+                                screen = Screen.StadiumInfo(stadiumId, currentContactsScreen)
                             },
                             onOpenChatMessage = { contactId, messageId ->
                                 screen = Screen.Chat(contactId, highlightMessageId = messageId)

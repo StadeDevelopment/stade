@@ -138,6 +138,31 @@ class ScreenNavigationTest {
     }
 
     @Test
+    fun stadiumInfoSitsDeeperThanItsStadium() {
+        val stadium = Screen.Stadium("s1")
+        val info = Screen.StadiumInfo("s1", stadium)
+        assertTrue(goesForward(stadium, info), "Stadium -> info should go forward")
+        assertTrue(!goesForward(info, stadium), "info -> Stadium should go back")
+    }
+
+    @Test
+    fun stadiumInfoOpenedFromTheChatListStillGoesBackToIt() {
+        val info = Screen.StadiumInfo("s1", Screen.Contacts)
+        assertTrue(goesForward(Screen.Contacts, info))
+        assertTrue(!goesForward(info, Screen.Contacts))
+    }
+
+    @Test
+    fun stadiumInfoIsItsOwnDestination() {
+        assertTrue(screenKey(Screen.StadiumInfo("s1")) != screenKey(Screen.Stadium("s1")))
+        assertTrue(screenKey(Screen.StadiumInfo("s1")) != screenKey(Screen.ManageStadium("s1")))
+        assertEquals(
+            screenKey(Screen.StadiumInfo("s1")),
+            screenKey(Screen.StadiumInfo("s1", Screen.Contacts))
+        )
+    }
+
+    @Test
     fun archivedAndContactsAreDistinctDestinations() {
         assertTrue(screenKey(Screen.Archived) != screenKey(Screen.Contacts))
     }

@@ -56,6 +56,7 @@ import stade.composeapp.generated.resources.app_icon
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Podcasts
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -191,6 +192,7 @@ fun ContactsScreen(
     onJoinStadium: () -> Unit = {},
     onOpenRadar: (() -> Unit)? = null,
     onLongPressVerify: (String) -> Unit,
+    onOpenStadiumInfo: (String) -> Unit = {},
     onOpenChatMessage: (String, String) -> Unit = { _, _ -> },
     onOpenGroupMessage: (String, String) -> Unit = { _, _ -> },
     onOpenStadiumMessage: (String, String) -> Unit = { _, _ -> },
@@ -425,6 +427,26 @@ fun ContactsScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(strings.deleteContact)
+                        }
+                    }
+
+                    if (item is ChatListItem.StadiumItem) {
+                        FilledTonalButton(
+                            onClick = {
+                                val stadiumId = item.stadium.id
+                                actionItem = null
+                                onOpenStadiumInfo(stadiumId)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(strings.stadiumInfoTitle)
                         }
                     }
 

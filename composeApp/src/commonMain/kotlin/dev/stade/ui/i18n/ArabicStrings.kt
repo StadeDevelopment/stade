@@ -784,6 +784,14 @@ object ArabicStrings : AppStrings() {
     override val profileAboutEmpty = "لا شيء هنا بعد"
     override val profileSharedNote = "تُشارك نبذتك وحالتك مع جهات اتصالك."
     override val profileSaved = "تم حفظ الملف الشخصي"
+    override val stadiumInfoTitle = "معلومات Stadium"
+    override val stadiumAboutPlaceholder = "عن ماذا يتحدث هذا Stadium؟"
+    override val stadiumAboutEmpty = "لا يوجد وصف بعد"
+    override val stadiumAboutOwnerHint = "يرى المشتركون هذا في صفحة معلومات Stadium."
+    override val stadiumAboutSaved = "تم حفظ الوصف"
+    override val stadiumCreatedLabel = "أُنشئ"
+    override val stadiumRoleOwner = "أنت مالك هذا Stadium"
+    override val stadiumRoleSubscriber = "أنت تتابع هذا Stadium"
 
 
 

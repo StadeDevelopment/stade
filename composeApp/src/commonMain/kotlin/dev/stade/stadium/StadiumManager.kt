@@ -7,6 +7,7 @@ import app.cash.sqldelight.coroutines.mapToOneOrNull
 import dev.stade.crypto.CryptoApi
 import dev.stade.crypto.Encoding
 import dev.stade.db.StadeDb
+import dev.stade.identity.sanitizeMultiline
 import dev.stade.message.SearchResult
 import dev.stade.message.previewBody
 import dev.stade.notification.ShortcutEntityKind
@@ -74,6 +75,30 @@ class StadiumManager(private val db: StadeDb, private val crypto: CryptoApi) {
 
     fun rename(stadiumId: String, name: String) {
         db.stadeDbQueries.renameStadium(name, stadiumId)
+    }
+
+    fun setAbout(stadiumId: String, about: String) {
+        db.stadeDbQueries.setStadiumAbout(sanitizeMultiline(about, MAX_STADIUM_ABOUT_LEN), stadiumId)
+    }
+
+    fun aboutBody(stadiumId: String): String? {
+        val stadium = db.stadeDbQueries.selectStadium(stadiumId).executeAsOneOrNull() ?: return null
+        if (stadium.isOwner != 1L) return null
+        return "$STD_ABOUT_PREFIX$stadiumId:${stadium.about}"
+    }
+
+    fun handleAboutUpdate(contactId: String, rawBody: String): Boolean {
+        val stripped = rawBody.removePrefix(STD_ABOUT_PREFIX)
+        val colonIdx = stripped.indexOf(':')
+        if (colonIdx <= 0) return false
+        val stadiumId = stripped.substring(0, colonIdx)
+        val about = sanitizeMultiline(stripped.substring(colonIdx + 1), MAX_STADIUM_ABOUT_LEN)
+        val stadium = db.stadeDbQueries.selectStadium(stadiumId).executeAsOneOrNull() ?: return false
+        if (stadium.isOwner == 1L) return false
+        if (stadium.creatorStadeId != contactId) return false
+        if (stadium.about == about) return false
+        db.stadeDbQueries.setStadiumAbout(about, stadiumId)
+        return true
     }
 
     fun setMuted(stadiumId: String, muted: Boolean) {
@@ -293,7 +318,8 @@ class StadiumManager(private val db: StadeDb, private val crypto: CryptoApi) {
         inviteToken = inviteToken,
         memberCount = memberCount,
         createdAt = createdAt,
-        muted = muted == 1L
+        muted = muted == 1L,
+        about = about
     )
 
     private fun dev.stade.db.StadiumMessage.toStadiumMessage() = StadiumMessage(
