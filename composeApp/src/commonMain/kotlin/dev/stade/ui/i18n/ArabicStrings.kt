@@ -794,6 +794,17 @@ object ArabicStrings : AppStrings() {
     override val stadiumRoleSubscriber = "أنت تتابع هذا Stadium"
 
 
+    override val backupExportDetailTitle = "قبل التصدير"
+    override val backupExportContentsIdentity = "هويتك ومعرّف Stade ID، مع كل جهات الاتصال"
+    override val backupExportContentsChats = "كل محادثة ومجموعة وStadium، برسائلها ومرفقاتها"
+    override val backupExportContentsExtras = "الملصقات والرسائل المميّزة بنجمة وإعدادات التطبيق"
+    override val backupExportContentsPin = "رمز PIN الحالي يفتح النسخة المستعادة أيضًا"
+    override val backupExportContentsOnion = "عنوان onion الخاص بك، لتبقى النسخة المستعادة على العنوان نفسه"
+    override val backupExportContentsNoOnion = "لا يوجد عنوان onion بعد، لذا ستحصل النسخة المستعادة على عنوان جديد"
+    override val backupExportWarning = "من يحصل على هذا الملف وعبارة المرور يحصل على كل ذلك. احفظه في مكان تثق به."
+    override fun backupExportSize(size: String) = "نحو $size بعد الكتابة"
+
+
 
 
     override val themeTitle = "مظهر التطبيق"

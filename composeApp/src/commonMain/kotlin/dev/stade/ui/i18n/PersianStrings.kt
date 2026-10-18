@@ -794,6 +794,17 @@ object PersianStrings : AppStrings() {
     override val stadiumRoleSubscriber = "این Stadium را دنبال می‌کنی"
 
 
+    override val backupExportDetailTitle = "پیش از برون‌بری"
+    override val backupExportContentsIdentity = "هویت و Stade ID تو، همراه همه مخاطبان"
+    override val backupExportContentsChats = "هر گفت‌وگو، گروه و Stadium با پیام‌ها و پیوست‌هایشان"
+    override val backupExportContentsExtras = "برچسب‌ها، پیام‌های ستاره‌دار و تنظیمات برنامه"
+    override val backupExportContentsPin = "نسخه بازگردانی‌شده هم با پین فعلی باز می‌شود"
+    override val backupExportContentsOnion = "نشانی onion تو، تا نسخه بازگردانی‌شده همان نشانی را نگه دارد"
+    override val backupExportContentsNoOnion = "هنوز نشانی onion نداری، پس نسخه بازگردانی‌شده نشانی تازه می‌گیرد"
+    override val backupExportWarning = "هر کسی این پرونده و گذرواژه‌اش را داشته باشد همه‌چیز را دارد. جایی مطمئن نگهش دار."
+    override fun backupExportSize(size: String) = "حجم پرونده حدود $size خواهد بود"
+
+
 
 
     override val themeTitle = "پوسته برنامه"

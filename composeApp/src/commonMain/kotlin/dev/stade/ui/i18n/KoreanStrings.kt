@@ -794,6 +794,17 @@ object KoreanStrings : AppStrings() {
     override val stadiumRoleSubscriber = "구독 중인 Stadium입니다"
 
 
+    override val backupExportDetailTitle = "내보내기 전에"
+    override val backupExportContentsIdentity = "내 신원과 Stade ID, 모든 연락처"
+    override val backupExportContentsChats = "모든 대화, 그룹, Stadium의 메시지와 첨부파일"
+    override val backupExportContentsExtras = "스티커, 별표 메시지, 앱 설정"
+    override val backupExportContentsPin = "복원한 사본도 지금의 PIN으로 열립니다"
+    override val backupExportContentsOnion = "내 onion 주소 — 복원한 사본이 같은 주소를 유지합니다"
+    override val backupExportContentsNoOnion = "아직 onion 주소가 없어 복원한 사본은 새 주소를 받습니다"
+    override val backupExportWarning = "이 파일과 암호문구를 가진 사람은 전부를 갖게 됩니다. 믿을 수 있는 곳에 보관하세요."
+    override fun backupExportSize(size: String) = "파일 크기는 약 ${size}입니다"
+
+
 
 
     override val themeTitle = "앱 테마"

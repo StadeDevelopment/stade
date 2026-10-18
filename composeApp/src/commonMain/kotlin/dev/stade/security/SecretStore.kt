@@ -21,12 +21,8 @@ class SecretStore(
         db.stadeDbQueries.putKv(TRANSPORTS_LOCK_KV_KEY, (if (enabled) "1" else "0").encodeToByteArray())
     }
 
-    fun verifyPassphrase(passphrase: String): Boolean {
-        return when (vault.unlock(passphrase)) {
-            is UnlockOutcome.Success -> true
-            else -> false
-        }
-    }
+    fun verifyPassphrase(passphrase: String): Boolean =
+        vault.verifyPassword(passphrase) is UnlockOutcome.Success
 
     fun changePassphrase(current: String, new: String): Boolean =
         vault.changePassword(current, new)

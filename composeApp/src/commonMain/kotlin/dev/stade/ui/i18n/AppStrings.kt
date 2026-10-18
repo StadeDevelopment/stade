@@ -734,6 +734,16 @@ abstract class AppStrings {
     abstract val stadiumRoleOwner: String
     abstract val stadiumRoleSubscriber: String
 
+    abstract val backupExportDetailTitle: String
+    abstract val backupExportContentsIdentity: String
+    abstract val backupExportContentsChats: String
+    abstract val backupExportContentsExtras: String
+    abstract val backupExportContentsPin: String
+    abstract val backupExportContentsOnion: String
+    abstract val backupExportContentsNoOnion: String
+    abstract val backupExportWarning: String
+    abstract fun backupExportSize(size: String): String
+
     abstract val chatWallpaperTitle: String
     abstract val chatWallpaperOnSubtitle: String
     abstract val chatWallpaperOffSubtitle: String

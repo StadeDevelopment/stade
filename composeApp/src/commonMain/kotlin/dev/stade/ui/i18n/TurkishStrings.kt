@@ -811,6 +811,17 @@ object TurkishStrings : AppStrings() {
     override val stadiumRoleSubscriber = "Bu Stadium'u takip ediyorsun"
 
 
+    override val backupExportDetailTitle = "Dışa aktarmadan önce"
+    override val backupExportContentsIdentity = "Kimliğin ve Stade ID'n, tüm kişilerinle birlikte"
+    override val backupExportContentsChats = "Her sohbet, grup ve Stadium; mesajları ve ekleriyle"
+    override val backupExportContentsExtras = "Çıkartmalar, yıldızlı mesajlar ve uygulama ayarları"
+    override val backupExportContentsPin = "Geri yüklenen kopyayı yine PIN'in açar"
+    override val backupExportContentsOnion = "Onion adresin; böylece geri yüklenen kopya aynı adresi korur"
+    override val backupExportContentsNoOnion = "Henüz onion adresi yok, geri yüklenen kopya yenisini alır"
+    override val backupExportWarning = "Bu dosyayı ve parolasını eline geçiren her şeye sahip olur. Güvendiğin bir yerde sakla."
+    override fun backupExportSize(size: String) = "Yazıldığında yaklaşık $size"
+
+
 
 
     override val themeTitle = "Uygulama teması"

@@ -80,6 +80,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.stade.AppContainer
+import dev.stade.backup.backupContents
 import dev.stade.identity.LocalIdentity
 import dev.stade.identity.ProfileStatus
 import dev.stade.notification.getNotificationPrivacyEnabled
@@ -103,7 +104,9 @@ import dev.stade.ui.theme.getThemeMode
 import dev.stade.ui.i18n.localeDisplayName
 import dev.stade.ui.BackupOutcome
 import dev.stade.ui.rememberBackupIo
+import dev.stade.ui.components.BackupExportDetailDialog
 import dev.stade.ui.components.BackupPassphraseDialog
+import dev.stade.ui.components.formatBackupSize
 import dev.stade.ui.components.UpdateSettingsSection
 import dev.stade.ui.i18n.LocalStrings
 import dev.stade.ui.i18n.getLocalePreference
@@ -132,6 +135,7 @@ fun SettingsScreen(
     val runInBackgroundEnabled by getRunInBackgroundEnabledCommon()
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showBackupDialog by remember { mutableStateOf(false) }
+    var exportStep by remember { mutableStateOf(ExportStep.None) }
     var showVerifyDialog by remember { mutableStateOf(false) }
     var backupMessage by remember { mutableStateOf<String?>(null) }
     val backupIo = rememberBackupIo(container.vault) { outcome ->
@@ -164,6 +168,27 @@ fun SettingsScreen(
             delay(2000)
             fingerprintCopied = false
         }
+    }
+
+    if (exportStep == ExportStep.Detail) {
+        val contents = remember(owner.id) { backupContents(container.vault) }
+        BackupExportDetailDialog(
+            contents = contents,
+            onContinue = { exportStep = ExportStep.Pin },
+            onDismiss = { exportStep = ExportStep.None }
+        )
+    }
+
+    if (exportStep == ExportStep.Pin) {
+        SecurityPinGate(
+            container = container,
+            onVerified = {
+                exportStep = ExportStep.None
+                showBackupDialog = true
+            },
+            onBack = { exportStep = ExportStep.None }
+        )
+        return
     }
 
     if (showBackupDialog) {
@@ -484,7 +509,7 @@ fun SettingsScreen(
                             iconTint = MaterialTheme.colorScheme.primary,
                             title = strings.backupExportTitle,
                             subtitle = strings.backupExportSubtitle,
-                            onClick = { showBackupDialog = true }
+                            onClick = { exportStep = ExportStep.Detail }
                         )
                     }
                     row {
@@ -799,9 +824,4 @@ private fun ActionSettingsRow(
 
 
 
-private fun formatBackupSize(bytes: Long): String = when {
-    bytes >= 1024L * 1024 * 1024 -> "${bytes / (1024L * 1024 * 1024)} GB"
-    bytes >= 1024L * 1024 -> "${bytes / (1024L * 1024)} MB"
-    bytes >= 1024L -> "${bytes / 1024L} KB"
-    else -> "$bytes B"
-}
+private enum class ExportStep { None, Detail, Pin }

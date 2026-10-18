@@ -192,6 +192,41 @@ class FileVault(private val rootDir: File) : Vault {
         return UnlockOutcome.Success
     }
 
+    override fun verifyPassword(candidate: String): UnlockOutcome {
+        if (!isInitialized()) return UnlockOutcome.NotInitialized
+        val meta = readMeta() ?: return UnlockOutcome.Error(dev.stade.ui.i18n.I18n.current.vaultMetaUnreadable)
+        if (meta.lockoutUntilMillis > nowMillis()) return UnlockOutcome.LockedOut(meta.lockoutUntilMillis)
+        val kek = try {
+            deriveWith(candidate, meta.salt, meta.kdfKind, meta.iterations, meta.kdfMemoryKib, meta.kdfParallelism)
+        } catch (t: Throwable) {
+            return UnlockOutcome.Error(t.message ?: dev.stade.ui.i18n.I18n.current.vaultKeyDerivationFailed)
+        }
+        val verifierOk = runCatching {
+            val pt = gcmDecrypt(kek, meta.verifierNonce, meta.verifierCipher)
+            java.security.MessageDigest.isEqual(pt, VERIFIER_PLAIN)
+        }.getOrDefault(false)
+        zero(kek)
+        if (!verifierOk) {
+            meta.failedAttempts += 1
+            applyLockoutFor(meta)
+            writeMeta(meta)
+            cached = meta
+            val remaining = (LOCKOUT_THRESHOLD - meta.failedAttempts).coerceAtLeast(0)
+            return if (meta.lockoutUntilMillis > nowMillis()) {
+                UnlockOutcome.LockedOut(meta.lockoutUntilMillis)
+            } else {
+                UnlockOutcome.Wrong(remaining)
+            }
+        }
+        if (meta.failedAttempts != 0 || meta.lockoutUntilMillis != 0L) {
+            meta.failedAttempts = 0
+            meta.lockoutUntilMillis = 0L
+            writeMeta(meta)
+            cached = meta
+        }
+        return UnlockOutcome.Success
+    }
+
     override fun tryAutoUnlock(): Boolean {
         if (unlocked) return true
         if (sessionFile.exists()) runCatching { secureDelete(sessionFile) }

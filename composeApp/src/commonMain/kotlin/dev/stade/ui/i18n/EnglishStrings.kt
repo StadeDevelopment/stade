@@ -814,6 +814,17 @@ object EnglishStrings : AppStrings() {
     override val stadiumRoleSubscriber = "You follow this Stadium"
 
 
+    override val backupExportDetailTitle = "Before you export"
+    override val backupExportContentsIdentity = "Your identity and Stade ID, with every contact"
+    override val backupExportContentsChats = "Every chat, group and Stadium, with their messages and attachments"
+    override val backupExportContentsExtras = "Stickers, starred messages and app settings"
+    override val backupExportContentsPin = "Your PIN still unlocks a restored copy"
+    override val backupExportContentsOnion = "Your onion address, so a restored copy keeps the same one"
+    override val backupExportContentsNoOnion = "No onion address yet, so a restored copy will get a new one"
+    override val backupExportWarning = "Anyone holding this file and its passphrase holds all of it. Keep it somewhere you trust."
+    override fun backupExportSize(size: String) = "Roughly $size once written"
+
+
 
 
     override val themeTitle = "App theme"
