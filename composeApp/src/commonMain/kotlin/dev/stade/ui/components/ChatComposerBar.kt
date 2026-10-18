@@ -41,7 +41,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material.icons.filled.BrokenImage
@@ -130,7 +129,6 @@ fun ChatComposerBar(
     onSend: () -> Unit,
     onLongPressSend: (() -> Unit)? = null,
     onPickMedia: () -> Unit,
-    onOpenPaddy: () -> Unit = {},
     onToggleRecording: () -> Unit,
     onCancelRecording: () -> Unit = {},
     recordingElapsedMs: Long = 0L,
@@ -140,7 +138,6 @@ fun ChatComposerBar(
     drawerOpen: Boolean = false
 ) {
     val strings = LocalStrings.current
-    var plusOpen by remember { mutableStateOf(false) }
     val canSend = draft.text.isNotBlank() || pendingImages.isNotEmpty() || pendingVideo != null || pendingVoiceClip != null
     val interactionSource = remember { MutableInteractionSource() }
     val composerFocus = remember { FocusRequester() }
@@ -420,77 +417,16 @@ fun ChatComposerBar(
                             }
                             innerTextField()
                         }
-                        Box {
-                            val plusRotation by animateFloatAsState(
-                                targetValue = if (plusOpen) 135f else 0f,
-                                animationSpec = tween(240, easing = FastOutSlowInEasing),
-                                label = "plusRotation"
+                        IconButton(
+                            onClick = onPickMedia,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.AttachFile,
+                                contentDescription = strings.padAttachMedia,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
                             )
-                            var plusJustDismissed by remember { mutableStateOf(false) }
-                            LaunchedEffect(plusJustDismissed) {
-                                if (plusJustDismissed) {
-                                    delay(250)
-                                    plusJustDismissed = false
-                                }
-                            }
-                            IconButton(
-                                onClick = {
-                                    if (plusJustDismissed) {
-                                        plusJustDismissed = false
-                                    } else {
-                                        plusOpen = !plusOpen
-                                    }
-                                },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = strings.padPlusAction,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier
-                                        .size(26.dp)
-                                        .graphicsLayer { rotationZ = plusRotation }
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = plusOpen,
-                                onDismissRequest = {
-                                    plusOpen = false
-                                    plusJustDismissed = true
-                                },
-                                shape = RoundedCornerShape(18.dp),
-                                properties = PopupProperties(focusable = false)
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(strings.padAttachMedia) },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.AttachFile, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        plusOpen = false
-                                        onPickMedia()
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(strings.padPaddyTitle)
-                                            Text(
-                                                strings.padPaddySubtitle,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.GraphicEq, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        plusOpen = false
-                                        onOpenPaddy()
-                                    }
-                                )
-                            }
                         }
                     }
                 }
