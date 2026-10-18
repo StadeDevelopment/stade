@@ -55,7 +55,6 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Unarchive
-import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Verified
@@ -241,9 +240,6 @@ fun TwoPanelLayout(
     var showArchived by remember { mutableStateOf(false) }
     val autoUnarchive by remember { container.archivedChats.observeAutoUnarchive() }
         .collectAsState(initial = remember { container.archivedChats.autoUnarchiveOnMessage() })
-    LaunchedEffect(archivedKeys, showArchived) {
-        if (showArchived && archivedKeys.isEmpty()) showArchived = false
-    }
     var query by remember { mutableStateOf("") }
     val settingsListState = rememberLazyListState()
     val stadeyVisible by getStadeyVisible()
@@ -493,19 +489,10 @@ fun TwoPanelLayout(
                         actions = {
                             UpdateAvailableButton(container = container)
                             if (!showArchived) {
-                                if (archivedKeys.isNotEmpty()) {
-                                    IconButton(onClick = { showArchived = true }) {
-                                        Icon(
-                                            Icons.Default.Archive,
-                                            contentDescription = strings.archivedChatsTitle,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                IconButton(onClick = { right = PanelRight.Starred }) {
+                                IconButton(onClick = { showArchived = true }) {
                                     Icon(
-                                        Icons.Default.StarOutline,
-                                        contentDescription = strings.starredMessagesTitle,
+                                        Icons.Default.Archive,
+                                        contentDescription = strings.archivedChatsTitle,
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -576,7 +563,18 @@ fun TwoPanelLayout(
                                     )
                                 }
                             }
-                            if (contacts.isEmpty() && groups.isEmpty() && stadiums.isEmpty()) {
+                            if (showArchived && query.isBlank() && combinedPanelItems.isEmpty()) {
+                                item(key = "archiveEmpty") {
+                                    Text(
+                                        strings.noArchivedChats,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp)
+                                    )
+                                }
+                            }
+                            if (!showArchived && contacts.isEmpty() && groups.isEmpty() && stadiums.isEmpty()) {
                                 item {
                                     Box(
                                         modifier = Modifier
