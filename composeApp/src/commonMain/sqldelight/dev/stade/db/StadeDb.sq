@@ -465,14 +465,24 @@ SELECT Message.*, Contact.nickname AS contactNickname FROM Message
 JOIN Contact ON Contact.id = Message.contactId
 WHERE Message.contactId IN (SELECT id FROM Contact WHERE ownerId = :ownerId)
 AND Message.body LIKE '%' || :query || '%'
-AND Message.body NOT LIKE 'STADE_IMG_V1:%' AND Message.body NOT LIKE 'STADE_VOI_V1:%' AND Message.body NOT LIKE 'STADE_STK_V1:%'
+AND Message.body NOT LIKE 'STADE_IMG_V1:%' AND Message.body NOT LIKE 'STADE_VOI_V1:%'
+AND Message.body NOT LIKE 'STADE_VID_V1:%' AND Message.body NOT LIKE 'STADE_STK_V1:%'
+ORDER BY Message.timestamp DESC LIMIT :resultLimit;
+
+typedMessagesInChat:
+SELECT Message.id FROM Message
+WHERE Message.contactId = :contactId
+AND (Message.body LIKE :firstPrefix || '%' OR Message.body LIKE :secondPrefix || '%'
+  OR Message.body LIKE 'STADE_RPL_V1:%' || :firstPrefix || '%'
+  OR Message.body LIKE 'STADE_RPL_V1:%' || :secondPrefix || '%')
 ORDER BY Message.timestamp DESC LIMIT :resultLimit;
 
 searchMessagesInChat:
 SELECT Message.id FROM Message
 WHERE Message.contactId = :contactId
 AND Message.body LIKE '%' || :query || '%'
-AND Message.body NOT LIKE 'STADE_IMG_V1:%' AND Message.body NOT LIKE 'STADE_VOI_V1:%' AND Message.body NOT LIKE 'STADE_STK_V1:%'
+AND Message.body NOT LIKE 'STADE_IMG_V1:%' AND Message.body NOT LIKE 'STADE_VOI_V1:%'
+AND Message.body NOT LIKE 'STADE_VID_V1:%' AND Message.body NOT LIKE 'STADE_STK_V1:%'
 ORDER BY Message.timestamp DESC LIMIT :resultLimit;
 
 searchGroupMessages:
@@ -480,14 +490,24 @@ SELECT GroupMessage.*, StadeGroup.name AS groupName FROM GroupMessage
 JOIN StadeGroup ON StadeGroup.id = GroupMessage.groupId
 WHERE StadeGroup.ownerId = :ownerId
 AND GroupMessage.body LIKE '%' || :query || '%'
-AND GroupMessage.body NOT LIKE 'STADE_IMG_V1:%' AND GroupMessage.body NOT LIKE 'STADE_VOI_V1:%' AND GroupMessage.body NOT LIKE 'STADE_STK_V1:%'
+AND GroupMessage.body NOT LIKE 'STADE_IMG_V1:%' AND GroupMessage.body NOT LIKE 'STADE_VOI_V1:%'
+AND GroupMessage.body NOT LIKE 'STADE_VID_V1:%' AND GroupMessage.body NOT LIKE 'STADE_STK_V1:%'
+ORDER BY GroupMessage.timestamp DESC LIMIT :resultLimit;
+
+typedGroupMessagesInChat:
+SELECT GroupMessage.id FROM GroupMessage
+WHERE GroupMessage.groupId = :groupId
+AND (GroupMessage.body LIKE :firstPrefix || '%' OR GroupMessage.body LIKE :secondPrefix || '%'
+  OR GroupMessage.body LIKE 'STADE_RPL_V1:%' || :firstPrefix || '%'
+  OR GroupMessage.body LIKE 'STADE_RPL_V1:%' || :secondPrefix || '%')
 ORDER BY GroupMessage.timestamp DESC LIMIT :resultLimit;
 
 searchGroupMessagesInChat:
 SELECT GroupMessage.id FROM GroupMessage
 WHERE GroupMessage.groupId = :groupId
 AND GroupMessage.body LIKE '%' || :query || '%'
-AND GroupMessage.body NOT LIKE 'STADE_IMG_V1:%' AND GroupMessage.body NOT LIKE 'STADE_VOI_V1:%' AND GroupMessage.body NOT LIKE 'STADE_STK_V1:%'
+AND GroupMessage.body NOT LIKE 'STADE_IMG_V1:%' AND GroupMessage.body NOT LIKE 'STADE_VOI_V1:%'
+AND GroupMessage.body NOT LIKE 'STADE_VID_V1:%' AND GroupMessage.body NOT LIKE 'STADE_STK_V1:%'
 ORDER BY GroupMessage.timestamp DESC LIMIT :resultLimit;
 
 CREATE TABLE Stadium (
@@ -594,14 +614,24 @@ SELECT StadiumMessage.*, Stadium.name AS stadiumName FROM StadiumMessage
 JOIN Stadium ON Stadium.id = StadiumMessage.stadiumId
 WHERE Stadium.ownerId = :ownerId
 AND StadiumMessage.body LIKE '%' || :query || '%'
-AND StadiumMessage.body NOT LIKE 'STADE_IMG_V1:%' AND StadiumMessage.body NOT LIKE 'STADE_VOI_V1:%' AND StadiumMessage.body NOT LIKE 'STADE_STK_V1:%'
+AND StadiumMessage.body NOT LIKE 'STADE_IMG_V1:%' AND StadiumMessage.body NOT LIKE 'STADE_VOI_V1:%'
+AND StadiumMessage.body NOT LIKE 'STADE_VID_V1:%' AND StadiumMessage.body NOT LIKE 'STADE_STK_V1:%'
+ORDER BY StadiumMessage.timestamp DESC LIMIT :resultLimit;
+
+typedStadiumMessagesInChat:
+SELECT StadiumMessage.id FROM StadiumMessage
+WHERE StadiumMessage.stadiumId = :stadiumId
+AND (StadiumMessage.body LIKE :firstPrefix || '%' OR StadiumMessage.body LIKE :secondPrefix || '%'
+  OR StadiumMessage.body LIKE 'STADE_RPL_V1:%' || :firstPrefix || '%'
+  OR StadiumMessage.body LIKE 'STADE_RPL_V1:%' || :secondPrefix || '%')
 ORDER BY StadiumMessage.timestamp DESC LIMIT :resultLimit;
 
 searchStadiumMessagesInChat:
 SELECT StadiumMessage.id FROM StadiumMessage
 WHERE StadiumMessage.stadiumId = :stadiumId
 AND StadiumMessage.body LIKE '%' || :query || '%'
-AND StadiumMessage.body NOT LIKE 'STADE_IMG_V1:%' AND StadiumMessage.body NOT LIKE 'STADE_VOI_V1:%' AND StadiumMessage.body NOT LIKE 'STADE_STK_V1:%'
+AND StadiumMessage.body NOT LIKE 'STADE_IMG_V1:%' AND StadiumMessage.body NOT LIKE 'STADE_VOI_V1:%'
+AND StadiumMessage.body NOT LIKE 'STADE_VID_V1:%' AND StadiumMessage.body NOT LIKE 'STADE_STK_V1:%'
 ORDER BY StadiumMessage.timestamp DESC LIMIT :resultLimit;
 
 CREATE TABLE Sticker (

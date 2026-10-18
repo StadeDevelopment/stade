@@ -804,6 +804,14 @@ object ArabicStrings : AppStrings() {
     override val themeModeDark = "داكن"
 
 
+    override val searchFilterAll = "كل الرسائل"
+    override val searchFilterMedia = "الصور ومقاطع الفيديو"
+    override val searchFilterVoice = "الرسائل الصوتية"
+    override val searchFilterStickers = "الملصقات"
+    override val searchFilterAction = "تصفية البحث"
+    override fun searchFilterBrowsing(label: String) = "تصفّح $label"
+
+
     override val pinnedMessageLabel = "رسالة مثبّتة"
     override val pinMessageAction = "تثبيت الرسالة"
     override val unpinMessageAction = "إلغاء التثبيت"

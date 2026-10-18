@@ -12,6 +12,7 @@ import dev.stade.db.StadeDb
 import dev.stade.identity.LocalIdentity
 import dev.stade.identity.StadeId
 import dev.stade.identity.sanitizeDisplayName
+import dev.stade.message.SearchFilter
 import dev.stade.message.SearchResult
 import dev.stade.message.previewBody
 import dev.stade.notification.ShortcutEntityKind
@@ -527,6 +528,13 @@ class GroupManager(
 
     fun searchInChat(groupId: String, query: String, limit: Long = 500): List<String> =
         db.stadeDbQueries.searchGroupMessagesInChat(groupId, query, limit).executeAsList()
+
+    fun filterInChat(groupId: String, filter: SearchFilter, limit: Long = 500): List<String> {
+        val prefixes = filter.prefixes ?: return emptyList()
+        return db.stadeDbQueries
+            .typedGroupMessagesInChat(groupId, prefixes.first, prefixes.second, limit)
+            .executeAsList()
+    }
 
     fun searchMessages(ownerId: String, query: String, limit: Long = 50): List<SearchResult> =
         db.stadeDbQueries.searchGroupMessages(ownerId, query, limit).executeAsList().map {

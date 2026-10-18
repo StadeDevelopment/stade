@@ -136,6 +136,7 @@ import dev.stade.identity.LocalIdentity
 import dev.stade.ui.components.LinkifiedText
 import dev.stade.ui.components.HIGHLIGHT_FLASH_MS
 import dev.stade.ui.components.ChatSearchBar
+import dev.stade.message.SearchFilter
 import dev.stade.ui.components.ChatSearchRunner
 import dev.stade.ui.components.ChatWallpaper
 import dev.stade.ui.components.chatWallpaperBytes
@@ -427,7 +428,10 @@ fun GroupChatScreen(
         }
     }
     val chatSearch = rememberChatSearchState(groupId)
-    ChatSearchRunner(chatSearch) { text -> container.groups.searchInChat(groupId, text) }
+    ChatSearchRunner(chatSearch) { text, filter ->
+        if (filter == SearchFilter.All) container.groups.searchInChat(groupId, text)
+        else container.groups.filterInChat(groupId, filter)
+    }
     LaunchedEffect(chatSearch.current, messages.size) {
         val target = chatSearch.current ?: return@LaunchedEffect
         val index = messages.indexOfFirst { it.id == target }

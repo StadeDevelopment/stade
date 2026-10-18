@@ -746,6 +746,13 @@ abstract class AppStrings {
     abstract val themeModeLight: String
     abstract val themeModeDark: String
 
+    abstract val searchFilterAll: String
+    abstract val searchFilterMedia: String
+    abstract val searchFilterVoice: String
+    abstract val searchFilterStickers: String
+    abstract val searchFilterAction: String
+    abstract fun searchFilterBrowsing(label: String): String
+
     abstract val pinnedMessageLabel: String
     abstract val pinMessageAction: String
     abstract val unpinMessageAction: String

@@ -114,6 +114,7 @@ import dev.stade.ui.copyImageToClipboard
 import dev.stade.ui.decodeToImageBitmap
 import dev.stade.ui.components.LinkifiedText
 import dev.stade.ui.components.ChatSearchBar
+import dev.stade.message.SearchFilter
 import dev.stade.ui.components.ChatSearchRunner
 import dev.stade.ui.components.ChatWallpaper
 import dev.stade.ui.components.chatWallpaperBytes
@@ -391,7 +392,10 @@ fun StadiumScreen(
     }
 
     val chatSearch = rememberChatSearchState(stadiumId)
-    ChatSearchRunner(chatSearch) { text -> container.stadiums.searchInChat(stadiumId, text) }
+    ChatSearchRunner(chatSearch) { text, filter ->
+        if (filter == SearchFilter.All) container.stadiums.searchInChat(stadiumId, text)
+        else container.stadiums.filterInChat(stadiumId, filter)
+    }
     LaunchedEffect(chatSearch.current, messages.size) {
         val target = chatSearch.current ?: return@LaunchedEffect
         val index = messages.indexOfFirst { it.id == target }

@@ -804,6 +804,14 @@ object KoreanStrings : AppStrings() {
     override val themeModeDark = "어둡게"
 
 
+    override val searchFilterAll = "모든 메시지"
+    override val searchFilterMedia = "사진과 동영상"
+    override val searchFilterVoice = "음성 메시지"
+    override val searchFilterStickers = "스티커"
+    override val searchFilterAction = "검색 범위 좁히기"
+    override fun searchFilterBrowsing(label: String) = "${label} 보기"
+
+
     override val pinnedMessageLabel = "고정된 메시지"
     override val pinMessageAction = "메시지 고정"
     override val unpinMessageAction = "고정 해제"

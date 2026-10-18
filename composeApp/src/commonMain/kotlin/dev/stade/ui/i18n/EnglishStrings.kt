@@ -824,6 +824,14 @@ object EnglishStrings : AppStrings() {
     override val themeModeDark = "Dark"
 
 
+    override val searchFilterAll = "All messages"
+    override val searchFilterMedia = "Photos and videos"
+    override val searchFilterVoice = "Voice messages"
+    override val searchFilterStickers = "Stickers"
+    override val searchFilterAction = "Filter what you search"
+    override fun searchFilterBrowsing(label: String) = "Browsing $label"
+
+
     override val pinnedMessageLabel = "Pinned message"
     override val pinMessageAction = "Pin message"
     override val unpinMessageAction = "Unpin"

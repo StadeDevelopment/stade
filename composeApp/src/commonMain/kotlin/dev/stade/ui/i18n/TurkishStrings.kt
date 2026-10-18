@@ -821,6 +821,14 @@ object TurkishStrings : AppStrings() {
     override val themeModeDark = "Koyu"
 
 
+    override val searchFilterAll = "Tüm mesajlar"
+    override val searchFilterMedia = "Fotoğraflar ve videolar"
+    override val searchFilterVoice = "Sesli mesajlar"
+    override val searchFilterStickers = "Çıkartmalar"
+    override val searchFilterAction = "Aramayı filtrele"
+    override fun searchFilterBrowsing(label: String) = "$label arasında geziniyorsun"
+
+
     override val pinnedMessageLabel = "Sabitlenmiş mesaj"
     override val pinMessageAction = "Mesajı sabitle"
     override val unpinMessageAction = "Sabitlemeyi kaldır"

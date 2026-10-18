@@ -9,6 +9,7 @@ import dev.stade.crypto.CryptoApi
 import dev.stade.crypto.Encoding
 import dev.stade.db.StadeDb
 import dev.stade.identity.sanitizeMultiline
+import dev.stade.message.SearchFilter
 import dev.stade.message.SearchResult
 import dev.stade.message.previewBody
 import dev.stade.notification.ShortcutEntityKind
@@ -306,6 +307,13 @@ class StadiumManager(private val db: StadeDb, private val crypto: CryptoApi) {
 
     fun searchInChat(stadiumId: String, query: String, limit: Long = 500): List<String> =
         db.stadeDbQueries.searchStadiumMessagesInChat(stadiumId, query, limit).executeAsList()
+
+    fun filterInChat(stadiumId: String, filter: SearchFilter, limit: Long = 500): List<String> {
+        val prefixes = filter.prefixes ?: return emptyList()
+        return db.stadeDbQueries
+            .typedStadiumMessagesInChat(stadiumId, prefixes.first, prefixes.second, limit)
+            .executeAsList()
+    }
 
     fun searchMessages(ownerId: String, query: String, limit: Long = 50): List<SearchResult> =
         db.stadeDbQueries.searchStadiumMessages(ownerId, query, limit).executeAsList().map {

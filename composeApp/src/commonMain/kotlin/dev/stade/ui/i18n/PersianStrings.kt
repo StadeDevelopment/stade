@@ -804,6 +804,14 @@ object PersianStrings : AppStrings() {
     override val themeModeDark = "تاریک"
 
 
+    override val searchFilterAll = "همه پیام‌ها"
+    override val searchFilterMedia = "عکس‌ها و ویدیوها"
+    override val searchFilterVoice = "پیام‌های صوتی"
+    override val searchFilterStickers = "برچسب‌ها"
+    override val searchFilterAction = "پالایش جست‌وجو"
+    override fun searchFilterBrowsing(label: String) = "مرور $label"
+
+
     override val pinnedMessageLabel = "پیام سنجاق‌شده"
     override val pinMessageAction = "سنجاق کردن پیام"
     override val unpinMessageAction = "برداشتن سنجاق"

@@ -28,6 +28,13 @@ class MessageManager(private val db: StadeDb, private val crypto: CryptoApi) {
     fun searchInChat(contactId: String, query: String, limit: Long = 500): List<String> =
         db.stadeDbQueries.searchMessagesInChat(contactId, query, limit).executeAsList()
 
+    fun filterInChat(contactId: String, filter: SearchFilter, limit: Long = 500): List<String> {
+        val prefixes = filter.prefixes ?: return emptyList()
+        return db.stadeDbQueries
+            .typedMessagesInChat(contactId, prefixes.first, prefixes.second, limit)
+            .executeAsList()
+    }
+
     fun searchMessages(ownerId: String, query: String, limit: Long = 50): List<SearchResult> =
         db.stadeDbQueries.searchMessages(ownerId, query, limit).executeAsList().map {
             SearchResult(it.id, it.contactId, false, it.contactNickname, previewBody(it.body, ""), it.timestamp)

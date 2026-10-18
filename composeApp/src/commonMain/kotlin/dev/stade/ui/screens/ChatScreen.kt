@@ -172,6 +172,7 @@ import dev.stade.transport.DialAttempt
 import dev.stade.ui.PlatformBackHandler
 import dev.stade.ui.isTouchPrimaryInput
 import dev.stade.ui.components.ChatSearchBar
+import dev.stade.message.SearchFilter
 import dev.stade.ui.components.ChatSearchRunner
 import dev.stade.identity.ProfileStatus
 import dev.stade.identity.contactPresence
@@ -562,8 +563,9 @@ fun ChatScreen(
     }
 
     val chatSearch = rememberChatSearchState(contactId)
-    ChatSearchRunner(chatSearch) { text ->
-        container.messages.searchInChat(contactId, text)
+    ChatSearchRunner(chatSearch) { text, filter ->
+        if (filter == SearchFilter.All) container.messages.searchInChat(contactId, text)
+        else container.messages.filterInChat(contactId, filter)
     }
     LaunchedEffect(chatSearch.current, messages.size) {
         val target = chatSearch.current ?: return@LaunchedEffect
