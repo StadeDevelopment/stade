@@ -92,21 +92,23 @@ fun DesktopUserBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val openProfile = LocalOpenMyProfile.current
-            Box(
-                modifier = if (openProfile != null) {
-                    Modifier
-                        .clip(CircleShape)
-                        .clickable(onClickLabel = strings.profileOpenAction, onClick = openProfile)
-                } else {
-                    Modifier
+            Box {
+                Box(
+                    modifier = if (openProfile != null) {
+                        Modifier
+                            .clip(CircleShape)
+                            .clickable(onClickLabel = strings.profileOpenAction, onClick = openProfile)
+                    } else {
+                        Modifier
+                    }
+                ) {
+                    Avatar(
+                        name = owner.nickname,
+                        size = 38.dp,
+                        keySeed = owner.publicSigningKey,
+                        avatarBytes = owner.avatar
+                    )
                 }
-            ) {
-                Avatar(
-                    name = owner.nickname,
-                    size = 38.dp,
-                    keySeed = owner.publicSigningKey,
-                    avatarBytes = owner.avatar
-                )
                 ProfileStatusDot(
                     status = ProfileStatus.fromCode(owner.status),
                     modifier = Modifier.align(Alignment.BottomEnd),
