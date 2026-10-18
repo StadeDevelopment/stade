@@ -804,6 +804,12 @@ object ArabicStrings : AppStrings() {
     override val themeModeDark = "داكن"
 
 
+    override val pinnedMessageLabel = "رسالة مثبّتة"
+    override val pinMessageAction = "تثبيت الرسالة"
+    override val unpinMessageAction = "إلغاء التثبيت"
+    override fun pinnedMessagesBanner(count: Int) = "${count} رسالة مثبّتة"
+
+
     override val chatWallpaperTitle = "خلفية المحادثة"
     override val chatWallpaperOnSubtitle = "اخترتها بنفسك وتبقى على هذا الجهاز وحده"
     override val chatWallpaperOffSubtitle = "نقش Stade. اضغط لاستخدام صورة من عندك"

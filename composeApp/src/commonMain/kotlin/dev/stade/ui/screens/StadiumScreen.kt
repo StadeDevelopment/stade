@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
@@ -62,6 +63,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -105,6 +107,7 @@ import dev.stade.identity.LocalIdentity
 import dev.stade.media.MediaEditorDialog
 import dev.stade.message.MAX_ATTACHMENT_BYTES
 import dev.stade.message.MessageType
+import dev.stade.message.previewBody
 import dev.stade.stadium.StadiumMessage
 import dev.stade.stadium.isOfficial
 import dev.stade.ui.copyImageToClipboard
@@ -114,6 +117,7 @@ import dev.stade.ui.components.ChatSearchBar
 import dev.stade.ui.components.ChatSearchRunner
 import dev.stade.ui.components.ChatWallpaper
 import dev.stade.ui.components.chatWallpaperBytes
+import dev.stade.ui.components.PinnedMessageBanner
 import dev.stade.ui.components.rememberChatSearchState
 import dev.stade.ui.components.centerOnChatMessage
 import dev.stade.ui.components.animateToChatBottom
@@ -242,6 +246,9 @@ fun StadiumScreen(
     }
     var leaving by remember { mutableStateOf(false) }
 
+    val pinnedRefs by remember(stadiumId) { container.pinnedMessages.observePinned(stadiumId) }
+        .collectAsState(initial = remember(stadiumId) { container.pinnedMessages.pinned(stadiumId) })
+    val pinnedIds = remember(pinnedRefs) { pinnedRefs.mapTo(mutableSetOf()) { it.messageId } }
     var selectedMessageIds by remember(stadiumId) { mutableStateOf<Set<String>>(emptySet()) }
     val inSelectionMode by remember { derivedStateOf { selectedMessageIds.isNotEmpty() } }
 
@@ -405,6 +412,17 @@ fun StadiumScreen(
         }
     }
 
+    fun jumpToMessage(messageId: String) {
+        val index = messages.indexOfFirst { it.id == messageId }
+        if (index < 0) return
+        scope.launch {
+            listState.centerOnChatMessage(index, messages.size)
+            flashedMessageId = messageId
+            delay(1500L)
+            flashedMessageId = null
+        }
+    }
+
     val current = stadium
 
     if (showLeaveDialog && current != null) {
@@ -563,6 +581,23 @@ fun StadiumScreen(
                                     else strings.starMessageAction
                             )
                         }
+                        val allPinned = selectedMessageIds.isNotEmpty() &&
+                            selectedMessageIds.all { pinnedIds.contains(it) }
+                        IconButton(onClick = {
+                            val targets = selectedMessageIds.toList()
+                            targets.forEach { id ->
+                                container.pinnedMessages.setPinned(stadiumId, id, !allPinned)
+                            }
+                            clearSelection()
+                        }) {
+                            Icon(
+                                Icons.Default.PushPin,
+                                contentDescription = if (allPinned) strings.unpinMessageAction
+                                    else strings.pinMessageAction,
+                                tint = if (allPinned) MaterialTheme.colorScheme.primary
+                                    else LocalContentColor.current
+                            )
+                        }
                         val singleSelectedStickerMsg = remember(selectedMessageIds, messages) {
                             if (selectedMessageIds.size != 1) null
                             else messages.firstOrNull {
@@ -684,6 +719,27 @@ fun StadiumScreen(
                         .fillMaxSize()
                         .windowInsetsPadding(WindowInsets.navigationBars)
                 ) {
+                    val pinnedMessage = remember(pinnedRefs, messages) {
+                        pinnedRefs.firstNotNullOfOrNull { ref ->
+                            messages.firstOrNull { it.id == ref.messageId }
+                        }
+                    }
+                    if (pinnedMessage != null && !inSelectionMode) {
+                        PinnedMessageBanner(
+                            snippet = previewBody(
+                                pinnedMessage.displayBody,
+                                strings.photoMessage,
+                                strings.voiceMessage,
+                                strings.videoMessage,
+                                strings.stickerMessage
+                            ),
+                            count = pinnedRefs.count { ref -> messages.any { it.id == ref.messageId } },
+                            onClick = { jumpToMessage(pinnedMessage.id) },
+                            onUnpin = {
+                                container.pinnedMessages.setPinned(stadiumId, pinnedMessage.id, false)
+                            }
+                        )
+                    }
                     if (!current.isOwner && !connected.contains(current.creatorStadeId)) {
                         Surface(
                             color = MaterialTheme.colorScheme.errorContainer,

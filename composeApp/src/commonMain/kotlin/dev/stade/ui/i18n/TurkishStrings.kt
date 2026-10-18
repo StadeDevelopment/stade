@@ -821,6 +821,12 @@ object TurkishStrings : AppStrings() {
     override val themeModeDark = "Koyu"
 
 
+    override val pinnedMessageLabel = "Sabitlenmiş mesaj"
+    override val pinMessageAction = "Mesajı sabitle"
+    override val unpinMessageAction = "Sabitlemeyi kaldır"
+    override fun pinnedMessagesBanner(count: Int) = "${count} sabitlenmiş mesaj"
+
+
     override val chatWallpaperTitle = "Sohbet duvar kağıdı"
     override val chatWallpaperOnSubtitle = "Senin seçtiğin, yalnızca bu cihazda tutulur"
     override val chatWallpaperOffSubtitle = "Stade deseni. Kendi fotoğrafını kullanmak için dokun"

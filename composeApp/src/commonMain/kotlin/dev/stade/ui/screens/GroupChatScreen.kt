@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Group
@@ -76,6 +77,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -138,6 +140,7 @@ import dev.stade.ui.components.ChatSearchRunner
 import dev.stade.ui.components.ChatWallpaper
 import dev.stade.ui.components.chatWallpaperBytes
 import dev.stade.ui.components.rememberChatWallpaperPicker
+import dev.stade.ui.components.PinnedMessageBanner
 import dev.stade.ui.components.rememberChatSearchState
 import dev.stade.ui.components.centerOnChatMessage
 import dev.stade.ui.components.animateToChatBottom
@@ -309,6 +312,9 @@ fun GroupChatScreen(
     }
 
     val wallpaperPicker = rememberChatWallpaperPicker(container, groupId)
+    val pinnedRefs by remember(groupId) { container.pinnedMessages.observePinned(groupId) }
+        .collectAsState(initial = remember(groupId) { container.pinnedMessages.pinned(groupId) })
+    val pinnedIds = remember(pinnedRefs) { pinnedRefs.mapTo(mutableSetOf()) { it.messageId } }
     var selectedMessageIds by remember(groupId) { mutableStateOf<Set<String>>(emptySet()) }
     val inSelectionMode by remember { derivedStateOf { selectedMessageIds.isNotEmpty() } }
     var showSelectionDeleteDialog by remember { mutableStateOf(false) }
@@ -831,6 +837,23 @@ fun GroupChatScreen(
                                     else strings.starMessageAction
                             )
                         }
+                        val allPinned = selectedMessageIds.isNotEmpty() &&
+                            selectedMessageIds.all { pinnedIds.contains(it) }
+                        IconButton(onClick = {
+                            val targets = selectedMessageIds.toList()
+                            targets.forEach { id ->
+                                container.pinnedMessages.setPinned(groupId, id, !allPinned)
+                            }
+                            clearSelection()
+                        }) {
+                            Icon(
+                                Icons.Default.PushPin,
+                                contentDescription = if (allPinned) strings.unpinMessageAction
+                                    else strings.pinMessageAction,
+                                tint = if (allPinned) MaterialTheme.colorScheme.primary
+                                    else LocalContentColor.current
+                            )
+                        }
                         IconButton(onClick = { showSelectionDeleteDialog = true }) {
                             Icon(
                                 Icons.Default.Delete,
@@ -964,6 +987,27 @@ fun GroupChatScreen(
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.navigationBars)
             ) {
+                val pinnedMessage = remember(pinnedRefs, messages) {
+                    pinnedRefs.firstNotNullOfOrNull { ref ->
+                        messages.firstOrNull { it.id == ref.messageId }
+                    }
+                }
+                if (pinnedMessage != null && !inSelectionMode) {
+                    PinnedMessageBanner(
+                        snippet = previewBody(
+                            pinnedMessage.displayBody,
+                            strings.photoMessage,
+                            strings.voiceMessage,
+                            strings.videoMessage,
+                            strings.stickerMessage
+                        ),
+                        count = pinnedRefs.count { ref -> messages.any { it.id == ref.messageId } },
+                        onClick = { jumpToMessage(pinnedMessage.id) },
+                        onUnpin = {
+                            container.pinnedMessages.setPinned(groupId, pinnedMessage.id, false)
+                        }
+                    )
+                }
                 if (rawMessages == null) {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth())
                 } else if (messages.isEmpty()) {

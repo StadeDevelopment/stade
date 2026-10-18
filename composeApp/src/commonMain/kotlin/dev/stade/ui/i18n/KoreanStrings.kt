@@ -804,6 +804,12 @@ object KoreanStrings : AppStrings() {
     override val themeModeDark = "어둡게"
 
 
+    override val pinnedMessageLabel = "고정된 메시지"
+    override val pinMessageAction = "메시지 고정"
+    override val unpinMessageAction = "고정 해제"
+    override fun pinnedMessagesBanner(count: Int) = "고정된 메시지 ${count}개"
+
+
     override val chatWallpaperTitle = "대화 배경"
     override val chatWallpaperOnSubtitle = "내가 고른 배경이며 이 기기에만 보관됩니다"
     override val chatWallpaperOffSubtitle = "Stade 패턴입니다. 눌러서 내 사진을 사용하세요"

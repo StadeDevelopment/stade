@@ -745,6 +745,11 @@ abstract class AppStrings {
     abstract val themeModeSystem: String
     abstract val themeModeLight: String
     abstract val themeModeDark: String
+
+    abstract val pinnedMessageLabel: String
+    abstract val pinMessageAction: String
+    abstract val unpinMessageAction: String
+    abstract fun pinnedMessagesBanner(count: Int): String
 }
 
 val LocalStrings = compositionLocalOf<AppStrings> { EnglishStrings }

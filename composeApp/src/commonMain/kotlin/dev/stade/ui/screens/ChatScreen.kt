@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
@@ -83,6 +84,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -177,6 +179,7 @@ import dev.stade.ui.components.profileStatusColor
 import dev.stade.ui.components.profileStatusLabel
 import dev.stade.ui.components.ChatWallpaper
 import dev.stade.ui.components.chatWallpaperBytes
+import dev.stade.ui.components.PinnedMessageBanner
 import dev.stade.ui.components.rememberChatSearchState
 import dev.stade.ui.components.Avatar
 import dev.stade.ui.components.ChatComposerBar
@@ -530,6 +533,10 @@ fun ChatScreen(
         if (listState.firstVisibleItemIndex > 1) return@LaunchedEffect
         listState.animateScrollToItem(0)
     }
+
+    val pinnedRefs by remember(contactId) { container.pinnedMessages.observePinned(contactId) }
+        .collectAsState(initial = remember(contactId) { container.pinnedMessages.pinned(contactId) })
+    val pinnedIds = remember(pinnedRefs) { pinnedRefs.mapTo(mutableSetOf()) { it.messageId } }
 
     var flashedMessageId by remember { mutableStateOf<String?>(null) }
 
@@ -983,6 +990,23 @@ fun ChatScreen(
                                     else strings.starMessageAction
                             )
                         }
+                        val allPinned = selectedMessageIds.isNotEmpty() &&
+                            selectedMessageIds.all { pinnedIds.contains(it) }
+                        IconButton(onClick = {
+                            val targets = selectedMessageIds.toList()
+                            targets.forEach { id ->
+                                container.pinnedMessages.setPinned(contactId, id, !allPinned)
+                            }
+                            clearSelection()
+                        }) {
+                            Icon(
+                                Icons.Default.PushPin,
+                                contentDescription = if (allPinned) strings.unpinMessageAction
+                                    else strings.pinMessageAction,
+                                tint = if (allPinned) MaterialTheme.colorScheme.primary
+                                    else LocalContentColor.current
+                            )
+                        }
                         IconButton(onClick = { showSelectionDeleteDialog = true }) {
                             Icon(
                                 Icons.Default.Delete,
@@ -1103,6 +1127,28 @@ fun ChatScreen(
                 }
                 if (currentVanishSession != null) {
                     VanishActiveBanner(deadlineAtMs = currentVanishSession.deadlineAtMs)
+                }
+
+                val pinnedMessage = remember(pinnedRefs, messages) {
+                    pinnedRefs.firstNotNullOfOrNull { ref ->
+                        messages.firstOrNull { it.id == ref.messageId }
+                    }
+                }
+                if (pinnedMessage != null && !inSelectionMode) {
+                    PinnedMessageBanner(
+                        snippet = previewBody(
+                            pinnedMessage.displayBody,
+                            strings.photoMessage,
+                            strings.voiceMessage,
+                            strings.videoMessage,
+                            strings.stickerMessage
+                        ),
+                        count = pinnedRefs.count { ref -> messages.any { it.id == ref.messageId } },
+                        onClick = { jumpToMessage(pinnedMessage.id) },
+                        onUnpin = {
+                            container.pinnedMessages.setPinned(contactId, pinnedMessage.id, false)
+                        }
+                    )
                 }
 
                 if (rawMessages == null) {

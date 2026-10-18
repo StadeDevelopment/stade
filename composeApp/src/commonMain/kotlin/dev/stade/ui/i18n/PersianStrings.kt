@@ -804,6 +804,12 @@ object PersianStrings : AppStrings() {
     override val themeModeDark = "تاریک"
 
 
+    override val pinnedMessageLabel = "پیام سنجاق‌شده"
+    override val pinMessageAction = "سنجاق کردن پیام"
+    override val unpinMessageAction = "برداشتن سنجاق"
+    override fun pinnedMessagesBanner(count: Int) = "${count} پیام سنجاق‌شده"
+
+
     override val chatWallpaperTitle = "پس‌زمینه گفت‌وگو"
     override val chatWallpaperOnSubtitle = "خودت انتخابش کرده‌ای و فقط روی همین دستگاه می‌ماند"
     override val chatWallpaperOffSubtitle = "نقش Stade. برای استفاده از عکس خودت بزن"
