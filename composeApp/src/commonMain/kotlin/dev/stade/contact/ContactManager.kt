@@ -2,6 +2,7 @@ package dev.stade.contact
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOneOrNull
 import dev.stade.crypto.CryptoApi
 import dev.stade.db.StadeDb
 import dev.stade.identity.LocalIdentity
@@ -25,6 +26,12 @@ class ContactManager(private val db: StadeDb, private val crypto: CryptoApi) {
             .asFlow()
             .mapToList(Dispatchers.Default)
             .map { rows -> rows.map { it.toDomain() } }
+
+    fun observeContact(contactId: String): Flow<Contact?> =
+        db.stadeDbQueries.selectContact(contactId)
+            .asFlow()
+            .mapToOneOrNull(Dispatchers.Default)
+            .map { it?.toDomain() }
 
     fun all(): List<Contact> =
         db.stadeDbQueries.selectAllContacts().executeAsList().map { it.toDomain() }
@@ -95,6 +102,10 @@ class ContactManager(private val db: StadeDb, private val crypto: CryptoApi) {
 
     fun rename(contactId: String, nickname: String) {
         db.stadeDbQueries.renameContact(nickname, contactId)
+    }
+
+    fun setProfile(contactId: String, bio: String, status: String) {
+        db.stadeDbQueries.setContactProfile(bio, status, contactId)
     }
 
     fun verify(contactId: String) {
@@ -177,6 +188,8 @@ class ContactManager(private val db: StadeDb, private val crypto: CryptoApi) {
             kind = kind.toInt(),
             muted = muted == 1L,
             avatar = avatar,
+            bio = bio,
+            status = status,
             groupProto = groupProto.toInt()
         )
 }

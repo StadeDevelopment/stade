@@ -32,12 +32,15 @@ import dev.stade.identity.LocalIdentity
 import dev.stade.identity.StadeId
 import dev.stade.identity.sanitizeDisplayName
 import dev.stade.message.AVATAR_BODY_PREFIX
+import dev.stade.message.MAX_BIO_LEN
 import dev.stade.message.MessageManager
+import dev.stade.message.PROFILE_BODY_PREFIX
 import dev.stade.message.REACTION_BODY_PREFIX
 import dev.stade.message.TYPING_BODY_PREFIX
 import dev.stade.message.VANISH_CANCEL_PREFIX
 import dev.stade.message.VANISH_START_PREFIX
 import dev.stade.message.parseAvatarBody
+import dev.stade.message.parseProfileBody
 import dev.stade.message.parseReactionWrapper
 import dev.stade.message.parseTypingBody
 import dev.stade.message.parseVanishCancelBody
@@ -121,6 +124,7 @@ class SyncEngine(
         data class SendFailed(val contactId: String, val reason: String) : SyncEvent
         data class ReactionUpdated(val messageId: String) : SyncEvent
         data class AvatarUpdated(val contactId: String) : SyncEvent
+        data class ProfileUpdated(val contactId: String) : SyncEvent
         data class TypingChanged(val contactId: String, val typing: Boolean) : SyncEvent
         data class StadiumMessageReceived(val stadiumId: String) : SyncEvent
         data class StadiumContactReleased(val contactId: String, val forget: Boolean) : SyncEvent
@@ -817,6 +821,20 @@ class SyncEngine(
                             if ((contacts.get(contact.id)?.kind ?: 0) == 0) {
                                 contacts.setAvatar(contact.id, parseAvatarBody(bodyStr))
                                 _events.tryEmit(SyncEvent.AvatarUpdated(contact.id))
+                            }
+                        }
+                        bodyStr.startsWith(PROFILE_BODY_PREFIX) -> {
+                            if ((contacts.get(contact.id)?.kind ?: 0) == 0) {
+                                val parsed = parseProfileBody(bodyStr)
+                                if (parsed != null) {
+                                    val (status, bio) = parsed
+                                    contacts.setProfile(
+                                        contact.id,
+                                        sanitizeDisplayName(bio, MAX_BIO_LEN),
+                                        status
+                                    )
+                                    _events.tryEmit(SyncEvent.ProfileUpdated(contact.id))
+                                }
                             }
                         }
                         bodyStr.startsWith(TYPING_BODY_PREFIX) -> {

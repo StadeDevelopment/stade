@@ -45,8 +45,11 @@ internal object DesktopSchemaUpgrade {
         if (migrated) writeVersion(driver, target)
     }
 
-    private fun inferVersion(driver: SqlDriver): Long =
-        if (hasColumn(driver, "Contact", "addresses")) 2L else 1L
+    private fun inferVersion(driver: SqlDriver): Long = when {
+        hasColumn(driver, "Contact", "bio") -> 3L
+        hasColumn(driver, "Contact", "addresses") -> 2L
+        else -> 1L
+    }
 
     private fun hasColumn(driver: SqlDriver, table: String, column: String): Boolean =
         runCatching {

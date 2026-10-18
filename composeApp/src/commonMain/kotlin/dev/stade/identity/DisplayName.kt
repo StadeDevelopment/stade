@@ -9,6 +9,13 @@ fun sanitizeDisplayName(value: String, maxLength: Int = MAX_DISPLAY_NAME_LEN): S
         .trim()
         .take(maxLength)
 
+fun sanitizeMultiline(value: String, maxLength: Int): String =
+    value.asSequence()
+        .filter { it == '\n' || !isUnsafeDisplayChar(it) }
+        .joinToString("")
+        .trim()
+        .take(maxLength)
+
 fun isUnsafeDisplayChar(c: Char): Boolean {
     val code = c.code
     return when {

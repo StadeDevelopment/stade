@@ -771,5 +771,19 @@ object PersianStrings : AppStrings() {
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "جلوه‌های صوتی"
     override val unsupportedMessage = "این نوع پیام دیگر پشتیبانی نمی‌شود"
+
+    override val myProfileTitle = "نمایه من"
+    override val profileOpenAction = "نمایه خود را باز کن"
+    override val profileStatusSection = "وضعیت"
+    override val profileStatusNone = "هیچ"
+    override val profileStatusIdle = "بی‌کار"
+    override val profileStatusDnd = "مزاحم نشوید"
+    override val profileStatusManualNote = "این را خودت انتخاب می‌کنی. Stade هرگز آن را برایت تغییر نمی‌دهد و تا زمانی که عوضش کنی همان می‌ماند."
+    override val profileAboutSection = "درباره"
+    override val profileAboutPlaceholder = "چند کلمه درباره خودت"
+    override val profileAboutEmpty = "هنوز چیزی اینجا نیست"
+    override val profileSharedNote = "درباره و وضعیت تو با مخاطبانت به اشتراک گذاشته می‌شود."
+    override val profileSaved = "نمایه ذخیره شد"
+
 }
 

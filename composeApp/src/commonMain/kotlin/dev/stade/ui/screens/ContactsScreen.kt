@@ -45,6 +45,8 @@ import dev.stade.ui.components.rememberHomeTopBarState
 import dev.stade.ui.components.LocalHomeTopBarClearance
 import dev.stade.ui.components.LocalHomeBarClearance
 import dev.stade.stadium.isOfficial
+import dev.stade.identity.contactPresence
+import dev.stade.ui.components.ProfileStatusDot
 import dev.stade.ui.components.Avatar
 import dev.stade.ui.components.BotBadge
 import dev.stade.ui.components.UpdateRequiredBanner
@@ -1073,23 +1075,11 @@ private fun ContactRow(
         ) {
             Box {
                 Avatar(contact.nickname, size = 52.dp, keySeed = contact.publicSigningKey, avatarBytes = contact.avatar)
-                Box(
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(14.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                        .padding(2.dp)
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(
-                                if (connected) StadeColors.online else StadeColors.offline
-                            )
-                    )
-                }
+                ProfileStatusDot(
+                    status = contactPresence(contact.status, connected, contact.lastSeen > 0L),
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    size = 14.dp
+                )
             }
 
             Spacer(Modifier.width(16.dp))

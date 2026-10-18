@@ -171,6 +171,10 @@ import dev.stade.ui.PlatformBackHandler
 import dev.stade.ui.isTouchPrimaryInput
 import dev.stade.ui.components.ChatSearchBar
 import dev.stade.ui.components.ChatSearchRunner
+import dev.stade.identity.ProfileStatus
+import dev.stade.identity.contactPresence
+import dev.stade.ui.components.profileStatusColor
+import dev.stade.ui.components.profileStatusLabel
 import dev.stade.ui.components.rememberChatSearchState
 import dev.stade.ui.components.Avatar
 import dev.stade.ui.components.ChatComposerBar
@@ -1025,17 +1029,23 @@ fun ChatScreen(
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     } else {
-                                        Box(
-                                            Modifier.size(7.dp).clip(CircleShape).background(
-                                                if (isOnline) StadeColors.online else StadeColors.offline
+                                        val presence = contactPresence(
+                                            contact?.status.orEmpty(),
+                                            isOnline,
+                                            (contact?.lastSeen ?: 0L) > 0L
+                                        )
+                                        if (presence != ProfileStatus.NONE) {
+                                            Box(
+                                                Modifier.size(7.dp).clip(CircleShape)
+                                                    .background(profileStatusColor(presence))
                                             )
-                                        )
-                                        Spacer(Modifier.size(6.dp))
-                                        Text(
-                                            if (isOnline) strings.online else strings.offline,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                            Spacer(Modifier.size(6.dp))
+                                            Text(
+                                                profileStatusLabel(presence),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
                                 }
                             }

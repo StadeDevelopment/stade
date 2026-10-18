@@ -29,11 +29,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
@@ -41,7 +40,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Translate
@@ -55,8 +53,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,7 +68,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,10 +77,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.stade.AppContainer
 import dev.stade.identity.LocalIdentity
-import dev.stade.media.MediaEditorDialog
+import dev.stade.identity.ProfileStatus
 import dev.stade.notification.getNotificationPrivacyEnabled
 import dev.stade.notification.getNotificationsEnabled
 import dev.stade.notification.getRunInBackgroundEnabledCommon
@@ -96,11 +92,12 @@ import dev.stade.notification.openNotificationSettings
 import dev.stade.notification.setNotificationPrivacyEnabled
 import dev.stade.notification.setNotificationsEnabled
 import dev.stade.notification.setRunInBackgroundEnabledCommon
-import dev.stade.ui.compressAvatar
 import dev.stade.ui.components.SettingsGroup
 import dev.stade.ui.components.SettingsRowSurface
 import dev.stade.ui.components.SettingsBadge
 import dev.stade.ui.components.Avatar
+import dev.stade.ui.components.LocalOpenMyProfile
+import dev.stade.ui.components.ProfileStatusPill
 import dev.stade.ui.components.PlatformVerticalScrollbar
 import dev.stade.ui.rememberMediaPickerLauncher
 import dev.stade.ui.theme.getDynamicColorEnabled
@@ -113,10 +110,7 @@ import dev.stade.ui.components.BackupPassphraseDialog
 import dev.stade.ui.components.UpdateSettingsSection
 import dev.stade.ui.i18n.LocalStrings
 import dev.stade.ui.i18n.getLocalePreference
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -165,14 +159,7 @@ fun SettingsScreen(
     val currentLocale by getLocalePreference()
     val stadeyVisible by getStadeyVisible()
     var showActivateStadeyConfirm by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    var pendingAvatarBytes by remember { mutableStateOf<ByteArray?>(null) }
-    var showRemoveAvatarConfirm by remember { mutableStateOf(false) }
-    val avatarPicker = rememberMediaPickerLauncher(
-        onImages = { images -> images.firstOrNull()?.let { pendingAvatarBytes = it } },
-        onVideo = {},
-        imagesOnly = true
-    )
+    val openProfile = LocalOpenMyProfile.current
 
     LaunchedEffect(fingerprintCopied) {
         if (fingerprintCopied) {
@@ -279,54 +266,6 @@ fun SettingsScreen(
         )
     }
 
-    pendingAvatarBytes?.let { raw ->
-        MediaEditorDialog(
-            imageBytes = raw,
-            onSave = { edited ->
-                scope.launch {
-                    val compressed = withContext(Dispatchers.Default) { compressAvatar(edited) }
-                    container.avatars.setMyAvatar(owner, compressed)
-                }
-                pendingAvatarBytes = null
-            },
-            onCancel = { pendingAvatarBytes = null },
-            circular = true
-        )
-    }
-
-    if (showRemoveAvatarConfirm) {
-        AlertDialog(
-            onDismissRequest = { showRemoveAvatarConfirm = false },
-            icon = {
-                Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-            },
-            title = { Text(strings.removeAvatarConfirmTitle) },
-            text = {
-                Text(
-                    strings.removeAvatarConfirmBody,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            container.avatars.setMyAvatar(owner, null)
-                        }
-                        showRemoveAvatarConfirm = false
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) { Text(strings.removeAvatarAction) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRemoveAvatarConfirm = false }) { Text(strings.cancel) }
-            }
-        )
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -362,8 +301,7 @@ fun SettingsScreen(
                         clipboardManager.setText(AnnotatedString(fingerprint))
                         fingerprintCopied = true
                     },
-                    onChangeAvatar = { avatarPicker.launch() },
-                    onRemoveAvatarRequest = { showRemoveAvatarConfirm = true }
+                    onOpenProfile = openProfile
                 )
             }
 
@@ -600,12 +538,10 @@ private fun ProfileHeader(
     fingerprint: String,
     copied: Boolean,
     onCopyFingerprint: () -> Unit,
-    onChangeAvatar: () -> Unit,
-    onRemoveAvatarRequest: () -> Unit
+    onOpenProfile: (() -> Unit)?
 ) {
     val strings = LocalStrings.current
     val cardShape = RoundedCornerShape(16.dp)
-    var showAvatarMenu by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -625,9 +561,16 @@ private fun ProfileHeader(
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .clickable {
-                            if (avatarBytes != null) showAvatarMenu = true else onChangeAvatar()
-                        }
+                        .then(
+                            if (onOpenProfile != null) {
+                                Modifier.clickable(
+                                    onClickLabel = strings.profileOpenAction,
+                                    onClick = onOpenProfile
+                                )
+                            } else {
+                                Modifier
+                            }
+                        )
                 ) {
                     Avatar(
                         name = owner.nickname,
@@ -636,35 +579,26 @@ private fun ProfileHeader(
                         size = 84.dp
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.PhotoCamera,
-                        contentDescription = strings.changeAvatarAction,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                DropdownMenu(
-                    expanded = showAvatarMenu,
-                    onDismissRequest = { showAvatarMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(strings.changeAvatarAction) },
-                        leadingIcon = { Icon(Icons.Default.PhotoCamera, contentDescription = null) },
-                        onClick = { showAvatarMenu = false; onChangeAvatar() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(strings.removeAvatarAction) },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                        onClick = { showAvatarMenu = false; onRemoveAvatarRequest() }
-                    )
+                if (onOpenProfile != null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable(
+                                onClickLabel = strings.profileOpenAction,
+                                onClick = onOpenProfile
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = strings.profileOpenAction,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -673,12 +607,26 @@ private fun ProfileHeader(
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                strings.localIdentity,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.65f)
-            )
+            Spacer(Modifier.height(6.dp))
+            val status = ProfileStatus.fromCode(owner.status)
+            if (status == ProfileStatus.NONE) {
+                Text(
+                    strings.localIdentity,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.65f)
+                )
+            } else {
+                ProfileStatusPill(status)
+            }
+            if (owner.bio.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    owner.bio,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                    textAlign = TextAlign.Center
+                )
+            }
             Spacer(Modifier.height(16.dp))
 
             Card(

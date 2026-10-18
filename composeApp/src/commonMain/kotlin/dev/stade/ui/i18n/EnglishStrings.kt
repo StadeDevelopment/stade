@@ -791,5 +791,19 @@ object EnglishStrings : AppStrings() {
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "Sound effects"
     override val unsupportedMessage = "This message type is no longer supported"
+
+    override val myProfileTitle = "My profile"
+    override val profileOpenAction = "Open your profile"
+    override val profileStatusSection = "Status"
+    override val profileStatusNone = "None"
+    override val profileStatusIdle = "Idle"
+    override val profileStatusDnd = "Do not disturb"
+    override val profileStatusManualNote = "You pick this yourself. Stade never sets it for you, and it stays until you change it."
+    override val profileAboutSection = "About"
+    override val profileAboutPlaceholder = "A few words about you"
+    override val profileAboutEmpty = "Nothing here yet"
+    override val profileSharedNote = "Your About and status are shared with your contacts."
+    override val profileSaved = "Profile saved"
+
 }
 

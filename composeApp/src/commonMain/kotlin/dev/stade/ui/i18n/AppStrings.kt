@@ -712,6 +712,19 @@ abstract class AppStrings {
     abstract val padPaddyTitle: String
     abstract val padPaddySubtitle: String
     abstract val unsupportedMessage: String
+
+    abstract val myProfileTitle: String
+    abstract val profileOpenAction: String
+    abstract val profileStatusSection: String
+    abstract val profileStatusNone: String
+    abstract val profileStatusIdle: String
+    abstract val profileStatusDnd: String
+    abstract val profileStatusManualNote: String
+    abstract val profileAboutSection: String
+    abstract val profileAboutPlaceholder: String
+    abstract val profileAboutEmpty: String
+    abstract val profileSharedNote: String
+    abstract val profileSaved: String
 }
 
 val LocalStrings = compositionLocalOf<AppStrings> { EnglishStrings }

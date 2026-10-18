@@ -3,6 +3,7 @@ package dev.stade.ui.components
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -36,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,6 +51,7 @@ import dev.stade.transport.TransportType
 import dev.stade.ui.rememberNetworkOnline
 import kotlinx.coroutines.flow.MutableStateFlow
 import dev.stade.identity.LocalIdentity
+import dev.stade.identity.ProfileStatus
 import dev.stade.ui.i18n.LocalStrings
 
 val DESKTOP_USER_BAR_HEIGHT = 54.dp
@@ -87,12 +91,28 @@ fun DesktopUserBar(
             modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Avatar(
-                name = owner.nickname,
-                size = 38.dp,
-                keySeed = owner.publicSigningKey,
-                avatarBytes = owner.avatar
-            )
+            val openProfile = LocalOpenMyProfile.current
+            Box(
+                modifier = if (openProfile != null) {
+                    Modifier
+                        .clip(CircleShape)
+                        .clickable(onClickLabel = strings.profileOpenAction, onClick = openProfile)
+                } else {
+                    Modifier
+                }
+            ) {
+                Avatar(
+                    name = owner.nickname,
+                    size = 38.dp,
+                    keySeed = owner.publicSigningKey,
+                    avatarBytes = owner.avatar
+                )
+                ProfileStatusDot(
+                    status = ProfileStatus.fromCode(owner.status),
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    ringColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
+            }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(

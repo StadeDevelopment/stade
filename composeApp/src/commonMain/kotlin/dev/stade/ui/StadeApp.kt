@@ -91,6 +91,8 @@ import dev.stade.ui.components.HomeTopBarActions
 import dev.stade.ui.components.LocalHomeTopBarClearance
 import dev.stade.ui.components.rememberHomeTopBarState
 import dev.stade.ui.components.LocalHomeBarClearance
+import dev.stade.ui.components.LocalOpenMyProfile
+import dev.stade.ui.components.MyProfilePanel
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.draw.clipToBounds
@@ -374,6 +376,8 @@ private fun UnlockedApp(
     var barIntroPlayed by remember { mutableStateOf(false) }
     var officialStadiumPrompt by remember { mutableStateOf(false) }
     var measuredBarHeight by remember { mutableStateOf(HOME_BAR_HEIGHT) }
+    var profilePanelOpen by remember { mutableStateOf(false) }
+    val openProfilePanel = remember { { profilePanelOpen = true } }
     val settingsListState = rememberLazyListState()
 
     val isInForeground by container.isAppInForeground.collectAsState()
@@ -640,6 +644,7 @@ private fun UnlockedApp(
             if (measuredTopBarHeight > 0.dp) measuredTopBarHeight else assumedTopBarHeight
         val homeTopBarScreen = homeProfileScreen(screen)
         val homeTopBarVisible = !showTwoPanel && identity != null && homeTopBarScreen != null
+        CompositionLocalProvider(LocalOpenMyProfile provides openProfilePanel) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -985,6 +990,23 @@ private fun UnlockedApp(
                         }
                 )
             }
+
+            val panelOwner = identity
+            if (panelOwner != null) {
+                MyProfilePanel(
+                    container = container,
+                    owner = panelOwner,
+                    visible = profilePanelOpen,
+                    onDismiss = { profilePanelOpen = false }
+                )
+            }
+        }
+        }
+
+        PlatformBackHandler(enabled = profilePanelOpen) { profilePanelOpen = false }
+
+        LaunchedEffect(identity?.id) {
+            if (identity == null) profilePanelOpen = false
         }
 
         val pendingStickers by container.pendingStickerImport.collectAsState()

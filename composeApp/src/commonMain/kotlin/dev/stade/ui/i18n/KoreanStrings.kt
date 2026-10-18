@@ -771,5 +771,19 @@ object KoreanStrings : AppStrings() {
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "효과음"
     override val unsupportedMessage = "더 이상 지원하지 않는 메시지 형식입니다"
+
+    override val myProfileTitle = "내 프로필"
+    override val profileOpenAction = "내 프로필 열기"
+    override val profileStatusSection = "상태"
+    override val profileStatusNone = "없음"
+    override val profileStatusIdle = "대기 중"
+    override val profileStatusDnd = "방해 금지"
+    override val profileStatusManualNote = "직접 선택하는 항목입니다. Stade가 대신 바꾸지 않으며, 변경할 때까지 그대로 유지됩니다."
+    override val profileAboutSection = "소개"
+    override val profileAboutPlaceholder = "자신에 대한 간단한 소개"
+    override val profileAboutEmpty = "아직 내용이 없습니다"
+    override val profileSharedNote = "소개와 상태는 연락처와 공유됩니다."
+    override val profileSaved = "프로필을 저장했습니다"
+
 }
 

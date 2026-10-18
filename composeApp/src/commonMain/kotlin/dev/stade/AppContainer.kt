@@ -123,6 +123,20 @@ class AppContainer(
             runCatching { createdDriver.execute(null, "ALTER TABLE Contact ADD COLUMN muted INTEGER NOT NULL DEFAULT 0", 0) }
         }
         runCatching {
+            createdDriver.executeQuery(null, "SELECT bio FROM LocalIdentity LIMIT 0",
+                { _: SqlCursor -> QueryResult.Value(Unit) }, 0)
+        }.onFailure {
+            runCatching { createdDriver.execute(null, "ALTER TABLE LocalIdentity ADD COLUMN bio TEXT NOT NULL DEFAULT ''", 0) }
+            runCatching { createdDriver.execute(null, "ALTER TABLE LocalIdentity ADD COLUMN status TEXT NOT NULL DEFAULT ''", 0) }
+        }
+        runCatching {
+            createdDriver.executeQuery(null, "SELECT bio FROM Contact LIMIT 0",
+                { _: SqlCursor -> QueryResult.Value(Unit) }, 0)
+        }.onFailure {
+            runCatching { createdDriver.execute(null, "ALTER TABLE Contact ADD COLUMN bio TEXT NOT NULL DEFAULT ''", 0) }
+            runCatching { createdDriver.execute(null, "ALTER TABLE Contact ADD COLUMN status TEXT NOT NULL DEFAULT ''", 0) }
+        }
+        runCatching {
             createdDriver.executeQuery(null, "SELECT muted FROM StadeGroup LIMIT 0",
                 { _: SqlCursor -> QueryResult.Value(Unit) }, 0)
         }.onFailure {

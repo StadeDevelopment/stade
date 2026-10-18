@@ -11,6 +11,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+private val PROFILE_COLUMNS = listOf(
+    "LocalIdentity" to "bio",
+    "LocalIdentity" to "status",
+    "Contact" to "bio",
+    "Contact" to "status",
+)
+
+private val MIGRATION_COLUMNS = PROFILE_COLUMNS + listOf("Contact" to "addresses")
+
 class DesktopSchemaUpgradeTest {
 
     private fun tempDbFile(): File =
@@ -81,13 +90,15 @@ class DesktopSchemaUpgradeTest {
     }
 
     @Test
-    fun `a database predating the addresses column gains it without losing rows`() {
+    fun `a database predating every migration gains their columns without losing rows`() {
         val file = tempDbFile()
         val seed = open(file)
         try {
             StadeDb.Schema.create(seed)
             seedContact(seed, "c1")
-            seed.execute(null, "ALTER TABLE Contact DROP COLUMN addresses", 0)
+            MIGRATION_COLUMNS.forEach { (table, column) ->
+                seed.execute(null, "ALTER TABLE $table DROP COLUMN $column", 0)
+            }
             seed.execute(null, "PRAGMA user_version = 0", 0)
             assertFalse(hasColumn(seed, "Contact", "addresses"))
         } finally {
@@ -96,10 +107,45 @@ class DesktopSchemaUpgradeTest {
 
         val driver = DriverFactory().create(file.absolutePath)
         try {
-            assertTrue(
-                hasColumn(driver, "Contact", "addresses"),
-                "an upgraded database must gain the addresses column"
-            )
+            MIGRATION_COLUMNS.forEach { (table, column) ->
+                assertTrue(
+                    hasColumn(driver, table, column),
+                    "an upgraded database must gain $table.$column"
+                )
+            }
+            assertEquals(StadeDb.Schema.version, userVersion(driver))
+            assertEquals(1L, contactCount(driver))
+        } finally {
+            driver.close()
+            file.delete()
+        }
+    }
+
+    @Test
+    fun `a database stopping at the addresses migration gains the profile columns`() {
+        val file = tempDbFile()
+        val seed = open(file)
+        try {
+            StadeDb.Schema.create(seed)
+            seedContact(seed, "c1")
+            PROFILE_COLUMNS.forEach { (table, column) ->
+                seed.execute(null, "ALTER TABLE $table DROP COLUMN $column", 0)
+            }
+            seed.execute(null, "PRAGMA user_version = 0", 0)
+            assertTrue(hasColumn(seed, "Contact", "addresses"))
+            assertFalse(hasColumn(seed, "Contact", "bio"))
+        } finally {
+            seed.close()
+        }
+
+        val driver = DriverFactory().create(file.absolutePath)
+        try {
+            PROFILE_COLUMNS.forEach { (table, column) ->
+                assertTrue(
+                    hasColumn(driver, table, column),
+                    "an upgraded database must gain $table.$column"
+                )
+            }
             assertEquals(StadeDb.Schema.version, userVersion(driver))
             assertEquals(1L, contactCount(driver))
         } finally {

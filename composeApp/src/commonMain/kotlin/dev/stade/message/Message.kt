@@ -18,6 +18,9 @@ const val VANISH_TAG_PREFIX = "STADE_VTG_V1:"
 const val AVATAR_BODY_PREFIX = "STADE_AVT_V1:"
 const val TYPING_BODY_PREFIX = "STADE_TYP_V1:"
 const val PAD_SOUND_BODY_PREFIX = "STADE_PAD_V1:"
+const val PROFILE_BODY_PREFIX = "STADE_PRF_V1:"
+const val MAX_BIO_LEN = 200
+const val MAX_STATUS_LEN = 16
 const val MAX_PAD_NAME_LEN = 48
 
 val RETIRED_BODY_PREFIXES = listOf("STADE_MEM_V1:", PAD_SOUND_BODY_PREFIX)
@@ -153,6 +156,22 @@ fun parseTypingBody(body: String): Boolean? = when (body) {
     TYPING_BODY_PREFIX + "1" -> true
     TYPING_BODY_PREFIX + "0" -> false
     else -> null
+}
+
+fun encodeProfileBody(bio: String, status: String): String {
+    val safeStatus = status.filter { it.isLetterOrDigit() }.take(MAX_STATUS_LEN)
+    val safeBio = bio.asSequence().filter { it != '\n' && it != '\r' }.take(MAX_BIO_LEN).joinToString("")
+    return PROFILE_BODY_PREFIX + safeStatus + "\n" + safeBio
+}
+
+fun parseProfileBody(body: String): Pair<String, String>? {
+    if (!body.startsWith(PROFILE_BODY_PREFIX)) return null
+    val rest = body.substring(PROFILE_BODY_PREFIX.length)
+    val newline = rest.indexOf('\n')
+    if (newline < 0) return null
+    val status = rest.substring(0, newline).filter { it.isLetterOrDigit() }.take(MAX_STATUS_LEN)
+    val bio = rest.substring(newline + 1).take(MAX_BIO_LEN)
+    return status to bio
 }
 
 fun encodeReplyBody(replyToId: String, innerBody: String): String =

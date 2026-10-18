@@ -10,7 +10,9 @@ CREATE TABLE LocalIdentity (
     mldsaPublicKey BLOB NOT NULL,
     mldsaPrivateKey BLOB NOT NULL,
     createdAt INTEGER NOT NULL,
-    avatar BLOB
+    avatar BLOB,
+    bio TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE Contact (
@@ -32,6 +34,8 @@ CREATE TABLE Contact (
     muted INTEGER NOT NULL DEFAULT 0,
     avatar BLOB,
     groupProto INTEGER NOT NULL DEFAULT 1,
+    bio TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(ownerId) REFERENCES LocalIdentity(id)
 );
 
@@ -102,6 +106,9 @@ INSERT INTO LocalIdentity(id, nickname, publicKey, privateKey, handshakePublicKe
 setIdentityAvatar:
 UPDATE LocalIdentity SET avatar = ? WHERE id = ?;
 
+setIdentityProfile:
+UPDATE LocalIdentity SET bio = ?, status = ? WHERE id = ?;
+
 selectContacts:
 SELECT * FROM Contact WHERE ownerId = ? ORDER BY nickname;
 
@@ -143,6 +150,9 @@ UPDATE Contact SET muted = ? WHERE id = ?;
 
 setContactAvatar:
 UPDATE Contact SET avatar = ? WHERE id = ?;
+
+setContactProfile:
+UPDATE Contact SET bio = ?, status = ? WHERE id = ?;
 
 setContactGroupProto:
 UPDATE Contact SET groupProto = ? WHERE id = ?;

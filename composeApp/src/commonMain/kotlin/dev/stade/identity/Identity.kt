@@ -15,11 +15,14 @@ data class LocalIdentity(
     val publicMlDsaKey: ByteArray,
     val privateMlDsaKey: ByteArray,
     val createdAt: Long,
-    val avatar: ByteArray? = null
+    val avatar: ByteArray? = null,
+    val bio: String = "",
+    val status: String = ""
 ) {
     val stadeId: String get() = id
     override fun equals(other: Any?): Boolean =
-        other is LocalIdentity && other.id == id && other.avatar.contentEquals(avatar)
+        other is LocalIdentity && other.id == id && other.nickname == nickname &&
+            other.avatar.contentEquals(avatar) && other.bio == bio && other.status == status
     override fun hashCode(): Int = id.hashCode()
 }
 

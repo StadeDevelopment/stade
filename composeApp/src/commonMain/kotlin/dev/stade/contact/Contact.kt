@@ -21,11 +21,16 @@ data class Contact(
     val kind: Int = 0,
     val muted: Boolean = false,
     val avatar: ByteArray? = null,
-    val groupProto: Int = 1
+    val groupProto: Int = 1,
+    val bio: String = "",
+    val status: String = ""
 ) {
     val stadeId: String get() = id
     override fun equals(other: Any?): Boolean =
-        other is Contact && other.id == id && other.muted == muted && other.avatar.contentEquals(avatar)
+        other is Contact && other.id == id && other.nickname == nickname &&
+            other.verified == verified && other.muted == muted && other.kind == kind &&
+            other.groupProto == groupProto && other.bio == bio && other.status == status &&
+            other.addresses == addresses && other.avatar.contentEquals(avatar)
     override fun hashCode(): Int = id.hashCode()
 }
 

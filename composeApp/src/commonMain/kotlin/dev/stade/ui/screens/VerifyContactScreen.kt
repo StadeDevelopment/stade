@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,8 +56,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.stade.AppContainer
 import dev.stade.identity.LocalIdentity
+import dev.stade.identity.ProfileStatus
+import dev.stade.identity.contactPresence
 import dev.stade.ui.components.Avatar
 import dev.stade.ui.components.AvatarViewerDialog
+import dev.stade.ui.components.ProfileStatusPill
 import dev.stade.ui.components.VanishDurationSheet
 import dev.stade.ui.components.formatVanishRemaining
 import dev.stade.ui.i18n.LocalStrings
@@ -76,16 +81,17 @@ fun VerifyContactScreen(
     onBack: () -> Unit
 ) {
     val strings = LocalStrings.current
-    var renameTick by remember(contactId) { mutableStateOf(0) }
-    val contact = remember(contactId, renameTick) { container.contacts.get(contactId) }
+    val contact by remember(contactId) {
+        container.contacts.observeContact(contactId)
+    }.collectAsState(initial = remember(contactId) { container.contacts.get(contactId) })
     var showRenameDialog by remember(contactId) { mutableStateOf(false) }
     var renameText by remember(contactId) { mutableStateOf("") }
     val safety = remember(contact?.id) {
         contact?.let { container.fingerprint.safetyNumber(owner.publicSigningKey, it.publicSigningKey) }
     }
-    var verified by remember(contact?.id) { mutableStateOf(contact?.verified == true) }
+    val verified = contact?.verified == true
     val connected by container.sync.connectedContacts.collectAsState()
-    val isOnline = contact != null && connected.contains(contact.id)
+    val isOnline = contact != null && connected.contains(contactId)
     val scope = rememberCoroutineScope()
 
     val customAvatar = contact?.avatar?.takeIf { it.isNotEmpty() }
@@ -106,8 +112,8 @@ fun VerifyContactScreen(
         }
     }
 
-    if (showRenameDialog && contact != null) {
-        val target = contact
+    val activeContact = contact
+    if (showRenameDialog && activeContact != null) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
             title = { Text(strings.editAliasTitle) },
@@ -127,9 +133,8 @@ fun VerifyContactScreen(
                 TextButton(
                     enabled = renameText.isNotBlank(),
                     onClick = {
-                        container.contacts.rename(target.id, renameText.trim())
+                        container.contacts.rename(activeContact.id, renameText.trim())
                         showRenameDialog = false
-                        renameTick++
                     }
                 ) { Text(strings.saveAction) }
             },
@@ -143,14 +148,13 @@ fun VerifyContactScreen(
         AvatarViewerDialog(avatarBytes = customAvatar, onDismiss = { showAvatarViewer = false })
     }
 
-    if (showVanishDurationSheet && contact != null) {
-        val c = contact
+    if (showVanishDurationSheet && activeContact != null) {
         VanishDurationSheet(
             onDismiss = { showVanishDurationSheet = false },
             onPick = { durationMs ->
                 scope.launch {
                     withContext(Dispatchers.Default) {
-                        runCatching { container.chat.startVanishMode(owner, c, durationMs) }
+                        runCatching { container.chat.startVanishMode(owner, activeContact, durationMs) }
                     }
                     showVanishDurationSheet = false
                 }
@@ -158,8 +162,7 @@ fun VerifyContactScreen(
         )
     }
 
-    if (showVanishCancelDialog && contact != null) {
-        val c = contact
+    if (showVanishCancelDialog && activeContact != null) {
         AlertDialog(
             onDismissRequest = { showVanishCancelDialog = false },
             title = { Text(strings.vanishTurnOffConfirmTitle) },
@@ -169,7 +172,7 @@ fun VerifyContactScreen(
                     showVanishCancelDialog = false
                     scope.launch {
                         withContext(Dispatchers.Default) {
-                            runCatching { container.chat.cancelVanishMode(owner, c) }
+                            runCatching { container.chat.cancelVanishMode(owner, activeContact) }
                         }
                     }
                 }) { Text(strings.vanishTurnOffAction, color = MaterialTheme.colorScheme.error) }
@@ -183,9 +186,13 @@ fun VerifyContactScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface),
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                title = { Text(contact?.nickname ?: strings.profileTitle) },
+                modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                title = { Text(strings.profileTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
@@ -198,21 +205,19 @@ fun VerifyContactScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(padding)
-                .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Card(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                shape = MaterialTheme.shapes.large
+                shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 26.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Avatar(
@@ -222,157 +227,183 @@ fun VerifyContactScreen(
                         } else {
                             Modifier
                         },
-                        size = 64.dp,
+                        size = 96.dp,
                         keySeed = contact?.publicSigningKey,
                         avatarBytes = contact?.avatar
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(14.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(contact?.nickname ?: "", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            contact?.nickname ?: "",
+                            style = MaterialTheme.typography.headlineSmall,
+                            textAlign = TextAlign.Center
+                        )
                         if (contact != null) {
-                            Spacer(Modifier.width(2.dp))
+                            Spacer(Modifier.width(4.dp))
                             IconButton(
                                 onClick = {
-                                    renameText = contact.nickname
+                                    renameText = contact?.nickname.orEmpty()
                                     showRenameDialog = true
                                 },
-                                modifier = Modifier.size(30.dp)
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     Icons.Default.Edit,
                                     contentDescription = strings.editAliasTitle,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    modifier = Modifier.size(17.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                 )
                             }
                         }
                     }
-                    if (contact != null) {
-                        Spacer(Modifier.height(6.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier.size(8.dp).clip(CircleShape).background(
-                                    if (isOnline) StadeColors.online else StadeColors.offline
-                                )
-                            )
-                            Spacer(Modifier.width(6.dp))
+                    val presence = contactPresence(
+                        contact?.status.orEmpty(),
+                        isOnline,
+                        (contact?.lastSeen ?: 0L) > 0L
+                    )
+                    if (contact != null && (presence != ProfileStatus.NONE || verified)) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (presence != ProfileStatus.NONE) ProfileStatusPill(presence)
+                            if (verified) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.Verified,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        strings.verifiedLabel,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                val bio = contact?.bio.orEmpty()
+                if (bio.isNotBlank()) {
+                    ProfileCard {
+                        Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
                             Text(
-                                if (isOnline) strings.online else strings.offline,
+                                strings.profileAboutSection,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        }
-                    }
-                    if (verified) {
-                        Spacer(Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Verified,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                strings.verifiedLabel,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(bio, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
-            }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp).fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        strings.safetyNumber,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    SafetyNumberBlock(safety ?: "")
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        strings.safetyNumberNote,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            if (!isTouchPrimaryInput && contact != null) {
-                val session = activeVanishSession
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                    shape = MaterialTheme.shapes.large,
-                    onClick = {
-                        if (session != null) showVanishCancelDialog = true else showVanishDurationSheet = true
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp).fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                ProfileCard {
+                    Column(
+                        modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            Icons.Default.Schedule,
-                            contentDescription = null,
-                            tint = if (session != null) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        Text(
+                            strings.safetyNumber,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                strings.vanishDurationSheetTitle,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                if (session != null) {
-                                    strings.vanishStateOn(formatVanishRemaining(session.deadlineAtMs - vanishNow))
-                                } else {
-                                    strings.vanishStateOff
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (session != null) MaterialTheme.colorScheme.primary
+                        Spacer(Modifier.height(10.dp))
+                        SafetyNumberBlock(safety ?: "")
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            strings.safetyNumberNote,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium,
+                            enabled = !verified && contact != null,
+                            onClick = { container.contacts.verify(contactId) }
+                        ) {
+                            Text(if (verified) strings.alreadyVerifiedLabel else strings.markAsVerified)
+                        }
+                    }
+                }
+
+                if (!isTouchPrimaryInput && contact != null) {
+                    val session = activeVanishSession
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        shape = MaterialTheme.shapes.large,
+                        onClick = {
+                            if (session != null) showVanishCancelDialog = true else showVanishDurationSheet = true
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = if (session != null) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            Spacer(Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    strings.vanishDurationSheetTitle,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    if (session != null) {
+                                        strings.vanishStateOn(formatVanishRemaining(session.deadlineAtMs - vanishNow))
+                                    } else {
+                                        strings.vanishStateOff
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (session != null) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             }
-
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                enabled = !verified,
-                onClick = {
-                    container.contacts.verify(contactId)
-                    verified = true
-                }
-            ) {
-                Text(if (verified) strings.alreadyVerifiedLabel else strings.markAsVerified)
-            }
         }
+    }
+}
+
+@Composable
+private fun ProfileCard(content: @Composable () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = MaterialTheme.shapes.large
+    ) {
+        content()
     }
 }
 

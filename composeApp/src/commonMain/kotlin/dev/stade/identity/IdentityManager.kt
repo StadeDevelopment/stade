@@ -59,6 +59,10 @@ class IdentityManager(
         db.stadeDbQueries.setIdentityAvatar(avatar, identityId)
     }
 
+    fun setProfile(identityId: String, bio: String, status: String) {
+        db.stadeDbQueries.setIdentityProfile(bio, status, identityId)
+    }
+
     private fun dev.stade.db.LocalIdentity.toDomain(): LocalIdentity =
         LocalIdentity(
             id = id,
@@ -72,6 +76,8 @@ class IdentityManager(
             publicMlDsaKey = mldsaPublicKey,
             privateMlDsaKey = mldsaPrivateKey,
             createdAt = createdAt,
-            avatar = avatar
+            avatar = avatar,
+            bio = bio,
+            status = status
         )
 }

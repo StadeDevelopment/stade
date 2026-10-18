@@ -116,7 +116,9 @@ however well it is written:
 
 - **Analytics, telemetry, or crash reporting that leaves the device.**
 - **Read receipts, "seen" indicators, or online-presence features.** They leak the
-  recipient's behaviour, which is exactly what the app exists to avoid.
+  recipient's behaviour, which is exactly what the app exists to avoid. The profile
+  status in the app is picked by hand and never set from activity, which is why it
+  stays.
 - **Accounts, phone numbers, or any central directory.**
 - **Live audio or video calls.** Tor is TCP-only and high-latency; carrying real-time
   media would mean routing around it.

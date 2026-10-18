@@ -771,5 +771,19 @@ object ArabicStrings : AppStrings() {
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "مؤثرات صوتية"
     override val unsupportedMessage = "لم يعد هذا النوع من الرسائل مدعومًا"
+
+    override val myProfileTitle = "ملفي الشخصي"
+    override val profileOpenAction = "افتح ملفك الشخصي"
+    override val profileStatusSection = "الحالة"
+    override val profileStatusNone = "بلا"
+    override val profileStatusIdle = "غير نشط"
+    override val profileStatusDnd = "عدم الإزعاج"
+    override val profileStatusManualNote = "أنت تختار هذا بنفسك. لا يغيّره Stade عنك، ويبقى كما هو حتى تبدّله."
+    override val profileAboutSection = "نبذة"
+    override val profileAboutPlaceholder = "بعض الكلمات عنك"
+    override val profileAboutEmpty = "لا شيء هنا بعد"
+    override val profileSharedNote = "تُشارك نبذتك وحالتك مع جهات اتصالك."
+    override val profileSaved = "تم حفظ الملف الشخصي"
+
 }
 

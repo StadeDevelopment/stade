@@ -147,6 +147,8 @@ import dev.stade.ui.screens.setStadeyVisible
 import dev.stade.ui.screens.StadiumScreen
 import dev.stade.ui.screens.SettingsScreen
 import dev.stade.ui.screens.TransportsScreen
+import dev.stade.identity.contactPresence
+import dev.stade.ui.components.ProfileStatusDot
 import dev.stade.ui.screens.VerifyContactScreen
 import dev.stade.ui.screens.SecuritySettingsScreen
 import dev.stade.ui.i18n.LocalStrings
@@ -1300,20 +1302,12 @@ private fun PanelContactRow(
 
             Box {
                 Avatar(name = contact.nickname, size = 42.dp, keySeed = contact.publicSigningKey, avatarBytes = contact.avatar)
-                Box(
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(11.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                        .padding(2.dp)
-                ) {
-                    Box(
-                        Modifier.fillMaxSize().clip(CircleShape).background(
-                            if (connected) StadeColors.online else StadeColors.offline
-                        )
-                    )
-                }
+                ProfileStatusDot(
+                    status = contactPresence(contact.status, connected, contact.lastSeen > 0L),
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    size = 11.dp,
+                    ringColor = MaterialTheme.colorScheme.surfaceContainerLow
+                )
             }
 
             Spacer(Modifier.width(12.dp))

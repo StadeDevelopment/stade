@@ -788,5 +788,19 @@ object TurkishStrings : AppStrings() {
     override val padPaddyTitle = "Stade Paddy"
     override val padPaddySubtitle = "Ses efektleri"
     override val unsupportedMessage = "Bu mesaj türü artık desteklenmiyor"
+
+    override val myProfileTitle = "Profilim"
+    override val profileOpenAction = "Profilini aç"
+    override val profileStatusSection = "Durum"
+    override val profileStatusNone = "Yok"
+    override val profileStatusIdle = "Boşta"
+    override val profileStatusDnd = "Rahatsız etmeyin"
+    override val profileStatusManualNote = "Bunu sen seçersin. Stade senin yerine değiştirmez, sen değiştirene kadar aynı kalır."
+    override val profileAboutSection = "Hakkında"
+    override val profileAboutPlaceholder = "Kendin hakkında birkaç kelime"
+    override val profileAboutEmpty = "Burada henüz bir şey yok"
+    override val profileSharedNote = "Hakkında ve durumun kişilerinle paylaşılır."
+    override val profileSaved = "Profil kaydedildi"
+
 }
 
