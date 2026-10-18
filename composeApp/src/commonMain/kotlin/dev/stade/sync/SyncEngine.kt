@@ -82,6 +82,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 
+private const val PING_INTERVAL_MS = 20_000L
+private const val WATCHDOG_TICK_MS = 10_000L
+private const val SILENCE_LIMIT_MS = 60_000L
 
 class SyncEngine(
     private val crypto: CryptoApi,
@@ -643,7 +646,7 @@ class SyncEngine(
         private suspend fun runPinger() {
             try {
                 while (true) {
-                    delay(30_000)
+                    delay(PING_INTERVAL_MS)
                     runCatching {
                         connection.send(FrameCodec.encode(SyncRecord(RecordType.PING, ByteArray(0))))
                     }.getOrElse {
@@ -658,8 +661,8 @@ class SyncEngine(
         private suspend fun runWatchdog() {
             try {
                 while (true) {
-                    delay(15_000)
-                    if (Clock.System.now().toEpochMilliseconds() - lastRxAt > 95_000) {
+                    delay(WATCHDOG_TICK_MS)
+                    if (Clock.System.now().toEpochMilliseconds() - lastRxAt > SILENCE_LIMIT_MS) {
                         runCatching { connection.close() }
                         return
                     }
