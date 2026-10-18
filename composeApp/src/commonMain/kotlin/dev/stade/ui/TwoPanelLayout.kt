@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -121,6 +122,7 @@ import dev.stade.ui.components.DESKTOP_USER_BAR_HEIGHT
 import dev.stade.ui.components.DesktopModalHost
 import dev.stade.radar.isRadarSupported
 import dev.stade.ui.components.DesktopUserBar
+import dev.stade.ui.components.UnreadCountBadge
 import dev.stade.ui.components.UpdateAvailableButton
 import dev.stade.ui.components.UpdateRequiredBanner
 import dev.stade.ui.screens.StadeRadarScreen
@@ -337,15 +339,9 @@ fun TwoPanelLayout(
         result
     }
 
-    val archivedUnreadCount = remember(archivedKeys, contacts, groups) {
-        archivedKeys.count { key ->
-            when {
-                key.startsWith("grp_") -> container.groups.unreadCount(key.removePrefix("grp_")) > 0
-                key.startsWith("std_") -> false
-                else -> container.messages.unreadCount(key) > 0
-            }
-        }
-    }
+    val archivedUnread by remember(owner.id) {
+        container.archivedChats.observeUnreadChats(owner.id)
+    }.collectAsState(initial = 0)
 
     var panelMessageResults by remember { mutableStateOf(emptyList<SearchResult>()) }
     LaunchedEffect(query) {
@@ -489,11 +485,19 @@ fun TwoPanelLayout(
                         actions = {
                             UpdateAvailableButton(container = container)
                             if (!showArchived) {
-                                IconButton(onClick = { showArchived = true }) {
-                                    Icon(
-                                        Icons.Default.Archive,
-                                        contentDescription = strings.archivedChatsTitle,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                Box {
+                                    IconButton(onClick = { showArchived = true }) {
+                                        Icon(
+                                            Icons.Default.Archive,
+                                            contentDescription = strings.archivedChatsTitle,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    UnreadCountBadge(
+                                        count = archivedUnread,
+                                        modifier = Modifier
+                                            .align(Alignment.BottomStart)
+                                            .offset(x = 3.dp, y = (-3).dp)
                                     )
                                 }
                             }

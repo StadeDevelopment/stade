@@ -66,8 +66,6 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import app.cash.sqldelight.coroutines.asFlow
-import app.cash.sqldelight.coroutines.mapToList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenu
@@ -267,22 +265,6 @@ fun ContactsScreen(
     }
     val autoUnarchive by remember { container.archivedChats.observeAutoUnarchive() }
         .collectAsState(initial = remember { container.archivedChats.autoUnarchiveOnMessage() })
-    val unreadContactIds by remember {
-        container.db.stadeDbQueries.unreadContactIds().asFlow().mapToList(Dispatchers.Default)
-    }.collectAsState(initial = emptyList())
-    val unreadGroupIds by remember {
-        container.db.stadeDbQueries.unreadGroupIds().asFlow().mapToList(Dispatchers.Default)
-    }.collectAsState(initial = emptyList())
-    val archivedUnreadCount = remember(archivedKeys, unreadContactIds, unreadGroupIds) {
-        archivedKeys.count { key ->
-            when {
-                key.startsWith("grp_") -> unreadGroupIds.contains(key.removePrefix("grp_"))
-                key.startsWith("std_") -> false
-                else -> unreadContactIds.contains(key)
-            }
-        }
-    }
-
     val scope = rememberCoroutineScope()
     val strings = LocalStrings.current
 

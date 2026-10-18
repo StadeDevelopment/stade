@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.flowOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -645,6 +646,9 @@ private fun UnlockedApp(
                 homeContactsPresent = list.isNotEmpty()
             }
         }
+        val archivedUnread by remember(homeOwnerId) {
+            homeOwnerId?.let { container.archivedChats.observeUnreadChats(it) } ?: flowOf(0)
+        }.collectAsState(initial = 0)
         var measuredTopBarHeight by remember { mutableStateOf(0.dp) }
         val assumedTopBarHeight =
             WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + DEFAULT_TOP_BAR_HEIGHT
@@ -982,6 +986,7 @@ private fun UnlockedApp(
                             state = homeBar,
                             barWidth = barWidth,
                             showSearch = homeContactsPresent,
+                            archivedUnread = archivedUnread,
                             onOpenArchived = { screen = Screen.Archived },
                             onOpenSettings = { screen = Screen.Settings },
                             onOpenRadarSettings = { radarSettingsTicket++ }

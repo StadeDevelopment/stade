@@ -236,6 +236,7 @@ fun HomeTopBarActions(
     state: HomeTopBarState,
     barWidth: Dp,
     showSearch: Boolean,
+    archivedUnread: Int,
     onOpenArchived: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenRadarSettings: () -> Unit
@@ -258,6 +259,7 @@ fun HomeTopBarActions(
             TopBarPill(
                 icon = Icons.Default.Archive,
                 contentDescription = strings.archivedChatsTitle,
+                badgeCount = archivedUnread,
                 onClick = onOpenArchived
             )
             TopBarPill(

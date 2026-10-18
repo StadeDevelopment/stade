@@ -5,10 +5,27 @@ import app.cash.sqldelight.coroutines.mapToList
 import dev.stade.db.StadeDb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
 
 private const val AUTO_UNARCHIVE_KEY = "arch.autoUnarchive"
+
+const val GROUP_CHAT_KEY_PREFIX = "grp_"
+const val STADIUM_CHAT_KEY_PREFIX = "std_"
+
+fun archivedUnreadChats(
+    archivedKeys: Set<String>,
+    unreadContactIds: Set<String>,
+    unreadGroupIds: Set<String>
+): Int = archivedKeys.count { key ->
+    when {
+        key.startsWith(GROUP_CHAT_KEY_PREFIX) ->
+            unreadGroupIds.contains(key.removePrefix(GROUP_CHAT_KEY_PREFIX))
+        key.startsWith(STADIUM_CHAT_KEY_PREFIX) -> false
+        else -> unreadContactIds.contains(key)
+    }
+}
 
 class ArchivedChats(private val db: StadeDb) {
     private fun kvKey(ownerId: String, chatKey: String) = "arch.$ownerId.$chatKey"
@@ -30,6 +47,15 @@ class ArchivedChats(private val db: StadeDb) {
             .mapToList(Dispatchers.Default)
             .map { rows -> rows.mapTo(mutableSetOf()) { it.key.removePrefix(prefix) } }
     }
+
+    fun observeUnreadChats(ownerId: String): Flow<Int> =
+        combine(
+            observeArchived(ownerId),
+            db.stadeDbQueries.unreadContactIds().asFlow().mapToList(Dispatchers.Default),
+            db.stadeDbQueries.unreadGroupIds().asFlow().mapToList(Dispatchers.Default)
+        ) { keys, contactIds, groupIds ->
+            archivedUnreadChats(keys, contactIds.toSet(), groupIds.toSet())
+        }
 
     fun autoUnarchiveOnMessage(): Boolean =
         runCatching {

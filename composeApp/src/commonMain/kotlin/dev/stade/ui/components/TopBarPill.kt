@@ -5,7 +5,10 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -37,6 +40,7 @@ import androidx.compose.ui.window.Popup
 import dev.stade.ui.i18n.LocalStrings
 import kotlinx.datetime.Clock
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -53,6 +57,8 @@ import kotlin.math.sin
 val TOP_PILL_SIZE = 40.dp
 val TOP_PILL_GAP = 8.dp
 
+private val BADGE_SIZE = 18.dp
+
 private const val GEAR_SPIN_MS = 400
 private const val GEAR_SPIN_HANDOFF_MS = GEAR_SPIN_MS.toLong()
 
@@ -61,11 +67,32 @@ private const val SPARKLE_HANDOFF_MS = 300L
 internal val SPARKLE_GOLD = Color(0xFFFFC53D)
 
 @Composable
+fun UnreadCountBadge(count: Int, modifier: Modifier = Modifier) {
+    if (count <= 0) return
+    Box(
+        modifier = modifier
+            .defaultMinSize(minWidth = BADGE_SIZE, minHeight = BADGE_SIZE)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.error)
+            .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            if (count > 99) "99+" else count.toString(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onError,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
 fun TopBarPill(
     icon: ImageVector,
     contentDescription: String,
     spinOnClick: Boolean = false,
     sparkleOnClick: Boolean = false,
+    badgeCount: Int = 0,
     onClick: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -74,66 +101,74 @@ fun TopBarPill(
     val haptic = rememberGearHaptic()
     val baseTint = MaterialTheme.colorScheme.onSurface
 
-    Surface(
-        modifier = Modifier.size(TOP_PILL_SIZE),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        shadowElevation = 2.dp
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            if (sparkleOnClick && burst.value > 0f && burst.value < 1f) {
-                SparkleBurst(progress = burst.value)
-            }
-            IconButton(
-                onClick = {
-                    when {
-                        spinOnClick -> {
-                            scope.launch {
-                                spin.animateTo(
-                                    targetValue = spin.value + 360f,
-                                    animationSpec = tween(GEAR_SPIN_MS, easing = FastOutSlowInEasing)
-                                )
+    Box {
+        Surface(
+            modifier = Modifier.size(TOP_PILL_SIZE),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            shadowElevation = 2.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                if (sparkleOnClick && burst.value > 0f && burst.value < 1f) {
+                    SparkleBurst(progress = burst.value)
+                }
+                IconButton(
+                    onClick = {
+                        when {
+                            spinOnClick -> {
+                                scope.launch {
+                                    spin.animateTo(
+                                        targetValue = spin.value + 360f,
+                                        animationSpec = tween(GEAR_SPIN_MS, easing = FastOutSlowInEasing)
+                                    )
+                                }
+                                scope.launch { haptic.play() }
+                                scope.launch {
+                                    delay(GEAR_SPIN_HANDOFF_MS)
+                                    onClick()
+                                }
                             }
-                            scope.launch { haptic.play() }
-                            scope.launch {
-                                delay(GEAR_SPIN_HANDOFF_MS)
-                                onClick()
+                            sparkleOnClick -> {
+                                scope.launch {
+                                    burst.snapTo(0f)
+                                    burst.animateTo(1f, tween(SPARKLE_MS, easing = LinearEasing))
+                                    burst.snapTo(0f)
+                                }
+                                scope.launch { haptic.play() }
+                                scope.launch {
+                                    delay(SPARKLE_HANDOFF_MS)
+                                    onClick()
+                                }
                             }
+                            else -> onClick()
                         }
-                        sparkleOnClick -> {
-                            scope.launch {
-                                burst.snapTo(0f)
-                                burst.animateTo(1f, tween(SPARKLE_MS, easing = LinearEasing))
-                                burst.snapTo(0f)
+                    },
+                    modifier = Modifier.size(TOP_PILL_SIZE)
+                ) {
+                    val pop = sin(burst.value * PI.toFloat())
+                    Icon(
+                        icon,
+                        contentDescription = contentDescription,
+                        tint = if (sparkleOnClick) lerp(baseTint, SPARKLE_GOLD, pop) else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .graphicsLayer {
+                                rotationZ = spin.value
+                                val s = 1f + pop * 0.5f
+                                scaleX = s
+                                scaleY = s
                             }
-                            scope.launch { haptic.play() }
-                            scope.launch {
-                                delay(SPARKLE_HANDOFF_MS)
-                                onClick()
-                            }
-                        }
-                        else -> onClick()
-                    }
-                },
-                modifier = Modifier.size(TOP_PILL_SIZE)
-            ) {
-                val pop = sin(burst.value * PI.toFloat())
-                Icon(
-                    icon,
-                    contentDescription = contentDescription,
-                    tint = if (sparkleOnClick) lerp(baseTint, SPARKLE_GOLD, pop) else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer {
-                            rotationZ = spin.value
-                            val s = 1f + pop * 0.5f
-                            scaleX = s
-                            scaleY = s
-                        }
-                )
+                    )
+                }
             }
         }
+        UnreadCountBadge(
+            count = badgeCount,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = (-3).dp, y = 3.dp)
+        )
     }
 }
 
