@@ -2,6 +2,7 @@
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import dev.stade.ui.i18n.I18n
 import java.util.prefs.Preferences
 
 private val prefs: Preferences = Preferences.userRoot().node("dev/stade/notifications")
@@ -51,7 +52,7 @@ actual fun showIncomingMessageNotification(
 ) {
     if (!_enabled.value) return
     if (privacy) {
-        DesktopNotifier.showMessage("Stade", "$unreadTotal yeni mesaj")
+        DesktopNotifier.showMessage("Stade", I18n.current.notifNewMessages(unreadTotal))
     } else {
         DesktopNotifier.showMessage(senderName, preview)
     }
