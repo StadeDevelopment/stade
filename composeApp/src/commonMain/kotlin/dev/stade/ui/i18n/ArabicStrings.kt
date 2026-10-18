@@ -829,6 +829,14 @@ object ArabicStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "${count} رسالة مثبّتة"
 
 
+    override val leaveSelectedGroupsTitle = "مغادرة المجموعات المحددة؟"
+    override val leaveSelectedStadiumsTitle = "إلغاء متابعة Stadium المحددة؟"
+    override val deleteSelectedContactsTitle = "حذف المحادثات المحددة؟"
+    override fun leaveSelectedGroupsBody(count: Int) = if (count == 1) "تغادر هذه المجموعة ويُحذف سجلّها من هذا الجهاز." else "تغادر ${count} مجموعة ويُحذف سجلّها من هذا الجهاز."
+    override fun leaveSelectedStadiumsBody(count: Int) = if (count == 1) "تتوقف عن متابعة هذا Stadium وتُحذف منشوراته من هذا الجهاز." else "تتوقف عن متابعة ${count} من Stadium وتُحذف منشوراتها من هذا الجهاز."
+    override fun deleteSelectedContactsBody(count: Int) = if (count == 1) "تحذف جهة الاتصال هذه مع كل رسالة ومفتاح بينكما. لا يُبلَّغ أي منكما." else "تحذف ${count} جهة اتصال مع كل رسالة ومفتاح بينكم. لا يُبلَّغ أحد."
+
+
     override val languageSearchPlaceholder = "ابحث عن لغة"
     override val languageSearchNoResults = "لا توجد لغة مطابقة"
 

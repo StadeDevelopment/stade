@@ -14,7 +14,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +56,7 @@ import org.jetbrains.compose.resources.painterResource
 import stade.composeapp.generated.resources.Res
 import stade.composeapp.generated.resources.app_icon
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
@@ -92,6 +95,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ripple
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -142,7 +146,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.combine
 
-private sealed class ChatListItem {
+internal sealed class ChatListItem {
     data class ContactItem(val contact: Contact, val lastMessageTs: Long? = null, val pinnedAtValue: Long? = null) : ChatListItem()
     data class GroupItem(val group: GroupInfo, val lastMessageTs: Long? = null, val pinnedAtValue: Long? = null) : ChatListItem()
     data class StadiumItem(val stadium: dev.stade.stadium.StadiumInfo, val lastMessageTs: Long? = null, val pinnedAtValue: Long? = null) : ChatListItem()
@@ -166,10 +170,40 @@ private sealed class ChatListItem {
         is GroupItem   -> pinnedAtValue
         is StadiumItem -> pinnedAtValue
     }
+    val muted: Boolean get() = when (this) {
+        is ContactItem -> contact.muted
+        is GroupItem   -> group.muted
+        is StadiumItem -> stadium.muted
+    }
 }
 
 
 
+
+internal enum class SelectionKind { Contacts, Groups, Stadiums }
+
+internal data class ChatSelectionSummary(
+    val count: Int,
+    val allArchived: Boolean,
+    val allMuted: Boolean,
+    val kind: SelectionKind?
+)
+
+internal fun chatSelectionSummary(
+    items: List<ChatListItem>,
+    archivedKeys: Set<String>
+): ChatSelectionSummary = ChatSelectionSummary(
+    count = items.size,
+    allArchived = items.isNotEmpty() && items.all { archivedKeys.contains(it.key) },
+    allMuted = items.isNotEmpty() && items.all { it.muted },
+    kind = when {
+        items.isEmpty() -> null
+        items.all { it is ChatListItem.ContactItem } -> SelectionKind.Contacts
+        items.all { it is ChatListItem.GroupItem } -> SelectionKind.Groups
+        items.all { it is ChatListItem.StadiumItem } -> SelectionKind.Stadiums
+        else -> null
+    }
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -274,6 +308,10 @@ fun ContactsScreen(
     }.collectAsState(initial = stadiums.map { container.stadiums.lastMessage(it.id) }.ifEmpty { listOf(null) })
 
 
+    var selectedKeys by remember(owner.id, showArchived) { mutableStateOf<Set<String>>(emptySet()) }
+    val inSelectionMode = selectedKeys.isNotEmpty()
+    var showBulkActionConfirm by remember { mutableStateOf(false) }
+    var bulkActionRunning by remember { mutableStateOf(false) }
     var actionItem by remember { mutableStateOf<ChatListItem?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showLeaveConfirm by remember { mutableStateOf(false) }
@@ -670,6 +708,7 @@ fun ContactsScreen(
         }
     }
 
+    PlatformBackHandler(enabled = inSelectionMode) { selectedKeys = emptySet() }
     PlatformBackHandler(enabled = bar.searchActive) {
         bar.searchActive = false
         bar.query = ""
@@ -725,6 +764,83 @@ fun ContactsScreen(
             )
             result
         }
+    }
+
+    val bulkSelection = remember(selectedKeys, combinedItems) {
+        combinedItems.filter { selectedKeys.contains(it.key) }
+    }
+    val bulkKind = remember(bulkSelection, archivedKeys) {
+        chatSelectionSummary(bulkSelection, archivedKeys).kind
+    }
+    if (showBulkActionConfirm && bulkKind != null) {
+        AlertDialog(
+            onDismissRequest = { if (!bulkActionRunning) showBulkActionConfirm = false },
+            icon = {
+                Icon(
+                    if (bulkKind == SelectionKind.Contacts) Icons.Default.Delete
+                    else Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(
+                    when (bulkKind) {
+                        SelectionKind.Contacts -> strings.deleteSelectedContactsTitle
+                        SelectionKind.Groups -> strings.leaveSelectedGroupsTitle
+                        SelectionKind.Stadiums -> strings.leaveSelectedStadiumsTitle
+                    }
+                )
+            },
+            text = {
+                Text(
+                    when (bulkKind) {
+                        SelectionKind.Contacts -> strings.deleteSelectedContactsBody(bulkSelection.size)
+                        SelectionKind.Groups -> strings.leaveSelectedGroupsBody(bulkSelection.size)
+                        SelectionKind.Stadiums -> strings.leaveSelectedStadiumsBody(bulkSelection.size)
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !bulkActionRunning,
+                    onClick = {
+                        bulkActionRunning = true
+                        val targets = bulkSelection
+                        scope.launch {
+                            withContext(Dispatchers.Default) {
+                                targets.forEach { entry ->
+                                    runCatching {
+                                        when (entry) {
+                                            is ChatListItem.StadiumItem ->
+                                                container.stadiumChat.leave(owner, entry.stadium)
+                                            is ChatListItem.GroupItem ->
+                                                container.groupChat.leaveGroup(owner, entry.group)
+                                            is ChatListItem.ContactItem ->
+                                                container.deleteContact(owner.id, entry.contact.id)
+                                        }
+                                    }
+                                }
+                            }
+                            bulkActionRunning = false
+                            showBulkActionConfirm = false
+                            selectedKeys = emptySet()
+                        }
+                    }
+                ) {
+                    Text(
+                        if (bulkKind == SelectionKind.Contacts) strings.delete else strings.leaveAction,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !bulkActionRunning, onClick = { showBulkActionConfirm = false }) {
+                    Text(strings.cancel)
+                }
+            }
+        )
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -786,7 +902,53 @@ fun ContactsScreen(
                         }
                     )
             ) {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize()) {
+                AnimatedVisibility(
+                    visible = inSelectionMode,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    val selectedItems = remember(selectedKeys, combinedItems) {
+                        combinedItems.filter { selectedKeys.contains(it.key) }
+                    }
+                    val summary = remember(selectedItems, archivedKeys) {
+                        chatSelectionSummary(selectedItems, archivedKeys)
+                    }
+                    ChatSelectionBar(
+                        count = summary.count,
+                        allArchived = summary.allArchived,
+                        allMuted = summary.allMuted,
+                        kind = summary.kind,
+                        onClear = { selectedKeys = emptySet() },
+                        onToggleArchive = {
+                            val next = !summary.allArchived
+                            selectedItems.forEach {
+                                container.archivedChats.setArchived(owner.id, it.key, next)
+                            }
+                            selectedKeys = emptySet()
+                        },
+                        onToggleMute = {
+                            val next = !summary.allMuted
+                            scope.launch {
+                                withContext(Dispatchers.Default) {
+                                    selectedItems.forEach { entry ->
+                                        when (entry) {
+                                            is ChatListItem.ContactItem ->
+                                                container.contacts.setMuted(entry.contact.id, next)
+                                            is ChatListItem.GroupItem ->
+                                                container.groups.setMuted(entry.group.id, next)
+                                            is ChatListItem.StadiumItem ->
+                                                container.stadiums.setMuted(entry.stadium.id, next)
+                                        }
+                                    }
+                                }
+                                selectedKeys = emptySet()
+                            }
+                        },
+                        onDestructive = { showBulkActionConfirm = true }
+                    )
+                }
+                LazyColumn(modifier = Modifier.weight(1f)) {
                     if (torCardShown) {
                     item(key = "torBootstrap") {
                         TorBootstrapCard(
@@ -858,8 +1020,16 @@ fun ContactsScreen(
                                         lastMessage = preview,
                                         unread = unread,
                                         pinned = item.pinnedAt != null,
-                                        onClick = { onOpenChat(contact.id) },
-                                        onLongPress = { actionItem = item }
+                                        selected = selectedKeys.contains(item.key),
+                                        onClick = {
+                                            if (inSelectionMode) {
+                                                selectedKeys = selectedKeys.toggled(item.key)
+                                            } else {
+                                                onOpenChat(contact.id)
+                                            }
+                                        },
+                                        onLongPress = { actionItem = item },
+                                        onAvatarClick = { selectedKeys = selectedKeys.toggled(item.key) }
                                     )
                                 }
                                 is ChatListItem.GroupItem -> {
@@ -876,8 +1046,16 @@ fun ContactsScreen(
                                         lastMessage = preview,
                                         unread = unread,
                                         pinned = item.pinnedAt != null,
-                                        onClick = { onOpenGroupChat(group.id) },
-                                        onLongPress = { actionItem = item }
+                                        selected = selectedKeys.contains(item.key),
+                                        onClick = {
+                                            if (inSelectionMode) {
+                                                selectedKeys = selectedKeys.toggled(item.key)
+                                            } else {
+                                                onOpenGroupChat(group.id)
+                                            }
+                                        },
+                                        onLongPress = { actionItem = item },
+                                        onAvatarClick = { selectedKeys = selectedKeys.toggled(item.key) }
                                     )
                                 }
                                 is ChatListItem.StadiumItem -> {
@@ -885,8 +1063,16 @@ fun ContactsScreen(
                                     StadiumRow(
                                         stadium = stadium,
                                         pinned = item.pinnedAt != null,
-                                        onClick = { onOpenStadium(stadium.id) },
-                                        onLongPress = { actionItem = item }
+                                        selected = selectedKeys.contains(item.key),
+                                        onClick = {
+                                            if (inSelectionMode) {
+                                                selectedKeys = selectedKeys.toggled(item.key)
+                                            } else {
+                                                onOpenStadium(stadium.id)
+                                            }
+                                        },
+                                        onLongPress = { actionItem = item },
+                                        onAvatarClick = { selectedKeys = selectedKeys.toggled(item.key) }
                                     )
                                 }
                             }
@@ -932,9 +1118,88 @@ fun ContactsScreen(
                         Spacer(Modifier.height(LocalHomeBarClearance.current))
                     }
                 }
+                }
             }
         }
 
+    }
+}
+
+private fun Set<String>.toggled(key: String): Set<String> =
+    if (contains(key)) this - key else this + key
+
+@Composable
+private fun AvatarSelectionOverlay() {
+    Box(
+        modifier = Modifier
+            .size(52.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Default.Check,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier.size(26.dp)
+        )
+    }
+}
+
+@Composable
+private fun ChatSelectionBar(
+    count: Int,
+    allArchived: Boolean,
+    allMuted: Boolean,
+    kind: SelectionKind?,
+    onClear: () -> Unit,
+    onToggleArchive: () -> Unit,
+    onToggleMute: () -> Unit,
+    onDestructive: () -> Unit
+) {
+    val strings = LocalStrings.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onClear) {
+                Icon(Icons.Default.Close, contentDescription = strings.cancelSelection)
+            }
+            Text(
+                strings.selectedCount(count),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onToggleMute) {
+                Icon(
+                    if (allMuted) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+                    contentDescription = if (allMuted) strings.unmuteChatAction else strings.muteChatAction
+                )
+            }
+            IconButton(onClick = onToggleArchive) {
+                Icon(
+                    if (allArchived) Icons.Default.Unarchive else Icons.Default.Archive,
+                    contentDescription = if (allArchived) strings.unarchiveChatAction
+                    else strings.archiveChatAction
+                )
+            }
+            if (kind != null) {
+                IconButton(onClick = onDestructive) {
+                    Icon(
+                        if (kind == SelectionKind.Contacts) Icons.Default.Delete
+                        else Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = if (kind == SelectionKind.Contacts) strings.deleteContact
+                        else strings.leaveAction,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1072,15 +1337,17 @@ private fun ContactRow(
     lastMessage: String?,
     unread: Long,
     pinned: Boolean,
+    selected: Boolean,
     onClick: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onAvatarClick: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
     val strings = LocalStrings.current
     val subtleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.Transparent,
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
     ) {
         Row(
             modifier = Modifier
@@ -1096,7 +1363,18 @@ private fun ContactRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box {
-                Avatar(contact.nickname, size = 52.dp, keySeed = contact.publicSigningKey, avatarBytes = contact.avatar)
+                Box(
+                    modifier = Modifier
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = ripple(bounded = false, radius = 28.dp),
+                            onClickLabel = strings.cancelSelection,
+                            onClick = onAvatarClick
+                        )
+                ) {
+                    Avatar(contact.nickname, size = 52.dp, keySeed = contact.publicSigningKey, avatarBytes = contact.avatar)
+                    if (selected) AvatarSelectionOverlay()
+                }
                 ProfileStatusDot(
                     status = contactPresence(contact.status, connected, contact.lastSeen > 0L),
                     modifier = Modifier.align(Alignment.BottomEnd),
@@ -1178,15 +1456,17 @@ private fun GroupRow(
     lastMessage: String?,
     unread: Long,
     pinned: Boolean,
+    selected: Boolean,
     onClick: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onAvatarClick: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
     val strings = LocalStrings.current
     val subtleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.Transparent,
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
     ) {
         Row(
             modifier = Modifier
@@ -1201,7 +1481,18 @@ private fun GroupRow(
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Avatar(name = group.name, size = 52.dp, icon = Icons.Default.Group)
+            Box(
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = ripple(bounded = false, radius = 28.dp),
+                        onClickLabel = strings.cancelSelection,
+                        onClick = onAvatarClick
+                    )
+            ) {
+                Avatar(name = group.name, size = 52.dp, icon = Icons.Default.Group)
+                if (selected) AvatarSelectionOverlay()
+            }
 
             Spacer(Modifier.width(16.dp))
 
@@ -1264,15 +1555,17 @@ private fun GroupRow(
 private fun StadiumRow(
     stadium: dev.stade.stadium.StadiumInfo,
     pinned: Boolean,
+    selected: Boolean,
     onClick: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onAvatarClick: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
     val strings = LocalStrings.current
     val subtleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.Transparent,
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
     ) {
         Row(
             modifier = Modifier
@@ -1287,13 +1580,24 @@ private fun StadiumRow(
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Avatar(
-                name = stadium.name,
-                size = 52.dp,
-                icon = Icons.Default.Podcasts,
-                image = if (stadium.isOfficial) painterResource(Res.drawable.app_icon) else null,
-                verified = stadium.isOfficial
-            )
+            Box(
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = ripple(bounded = false, radius = 28.dp),
+                        onClickLabel = strings.cancelSelection,
+                        onClick = onAvatarClick
+                    )
+            ) {
+                Avatar(
+                    name = stadium.name,
+                    size = 52.dp,
+                    icon = Icons.Default.Podcasts,
+                    image = if (stadium.isOfficial) painterResource(Res.drawable.app_icon) else null,
+                    verified = stadium.isOfficial
+                )
+                if (selected) AvatarSelectionOverlay()
+            }
 
             Spacer(Modifier.width(16.dp))
 

@@ -829,6 +829,14 @@ object KoreanStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "고정된 메시지 ${count}개"
 
 
+    override val leaveSelectedGroupsTitle = "선택한 그룹을 나가시겠습니까?"
+    override val leaveSelectedStadiumsTitle = "선택한 Stadium 구독을 해제할까요?"
+    override val deleteSelectedContactsTitle = "선택한 대화를 삭제할까요?"
+    override fun leaveSelectedGroupsBody(count: Int) = if (count == 1) "이 그룹을 나가고 기록이 이 기기에서 지워집니다." else "그룹 ${count}개를 나가고 기록이 이 기기에서 지워집니다."
+    override fun leaveSelectedStadiumsBody(count: Int) = if (count == 1) "이 Stadium 구독을 해제하고 게시물이 이 기기에서 지워집니다." else "Stadium ${count}개의 구독을 해제하고 게시물이 이 기기에서 지워집니다."
+    override fun deleteSelectedContactsBody(count: Int) = if (count == 1) "이 연락처와 주고받은 모든 메시지와 키를 함께 삭제합니다. 양쪽 모두에게 알리지 않습니다." else "연락처 ${count}명과 주고받은 모든 메시지와 키를 함께 삭제합니다. 누구에게도 알리지 않습니다."
+
+
     override val languageSearchPlaceholder = "언어 검색"
     override val languageSearchNoResults = "일치하는 언어가 없습니다"
 

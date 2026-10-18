@@ -846,6 +846,14 @@ object TurkishStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "${count} sabitlenmiş mesaj"
 
 
+    override val leaveSelectedGroupsTitle = "Seçili gruplardan ayrılınsın mı?"
+    override val leaveSelectedStadiumsTitle = "Seçili Stadium'lar bırakılsın mı?"
+    override val deleteSelectedContactsTitle = "Seçili sohbetler silinsin mi?"
+    override fun leaveSelectedGroupsBody(count: Int) = if (count == 1) "Bu gruptan ayrılırsın ve geçmişi bu cihazdan silinir." else "${count} gruptan ayrılırsın ve geçmişleri bu cihazdan silinir."
+    override fun leaveSelectedStadiumsBody(count: Int) = if (count == 1) "Bu Stadium\u0027u takip etmeyi bırakırsın ve gönderileri bu cihazdan silinir." else "${count} Stadium\u0027u takip etmeyi bırakırsın ve gönderileri bu cihazdan silinir."
+    override fun deleteSelectedContactsBody(count: Int) = if (count == 1) "Bu kişiyi, paylaştığınız tüm mesaj ve anahtarlarla birlikte silersin. Hiçbirinize bildirilmez." else "${count} kişiyi, paylaştığınız tüm mesaj ve anahtarlarla birlikte silersin. Kimseye bildirilmez."
+
+
     override val languageSearchPlaceholder = "Dil ara"
     override val languageSearchNoResults = "Bununla eşleşen dil yok"
 

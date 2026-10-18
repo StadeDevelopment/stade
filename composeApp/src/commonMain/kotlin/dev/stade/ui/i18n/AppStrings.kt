@@ -744,6 +744,13 @@ abstract class AppStrings {
     abstract val backupExportWarning: String
     abstract fun backupExportSize(size: String): String
 
+    abstract val leaveSelectedGroupsTitle: String
+    abstract val leaveSelectedStadiumsTitle: String
+    abstract val deleteSelectedContactsTitle: String
+    abstract fun leaveSelectedGroupsBody(count: Int): String
+    abstract fun leaveSelectedStadiumsBody(count: Int): String
+    abstract fun deleteSelectedContactsBody(count: Int): String
+
     abstract val languageSearchPlaceholder: String
     abstract val languageSearchNoResults: String
 

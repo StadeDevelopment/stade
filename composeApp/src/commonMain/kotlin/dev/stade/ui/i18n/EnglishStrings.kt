@@ -849,6 +849,14 @@ object EnglishStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "${count} pinned messages"
 
 
+    override val leaveSelectedGroupsTitle = "Leave the selected groups?"
+    override val leaveSelectedStadiumsTitle = "Leave the selected Stadiums?"
+    override val deleteSelectedContactsTitle = "Delete the selected chats?"
+    override fun leaveSelectedGroupsBody(count: Int) = if (count == 1) "You leave this group, and its history is removed from this device." else "You leave ${count} groups, and their history is removed from this device."
+    override fun leaveSelectedStadiumsBody(count: Int) = if (count == 1) "You stop following this Stadium, and its posts are removed from this device." else "You stop following ${count} Stadiums, and their posts are removed from this device."
+    override fun deleteSelectedContactsBody(count: Int) = if (count == 1) "You delete this contact along with every message and key you share. Neither of you is told." else "You delete ${count} contacts along with every message and key you share. Nobody is told."
+
+
     override val languageSearchPlaceholder = "Search languages"
     override val languageSearchNoResults = "No language matches that"
 

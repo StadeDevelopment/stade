@@ -829,6 +829,14 @@ object PersianStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "${count} پیام سنجاق‌شده"
 
 
+    override val leaveSelectedGroupsTitle = "از گروه‌های انتخاب‌شده خارج می‌شوی؟"
+    override val leaveSelectedStadiumsTitle = "دنبال‌کردن Stadium‌های انتخاب‌شده را بس می‌کنی؟"
+    override val deleteSelectedContactsTitle = "گفت‌وگوهای انتخاب‌شده حذف شوند؟"
+    override fun leaveSelectedGroupsBody(count: Int) = if (count == 1) "از این گروه خارج می‌شوی و تاریخچه‌اش از این دستگاه پاک می‌شود." else "از ${count} گروه خارج می‌شوی و تاریخچه‌شان از این دستگاه پاک می‌شود."
+    override fun leaveSelectedStadiumsBody(count: Int) = if (count == 1) "دنبال‌کردن این Stadium را بس می‌کنی و نوشته‌هایش از این دستگاه پاک می‌شود." else "دنبال‌کردن ${count} Stadium را بس می‌کنی و نوشته‌هایشان از این دستگاه پاک می‌شود."
+    override fun deleteSelectedContactsBody(count: Int) = if (count == 1) "این مخاطب را همراه همه پیام‌ها و کلیدهای مشترک حذف می‌کنی. به هیچ‌کدامتان خبر داده نمی‌شود." else "${count} مخاطب را همراه همه پیام‌ها و کلیدهای مشترک حذف می‌کنی. به کسی خبر داده نمی‌شود."
+
+
     override val languageSearchPlaceholder = "جست‌وجوی زبان"
     override val languageSearchNoResults = "زبانی با این عبارت پیدا نشد"
 
