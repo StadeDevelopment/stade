@@ -149,6 +149,7 @@ import dev.stade.ui.screens.SettingsScreen
 import dev.stade.ui.screens.TransportsScreen
 import dev.stade.identity.contactPresence
 import dev.stade.ui.components.ProfileStatusDot
+import dev.stade.ui.screens.ThemeScreen
 import dev.stade.ui.screens.VerifyContactScreen
 import dev.stade.ui.screens.SecuritySettingsScreen
 import dev.stade.ui.i18n.LocalStrings
@@ -174,6 +175,7 @@ private sealed class PanelRight {
     data object Transports : PanelRight()
     data object About : PanelRight()
     data object Language : PanelRight()
+    data object Theme : PanelRight()
     data object Starred : PanelRight()
     data object ArchiveSettings : PanelRight()
     data object Stadey : PanelRight()
@@ -790,6 +792,7 @@ fun TwoPanelLayout(
                                 right is PanelRight.Transports ||
                                 right is PanelRight.About ||
                                 right is PanelRight.Language ||
+                                right is PanelRight.Theme ||
                                 right is PanelRight.ArchiveSettings,
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -875,6 +878,7 @@ fun TwoPanelLayout(
                     onOpenSecurity = { right = PanelRight.Security },
                     onOpenAbout = { right = PanelRight.About },
                     onOpenLanguage = { right = PanelRight.Language },
+                    onOpenTheme = { right = PanelRight.Theme },
                     onOpenStarred = { right = PanelRight.Starred },
                     onLogout = onLogout,
                     listState = settingsListState
@@ -909,6 +913,9 @@ fun TwoPanelLayout(
                 )
 
                 is PanelRight.Language -> LanguageScreen(
+                    onBack = { right = PanelRight.Settings }
+                )
+                is PanelRight.Theme -> ThemeScreen(
                     onBack = { right = PanelRight.Settings }
                 )
                 is PanelRight.ArchiveSettings -> ArchiveSettingsScreen(
@@ -1894,6 +1901,7 @@ private fun panelKey(panel: PanelRight): String = when (panel) {
     is PanelRight.Transports -> "transports"
     is PanelRight.About -> "about"
     is PanelRight.Language -> "language"
+    is PanelRight.Theme -> "theme"
     is PanelRight.Starred -> "starred"
     is PanelRight.ArchiveSettings -> "archiveSettings"
     is PanelRight.Stadey -> "stadey"
@@ -1923,6 +1931,7 @@ private fun panelDepth(panel: PanelRight): Int = when (panel) {
     is PanelRight.Transports,
     is PanelRight.About,
     is PanelRight.Language,
+    is PanelRight.Theme,
     is PanelRight.ArchiveSettings -> 2
     is PanelRight.PinSetup -> 3
 }

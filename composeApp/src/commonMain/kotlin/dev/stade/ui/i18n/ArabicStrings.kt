@@ -785,5 +785,15 @@ object ArabicStrings : AppStrings() {
     override val profileSharedNote = "تُشارك نبذتك وحالتك مع جهات اتصالك."
     override val profileSaved = "تم حفظ الملف الشخصي"
 
+
+
+
+    override val themeTitle = "مظهر التطبيق"
+    override val themeSubtitle = "اختر شكل Stade. الوضع الفاتح والداكن قرارك، مهما فعل النظام."
+    override val themeColorSection = "اللون"
+    override val themeModeSystem = "النظام"
+    override val themeModeLight = "فاتح"
+    override val themeModeDark = "داكن"
+
 }
 

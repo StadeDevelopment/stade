@@ -725,6 +725,13 @@ abstract class AppStrings {
     abstract val profileAboutEmpty: String
     abstract val profileSharedNote: String
     abstract val profileSaved: String
+
+    abstract val themeTitle: String
+    abstract val themeSubtitle: String
+    abstract val themeColorSection: String
+    abstract val themeModeSystem: String
+    abstract val themeModeLight: String
+    abstract val themeModeDark: String
 }
 
 val LocalStrings = compositionLocalOf<AppStrings> { EnglishStrings }

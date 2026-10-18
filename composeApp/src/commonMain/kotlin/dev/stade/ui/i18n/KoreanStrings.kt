@@ -785,5 +785,15 @@ object KoreanStrings : AppStrings() {
     override val profileSharedNote = "소개와 상태는 연락처와 공유됩니다."
     override val profileSaved = "프로필을 저장했습니다"
 
+
+
+
+    override val themeTitle = "앱 테마"
+    override val themeSubtitle = "Stade의 모습을 고르세요. 시스템 설정과 무관하게 밝게 또는 어둡게 쓸 수 있습니다."
+    override val themeColorSection = "색"
+    override val themeModeSystem = "시스템"
+    override val themeModeLight = "밝게"
+    override val themeModeDark = "어둡게"
+
 }
 

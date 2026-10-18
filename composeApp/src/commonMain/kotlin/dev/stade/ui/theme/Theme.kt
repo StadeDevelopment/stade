@@ -110,9 +110,11 @@ object StadeColors {
     val offline: Color = Color(0xFF98A2B3)
 }
 
+fun stadeColorScheme(dark: Boolean): ColorScheme = if (dark) DarkColors else LightColors
+
 @Composable
 fun StadeTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+    val dark = isDarkTheme()
     val dynamicScheme = resolveDynamicColorScheme(dark)
     val target = dynamicScheme ?: if (dark) DarkColors else LightColors
     MaterialTheme(
@@ -126,7 +128,7 @@ fun StadeTheme(content: @Composable () -> Unit) {
 val ColorScheme.BrandColor: Color
     @Composable
     get() {
-        val dark = isSystemInDarkTheme()
+        val dark = isDarkTheme()
         val isDynamicEnabled = getDynamicColorEnabled().value
 
         return if (isDynamicEnabled && isDynamicColorSupported) {

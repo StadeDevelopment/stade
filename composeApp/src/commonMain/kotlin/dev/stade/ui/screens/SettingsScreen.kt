@@ -99,10 +99,7 @@ import dev.stade.ui.components.Avatar
 import dev.stade.ui.components.LocalOpenMyProfile
 import dev.stade.ui.components.ProfileStatusPill
 import dev.stade.ui.components.PlatformVerticalScrollbar
-import dev.stade.ui.rememberMediaPickerLauncher
-import dev.stade.ui.theme.getDynamicColorEnabled
-import dev.stade.ui.theme.isDynamicColorSupported
-import dev.stade.ui.theme.setDynamicColorEnabled
+import dev.stade.ui.theme.getThemeMode
 import dev.stade.ui.i18n.localeDisplayName
 import dev.stade.ui.BackupOutcome
 import dev.stade.ui.rememberBackupIo
@@ -123,12 +120,13 @@ fun SettingsScreen(
     onOpenAbout: () -> Unit = {},
     onOpenLanguage: () -> Unit = {},
     onOpenStarred: () -> Unit = {},
+    onOpenTheme: () -> Unit = {},
     onLogout: () -> Unit,
     listState: LazyListState = rememberLazyListState()
 ) {
     val strings = LocalStrings.current
     val fingerprint = remember(owner.id) { container.fingerprint.fingerprint(owner.publicSigningKey) }
-    val dynamicColorEnabled by getDynamicColorEnabled()
+    val themeMode by getThemeMode()
     val notificationsEnabled by getNotificationsEnabled()
     val notificationPrivacyEnabled by getNotificationPrivacyEnabled()
     val runInBackgroundEnabled by getRunInBackgroundEnabledCommon()
@@ -305,32 +303,27 @@ fun SettingsScreen(
                 )
             }
 
-            if (isDynamicColorSupported || !stadeyVisible) {
-                item {
-                    SettingsSectionLabel(strings.appearanceSection)
-                    SettingsGroup {
-                        if (isDynamicColorSupported) {
-                            row {
-                                SwitchSettingsRow(
-                                    icon = Icons.Default.Palette,
-                                    iconTint = MaterialTheme.colorScheme.tertiary,
-                                    title = strings.dynamicColorTitle,
-                                    subtitle = strings.dynamicColorSubtitle,
-                                    checked = dynamicColorEnabled,
-                                    onCheckedChange = { setDynamicColorEnabled(it) }
-                                )
-                            }
-                        }
-                        if (!stadeyVisible) {
-                            row {
-                                NavigationSettingsRow(
-                                    icon = Icons.Default.SmartToy,
-                                    iconTint = MaterialTheme.colorScheme.tertiary,
-                                    title = strings.activateStadeyTitle,
-                                    subtitle = strings.activateStadeySubtitle,
-                                    onClick = { showActivateStadeyConfirm = true }
-                                )
-                            }
+            item {
+                SettingsSectionLabel(strings.appearanceSection)
+                SettingsGroup {
+                    row {
+                        NavigationSettingsRow(
+                            icon = Icons.Default.Palette,
+                            iconTint = MaterialTheme.colorScheme.tertiary,
+                            title = strings.themeTitle,
+                            subtitle = themeModeSubtitle(themeMode),
+                            onClick = onOpenTheme
+                        )
+                    }
+                    if (!stadeyVisible) {
+                        row {
+                            NavigationSettingsRow(
+                                icon = Icons.Default.SmartToy,
+                                iconTint = MaterialTheme.colorScheme.tertiary,
+                                title = strings.activateStadeyTitle,
+                                subtitle = strings.activateStadeySubtitle,
+                                onClick = { showActivateStadeyConfirm = true }
+                            )
                         }
                     }
                 }

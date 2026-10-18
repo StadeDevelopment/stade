@@ -10,7 +10,15 @@ class ScreenNavigationTest {
 
     @Test
     fun settingsSubScreensAnimateBackToSettings() {
-        for (child in listOf(Screen.About, Screen.Security, Screen.Transports)) {
+        val children = listOf(
+            Screen.About,
+            Screen.Security,
+            Screen.Transports,
+            Screen.Theme,
+            Screen.Language,
+            Screen.Starred
+        )
+        for (child in children) {
             assertTrue(goesForward(Screen.Settings, child), "Settings -> $child should go forward")
             assertTrue(!goesForward(child, Screen.Settings), "$child -> Settings should go back")
         }

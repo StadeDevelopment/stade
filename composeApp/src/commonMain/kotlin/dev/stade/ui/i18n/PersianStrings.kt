@@ -785,5 +785,15 @@ object PersianStrings : AppStrings() {
     override val profileSharedNote = "درباره و وضعیت تو با مخاطبانت به اشتراک گذاشته می‌شود."
     override val profileSaved = "نمایه ذخیره شد"
 
+
+
+
+    override val themeTitle = "پوسته برنامه"
+    override val themeSubtitle = "ظاهر Stade را انتخاب کن. فارغ از تنظیم سیستم، روشن یا تاریک دست خودت است."
+    override val themeColorSection = "رنگ"
+    override val themeModeSystem = "سیستم"
+    override val themeModeLight = "روشن"
+    override val themeModeDark = "تاریک"
+
 }
 

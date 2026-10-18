@@ -805,5 +805,15 @@ object EnglishStrings : AppStrings() {
     override val profileSharedNote = "Your About and status are shared with your contacts."
     override val profileSaved = "Profile saved"
 
+
+
+
+    override val themeTitle = "App theme"
+    override val themeSubtitle = "Pick how Stade looks. Light and dark are yours to choose, whatever the system does."
+    override val themeColorSection = "Colour"
+    override val themeModeSystem = "System"
+    override val themeModeLight = "Light"
+    override val themeModeDark = "Dark"
+
 }
 

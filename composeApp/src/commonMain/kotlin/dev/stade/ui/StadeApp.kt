@@ -53,6 +53,7 @@ import dev.stade.ui.screens.SecuritySettingsScreen
 import dev.stade.ui.screens.LanguageScreen
 import dev.stade.ui.screens.SettingsScreen
 import dev.stade.ui.screens.StadiumScreen
+import dev.stade.ui.screens.ThemeScreen
 import dev.stade.ui.screens.TransportsScreen
 import dev.stade.ui.screens.VerifyContactScreen
 import dev.stade.ui.screens.WelcomeUsernameScreen
@@ -133,7 +134,8 @@ internal fun screenDepth(s: Screen): Int = when (s) {
     Screen.Contacts -> 1
     Screen.Settings, Screen.Stadey, Screen.AddContact, Screen.Radar, Screen.Archived,
     Screen.CreateGroup, Screen.CreateStadium, Screen.JoinStadium -> 2
-    Screen.Security, Screen.Transports, Screen.About, Screen.Starred -> 3
+    Screen.Security, Screen.Transports, Screen.About, Screen.Starred,
+    Screen.Language, Screen.Theme -> 3
     Screen.ArchiveSettings -> 3
     is Screen.GroupMembers, is Screen.ManageStadium, is Screen.Verify, is Screen.PinSetup -> 3
     else -> 2
@@ -156,6 +158,7 @@ sealed interface Screen {
     data object Transports : Screen
     data object About : Screen
     data object Language : Screen
+    data object Theme : Screen
     data object Stadey : Screen
     data object Starred : Screen
     data object ArchiveSettings : Screen
@@ -615,6 +618,7 @@ private fun UnlockedApp(
                 Screen.Transports -> screen = Screen.Settings
                 Screen.About -> screen = Screen.Settings
                 Screen.Language -> screen = Screen.Settings
+                Screen.Theme -> screen = Screen.Settings
                 Screen.Stadey -> screen = Screen.Contacts
                 Screen.Starred -> screen = Screen.Contacts
                 Screen.ArchiveSettings -> screen = Screen.Archived
@@ -737,6 +741,7 @@ private fun UnlockedApp(
                         onOpenAbout = { screen = Screen.About },
                         onOpenLanguage = { screen = Screen.Language },
                         onOpenStarred = { screen = Screen.Starred },
+                        onOpenTheme = { screen = Screen.Theme },
                         onLogout = {
                             scope.launch {
                                 container.connections.stop()
@@ -766,6 +771,9 @@ private fun UnlockedApp(
                         onBack = { screen = Screen.Contacts }
                     )
                     target == Screen.Language -> LanguageScreen(
+                        onBack = { screen = Screen.Settings }
+                    )
+                    target == Screen.Theme -> ThemeScreen(
                         onBack = { screen = Screen.Settings }
                     )
                     target == Screen.ArchiveSettings -> ArchiveSettingsScreen(

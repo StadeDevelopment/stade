@@ -802,5 +802,15 @@ object TurkishStrings : AppStrings() {
     override val profileSharedNote = "Hakkında ve durumun kişilerinle paylaşılır."
     override val profileSaved = "Profil kaydedildi"
 
+
+
+
+    override val themeTitle = "Uygulama teması"
+    override val themeSubtitle = "Stade'in görünümünü seç. Sistem ne yaparsa yapsın, açık ve koyu senin kararın."
+    override val themeColorSection = "Renk"
+    override val themeModeSystem = "Sistem"
+    override val themeModeLight = "Açık"
+    override val themeModeDark = "Koyu"
+
 }
 
