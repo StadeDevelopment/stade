@@ -515,6 +515,7 @@ private fun UnlockedApp(
                     if (container.isAppInForeground.value && container.activeContactId == event.contactId) return@collect
                     val notifStrings = dev.stade.ui.i18n.I18n.current
                     val contact = container.contacts.get(event.contactId)
+                    if (contact?.muted == true) return@collect
                     if (contact != null &&
                         container.archivedChats.silencesMessage(contact.ownerId, event.contactId)
                     ) {
@@ -564,6 +565,7 @@ private fun UnlockedApp(
                     if (container.isAppInForeground.value && container.activeContactId == event.groupId) return@collect
                     val notifStrings = dev.stade.ui.i18n.I18n.current
                     val group = container.groups.getGroup(event.groupId)
+                    if (group?.muted == true) return@collect
                     if (group != null &&
                         container.archivedChats.silencesMessage(
                             group.ownerId,
