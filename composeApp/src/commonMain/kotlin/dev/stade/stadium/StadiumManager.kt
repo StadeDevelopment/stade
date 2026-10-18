@@ -4,6 +4,7 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOne
 import app.cash.sqldelight.coroutines.mapToOneOrNull
+import dev.stade.chat.chatWallpaperKey
 import dev.stade.crypto.CryptoApi
 import dev.stade.crypto.Encoding
 import dev.stade.db.StadeDb
@@ -110,6 +111,7 @@ class StadiumManager(private val db: StadeDb, private val crypto: CryptoApi) {
             db.stadeDbQueries.deleteStadiumMessages(stadiumId)
             db.stadeDbQueries.deleteStadiumMembers(stadiumId)
             db.stadeDbQueries.deleteStadium(stadiumId)
+            db.stadeDbQueries.deleteKv(chatWallpaperKey(stadiumId))
         }
         removeConversationShortcut(ShortcutEntityKind.STADIUM, stadiumId)
     }
@@ -118,6 +120,7 @@ class StadiumManager(private val db: StadeDb, private val crypto: CryptoApi) {
         db.stadeDbQueries.transaction {
             db.stadeDbQueries.deleteStadiumMessages(stadiumId)
             db.stadeDbQueries.deleteStadium(stadiumId)
+            db.stadeDbQueries.deleteKv(chatWallpaperKey(stadiumId))
         }
         removeConversationShortcut(ShortcutEntityKind.STADIUM, stadiumId)
     }

@@ -59,6 +59,7 @@ import dev.stade.identity.LocalIdentity
 import dev.stade.identity.ProfileStatus
 import dev.stade.identity.contactPresence
 import dev.stade.ui.components.Avatar
+import dev.stade.ui.components.ChatWallpaperCard
 import dev.stade.ui.components.AvatarViewerDialog
 import dev.stade.ui.components.ProfileStatusPill
 import dev.stade.ui.components.VanishDurationSheet
@@ -308,6 +309,8 @@ fun VerifyContactScreen(
                         }
                     }
                 }
+
+                ChatWallpaperCard(container = container, chatId = contactId)
 
                 ProfileCard {
                     Column(

@@ -6,6 +6,7 @@ import app.cash.sqldelight.db.SqlDriver
 import dev.stade.chat.ArchiveService
 import dev.stade.chat.ArchivedChats
 import dev.stade.chat.PinnedChats
+import dev.stade.chat.ChatWallpapers
 import dev.stade.chat.StarredMessages
 import dev.stade.contact.ContactManager
 import dev.stade.contact.HandshakeService
@@ -247,6 +248,7 @@ class AppContainer(
     val pinnedChats = PinnedChats(db)
     val archivedChats = ArchivedChats(db)
     val starredMessages = StarredMessages(db)
+    val chatWallpapers = ChatWallpapers(db)
     val sync = SyncEngine(crypto, pq, contacts, messages, ratchet, outbox, handshake, vanish, groups, stadiums)
     val chat = ChatService(messages, sync, vanish)
     val typing = TypingTracker()

@@ -803,5 +803,11 @@ object PersianStrings : AppStrings() {
     override val themeModeLight = "روشن"
     override val themeModeDark = "تاریک"
 
+
+    override val chatWallpaperTitle = "پس‌زمینه گفت‌وگو"
+    override val chatWallpaperOnSubtitle = "خودت انتخابش کرده‌ای و فقط روی همین دستگاه می‌ماند"
+    override val chatWallpaperOffSubtitle = "نقش Stade. برای استفاده از عکس خودت بزن"
+    override val removeWallpaperAction = "حذف"
+
 }
 

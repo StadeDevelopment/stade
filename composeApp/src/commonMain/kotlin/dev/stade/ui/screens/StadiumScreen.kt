@@ -112,6 +112,8 @@ import dev.stade.ui.decodeToImageBitmap
 import dev.stade.ui.components.LinkifiedText
 import dev.stade.ui.components.ChatSearchBar
 import dev.stade.ui.components.ChatSearchRunner
+import dev.stade.ui.components.ChatWallpaper
+import dev.stade.ui.components.chatWallpaperBytes
 import dev.stade.ui.components.rememberChatSearchState
 import dev.stade.ui.components.centerOnChatMessage
 import dev.stade.ui.components.animateToChatBottom
@@ -676,6 +678,7 @@ fun StadiumScreen(
             }
         } else {
             Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                ChatWallpaper(chatWallpaperBytes(container, stadiumId))
                 Column(
                     modifier = Modifier
                         .fillMaxSize()

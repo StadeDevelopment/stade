@@ -820,5 +820,11 @@ object TurkishStrings : AppStrings() {
     override val themeModeLight = "Açık"
     override val themeModeDark = "Koyu"
 
+
+    override val chatWallpaperTitle = "Sohbet duvar kağıdı"
+    override val chatWallpaperOnSubtitle = "Senin seçtiğin, yalnızca bu cihazda tutulur"
+    override val chatWallpaperOffSubtitle = "Stade deseni. Kendi fotoğrafını kullanmak için dokun"
+    override val removeWallpaperAction = "Kaldır"
+
 }
 

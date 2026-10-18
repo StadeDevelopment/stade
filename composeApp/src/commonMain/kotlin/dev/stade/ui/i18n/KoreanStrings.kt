@@ -803,5 +803,11 @@ object KoreanStrings : AppStrings() {
     override val themeModeLight = "밝게"
     override val themeModeDark = "어둡게"
 
+
+    override val chatWallpaperTitle = "대화 배경"
+    override val chatWallpaperOnSubtitle = "내가 고른 배경이며 이 기기에만 보관됩니다"
+    override val chatWallpaperOffSubtitle = "Stade 패턴입니다. 눌러서 내 사진을 사용하세요"
+    override val removeWallpaperAction = "제거"
+
 }
 

@@ -7,6 +7,7 @@ import app.cash.sqldelight.coroutines.mapToOneOrNull
 import dev.stade.crypto.CryptoApi
 import dev.stade.crypto.PqCrypto
 import dev.stade.crypto.Encoding
+import dev.stade.chat.chatWallpaperKey
 import dev.stade.db.StadeDb
 import dev.stade.identity.LocalIdentity
 import dev.stade.identity.StadeId
@@ -166,6 +167,7 @@ class GroupManager(
             db.stadeDbQueries.deleteGroupMessages(groupId)
             db.stadeDbQueries.deleteGroupMembers(groupId)
             db.stadeDbQueries.deleteGroup(groupId)
+            db.stadeDbQueries.deleteKv(chatWallpaperKey(groupId))
         }
         removeConversationShortcut(ShortcutEntityKind.GROUP, groupId)
     }
@@ -221,6 +223,7 @@ class GroupManager(
             db.stadeDbQueries.deleteGroupMessages(groupId)
             db.stadeDbQueries.deleteGroupMembers(groupId)
             db.stadeDbQueries.deleteGroup(groupId)
+            db.stadeDbQueries.deleteKv(chatWallpaperKey(groupId))
         }
         removeConversationShortcut(ShortcutEntityKind.GROUP, groupId)
     }

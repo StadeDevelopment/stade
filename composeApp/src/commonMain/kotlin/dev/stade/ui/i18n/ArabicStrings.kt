@@ -803,5 +803,11 @@ object ArabicStrings : AppStrings() {
     override val themeModeLight = "فاتح"
     override val themeModeDark = "داكن"
 
+
+    override val chatWallpaperTitle = "خلفية المحادثة"
+    override val chatWallpaperOnSubtitle = "اخترتها بنفسك وتبقى على هذا الجهاز وحده"
+    override val chatWallpaperOffSubtitle = "نقش Stade. اضغط لاستخدام صورة من عندك"
+    override val removeWallpaperAction = "إزالة"
+
 }
 

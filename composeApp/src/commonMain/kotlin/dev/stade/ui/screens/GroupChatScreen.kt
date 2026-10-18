@@ -66,6 +66,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Stop
@@ -134,6 +135,9 @@ import dev.stade.ui.components.LinkifiedText
 import dev.stade.ui.components.HIGHLIGHT_FLASH_MS
 import dev.stade.ui.components.ChatSearchBar
 import dev.stade.ui.components.ChatSearchRunner
+import dev.stade.ui.components.ChatWallpaper
+import dev.stade.ui.components.chatWallpaperBytes
+import dev.stade.ui.components.rememberChatWallpaperPicker
 import dev.stade.ui.components.rememberChatSearchState
 import dev.stade.ui.components.centerOnChatMessage
 import dev.stade.ui.components.animateToChatBottom
@@ -304,6 +308,7 @@ fun GroupChatScreen(
         StickerImportResultDialog(outcome) { stickerImportResult = null }
     }
 
+    val wallpaperPicker = rememberChatWallpaperPicker(container, groupId)
     var selectedMessageIds by remember(groupId) { mutableStateOf<Set<String>>(emptySet()) }
     val inSelectionMode by remember { derivedStateOf { selectedMessageIds.isNotEmpty() } }
     var showSelectionDeleteDialog by remember { mutableStateOf(false) }
@@ -903,6 +908,24 @@ fun GroupChatScreen(
                                         showAddMembersDialog = true
                                     }
                                 )
+                                DropdownMenuItem(
+                                    text = { Text(strings.chatWallpaperTitle) },
+                                    leadingIcon = { Icon(Icons.Default.Wallpaper, null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        wallpaperPicker.launch()
+                                    }
+                                )
+                                if (wallpaperPicker.hasWallpaper) {
+                                    DropdownMenuItem(
+                                        text = { Text(strings.removeWallpaperAction) },
+                                        leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                        onClick = {
+                                            menuOpen = false
+                                            wallpaperPicker.onRemove()
+                                        }
+                                    )
+                                }
                                 if (isOwner) {
                                     DropdownMenuItem(
                                         text = { Text(strings.deleteGroupTitle, color = MaterialTheme.colorScheme.error) },
@@ -935,6 +958,7 @@ fun GroupChatScreen(
                 .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 .padding(padding)
         ) {
+            ChatWallpaper(chatWallpaperBytes(container, groupId))
             Column(
                 modifier = Modifier
                     .fillMaxSize()

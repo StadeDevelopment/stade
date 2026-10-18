@@ -175,6 +175,8 @@ import dev.stade.identity.ProfileStatus
 import dev.stade.identity.contactPresence
 import dev.stade.ui.components.profileStatusColor
 import dev.stade.ui.components.profileStatusLabel
+import dev.stade.ui.components.ChatWallpaper
+import dev.stade.ui.components.chatWallpaperBytes
 import dev.stade.ui.components.rememberChatSearchState
 import dev.stade.ui.components.Avatar
 import dev.stade.ui.components.ChatComposerBar
@@ -1086,6 +1088,7 @@ fun ChatScreen(
                 .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 .padding(padding)
         ) {
+            ChatWallpaper(chatWallpaperBytes(container, contactId))
             Column(
                 modifier = Modifier
                     .fillMaxSize()

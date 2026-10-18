@@ -734,6 +734,11 @@ abstract class AppStrings {
     abstract val stadiumRoleOwner: String
     abstract val stadiumRoleSubscriber: String
 
+    abstract val chatWallpaperTitle: String
+    abstract val chatWallpaperOnSubtitle: String
+    abstract val chatWallpaperOffSubtitle: String
+    abstract val removeWallpaperAction: String
+
     abstract val themeTitle: String
     abstract val themeSubtitle: String
     abstract val themeColorSection: String

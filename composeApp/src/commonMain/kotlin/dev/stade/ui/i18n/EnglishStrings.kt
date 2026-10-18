@@ -823,5 +823,11 @@ object EnglishStrings : AppStrings() {
     override val themeModeLight = "Light"
     override val themeModeDark = "Dark"
 
+
+    override val chatWallpaperTitle = "Chat wallpaper"
+    override val chatWallpaperOnSubtitle = "Chosen by you, kept on this device only"
+    override val chatWallpaperOffSubtitle = "The Stade pattern. Tap to use a photo of your own"
+    override val removeWallpaperAction = "Remove"
+
 }
 
