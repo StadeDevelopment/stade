@@ -76,9 +76,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
+
 
 class SyncEngine(
     private val crypto: CryptoApi,
@@ -166,7 +169,7 @@ class SyncEngine(
             contacts.markSeen(contact.id, Clock.System.now().toEpochMilliseconds())
             val preferOutbound = owner.stadeId < contact.id
             if (outbound != preferOutbound) {
-                val existing = sessionsLock.withLock { sessions[contact.id] }
+                val existing = sessionsLock.withLock { sessions[contact.id]?.takeIf { it.isAlive() } }
                 if (existing != null) {
                     runCatching { connection.close() }
                     return@coroutineScope
@@ -186,9 +189,11 @@ class SyncEngine(
             try {
                 session.run()
             } finally {
-                sessionsLock.withLock {
-                    if (sessions[contact.id] === session) sessions.remove(contact.id)
-                    _connected.value = sessions.keys.toSet()
+                withContext(NonCancellable) {
+                    sessionsLock.withLock {
+                        if (sessions[contact.id] === session) sessions.remove(contact.id)
+                        _connected.value = sessions.keys.toSet()
+                    }
                 }
                 _events.tryEmit(SyncEvent.ContactDisconnected(contact.id))
             }
@@ -544,6 +549,8 @@ class SyncEngine(
         @Volatile private var lastRxAt = Clock.System.now().toEpochMilliseconds()
 
         fun notifyOutbox() { outboxSignal.tryEmit(Unit) }
+
+        fun isAlive(): Boolean = rootJob?.isActive != false
 
         fun cancel() { rootJob?.cancel() }
 

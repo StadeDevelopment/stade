@@ -48,7 +48,7 @@ class ConnectionManager(
     private val tasks = mutableListOf<Job>()
     private val backoff = mutableMapOf<String, Long>()
     private val consecutiveFails = mutableMapOf<String, Int>()
-    private val dialing = mutableSetOf<String>()
+    private val dialing = mutableMapOf<String, Long>()
     private val pendingDial = mutableSetOf<String>()
     private val pendingAttempts = mutableMapOf<String, Int>()
     private val pendingQueuedAt = mutableMapOf<String, Long>()
@@ -171,10 +171,18 @@ class ConnectionManager(
         return CONTACT_BACKOFF_STEPS_MS[minOf(streak - 1, CONTACT_BACKOFF_STEPS_MS.lastIndex)]
     }
 
-    private fun isDialing(contactId: String): Boolean = synchronized(dialing) { contactId in dialing }
+    private fun isDialing(contactId: String): Boolean = synchronized(dialing) {
+        val since = dialing[contactId] ?: return false
+        if (nowMs() - since > DIAL_STALL_MS) {
+            dialing.remove(contactId)
+            false
+        } else {
+            true
+        }
+    }
 
     private fun markDialing(contactId: String) {
-        synchronized(dialing) { dialing.add(contactId) }
+        synchronized(dialing) { dialing[contactId] = nowMs() }
     }
 
     private fun unmarkDialing(contactId: String) {
@@ -204,6 +212,7 @@ class ConnectionManager(
             sync.events.collect { event ->
                 when (event) {
                     is SyncEngine.SyncEvent.ContactDisconnected -> {
+                        unmarkDialing(event.contactId)
                         scope.launch {
                             delay(1_000)
                             removeBackoff(event.contactId)
@@ -214,6 +223,7 @@ class ConnectionManager(
                         }
                     }
                     is SyncEngine.SyncEvent.ContactConnected -> {
+                        unmarkDialing(event.contactId)
                         clearFailCountWithPrefix("${event.contactId}|")
                         val siblingAddrs = runCatching { contacts.get(event.contactId)?.addresses }.getOrNull()
                         if (!siblingAddrs.isNullOrEmpty()) {
@@ -501,6 +511,7 @@ class ConnectionManager(
 
     private companion object {
         const val MAX_PENDING_AGE_MS = 10 * 60_000L
+        const val DIAL_STALL_MS = 150_000L
         val CONTACT_BACKOFF_STEPS_MS = longArrayOf(30_000L, 60_000L, 120_000L, 240_000L, 480_000L, 600_000L)
     }
 }
