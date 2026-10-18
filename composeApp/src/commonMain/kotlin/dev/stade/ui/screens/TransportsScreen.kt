@@ -1,5 +1,11 @@
 package dev.stade.ui.screens
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -31,6 +38,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +46,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +61,11 @@ import dev.stade.transport.torBridgesSupported
 import dev.stade.ui.components.PlatformVerticalScrollbar
 import dev.stade.ui.components.maskAddress
 import dev.stade.ui.i18n.LocalStrings
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
+import stade.composeapp.generated.resources.Res
+import stade.composeapp.generated.resources.stadey_onion
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -197,12 +213,54 @@ fun TransportsScreen(container: AppContainer, onBack: () -> Unit) {
                     }
                 }
             }
+            PeekingStadey(modifier = Modifier.align(Alignment.CenterEnd))
             PlatformVerticalScrollbar(
                 state = listState,
                 modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
             )
         }
     }
+}
+
+private val STADEY_WIDTH = 108.dp
+private val STADEY_HEIGHT = 120.dp
+private const val STADEY_WAIT_MS = 450L
+private const val STADEY_SHOWN_MS = 1900L
+private const val STADEY_LEAVE_MS = 620
+private const val STADEY_SHOWN_FRACTION = 0.72f
+private const val STADEY_LEAN_DEGREES = -9f
+
+internal fun stadeyHiddenFraction(shown: Float): Float =
+    1f - STADEY_SHOWN_FRACTION * shown.coerceIn(0f, 1f)
+
+@Composable
+private fun PeekingStadey(modifier: Modifier = Modifier) {
+    val peek = remember { Animatable(0f) }
+    val towardsScreen = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
+    LaunchedEffect(Unit) {
+        delay(STADEY_WAIT_MS)
+        peek.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+        )
+        delay(STADEY_SHOWN_MS)
+        peek.animateTo(0f, tween(STADEY_LEAVE_MS, easing = FastOutSlowInEasing))
+    }
+    Image(
+        painter = painterResource(Res.drawable.stadey_onion),
+        contentDescription = null,
+        modifier = modifier
+            .size(width = STADEY_WIDTH, height = STADEY_HEIGHT)
+            .graphicsLayer {
+                val shown = peek.value
+                transformOrigin = TransformOrigin(1f, 0.5f)
+                translationX = towardsScreen * size.width * stadeyHiddenFraction(shown)
+                rotationZ = STADEY_LEAN_DEGREES * shown * towardsScreen
+            }
+    )
 }
 
 @Composable
