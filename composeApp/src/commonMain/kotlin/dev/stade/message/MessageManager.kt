@@ -81,6 +81,14 @@ class MessageManager(private val db: StadeDb, private val crypto: CryptoApi) {
             .asFlow()
             .mapToOne(Dispatchers.Default)
 
+    fun observeUnreadOutsideArchive(): Flow<Long> =
+        db.stadeDbQueries.countUnreadOutsideArchive()
+            .asFlow()
+            .mapToOne(Dispatchers.Default)
+
+    fun unreadOutsideArchive(): Long =
+        db.stadeDbQueries.countUnreadOutsideArchive().executeAsOne()
+
     fun totalUnread(): Long =
         db.stadeDbQueries.countAllUnread().executeAsOne()
 

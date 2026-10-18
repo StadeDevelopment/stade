@@ -20,6 +20,8 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import dev.stade.AppContainer
+import dev.stade.chat.GROUP_CHAT_KEY_PREFIX
+import dev.stade.chat.STADIUM_CHAT_KEY_PREFIX
 import dev.stade.MainActivity
 import dev.stade.StadeApplication
 import dev.stade.notification.NotificationAvatar
@@ -198,9 +200,14 @@ class StadeService : Service() {
                                 if (!getNotificationsEnabled().value) return@collect
                                 val contact = container.contacts.get(event.contactId)
                                 if (contact?.muted == true) return@collect
+                                if (contact != null &&
+                                    container.archivedChats.silencesMessage(contact.ownerId, event.contactId)
+                                ) {
+                                    return@collect
+                                }
                                 if (container.isAppInForeground.value && container.activeContactId == event.contactId) return@collect
                                 if (getNotificationPrivacyEnabled().value) {
-                                    val total = runCatching { container.messages.totalUnread() }.getOrDefault(0L).toInt()
+                                    val total = runCatching { container.messages.unreadOutsideArchive() }.getOrDefault(0L).toInt()
                                     if (total > 0) showPrivacyNotification(total)
                                 } else {
                                     val senderName = contact?.nickname ?: dev.stade.ui.i18n.I18n.current.unknownNickname
@@ -214,9 +221,16 @@ class StadeService : Service() {
                                 if (!getNotificationsEnabled().value) return@collect
                                 val group = container.groups.getGroup(event.groupId) ?: return@collect
                                 if (group.muted) return@collect
+                                if (container.archivedChats.silencesMessage(
+                                        group.ownerId,
+                                        GROUP_CHAT_KEY_PREFIX + event.groupId
+                                    )
+                                ) {
+                                    return@collect
+                                }
                                 if (container.isAppInForeground.value && container.activeContactId == event.groupId) return@collect
                                 if (getNotificationPrivacyEnabled().value) {
-                                    val total = runCatching { container.messages.totalUnread() }.getOrDefault(0L).toInt()
+                                    val total = runCatching { container.messages.unreadOutsideArchive() }.getOrDefault(0L).toInt()
                                     if (total > 0) showPrivacyNotification(total)
                                     return@collect
                                 }
@@ -229,9 +243,16 @@ class StadeService : Service() {
                                 if (!getNotificationsEnabled().value) return@collect
                                 val stadium = container.stadiums.getStadium(event.stadiumId)
                                 if (stadium == null || stadium.muted) return@collect
+                                if (container.archivedChats.silencesMessage(
+                                        stadium.ownerId,
+                                        STADIUM_CHAT_KEY_PREFIX + event.stadiumId
+                                    )
+                                ) {
+                                    return@collect
+                                }
                                 if (container.isAppInForeground.value && container.activeContactId == event.stadiumId) return@collect
                                 if (getNotificationPrivacyEnabled().value) {
-                                    val total = runCatching { container.messages.totalUnread() }.getOrDefault(0L).toInt()
+                                    val total = runCatching { container.messages.unreadOutsideArchive() }.getOrDefault(0L).toInt()
                                     if (total > 0) showPrivacyNotification(total)
                                     return@collect
                                 }
@@ -246,7 +267,7 @@ class StadeService : Service() {
                 }
                 launch {
                     val mgr = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-                    container.messages.observeTotalUnread().distinctUntilChanged().collect { count ->
+                    container.messages.observeUnreadOutsideArchive().distinctUntilChanged().collect { count ->
                         if (count == 0L) {
                             mgr.cancel(hiddenNotifId)
                         } else if (getNotificationPrivacyEnabled().value && getNotificationsEnabled().value) {

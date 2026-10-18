@@ -208,6 +208,15 @@ SELECT COUNT(*) FROM Message WHERE contactId = ? AND read = 0 AND direction = 'I
 countAllUnread:
 SELECT COUNT(*) FROM Message WHERE read = 0 AND direction = 'IN';
 
+countUnreadOutsideArchive:
+SELECT COUNT(*) FROM Message
+WHERE Message.read = 0 AND Message.direction = 'IN'
+AND NOT EXISTS (
+    SELECT 1 FROM KeyValue
+    JOIN Contact ON Contact.id = Message.contactId
+    WHERE KeyValue.key = 'arch.' || Contact.ownerId || '.' || Message.contactId
+);
+
 unreadContactIds:
 SELECT DISTINCT contactId FROM Message WHERE read = 0 AND direction = 'IN';
 

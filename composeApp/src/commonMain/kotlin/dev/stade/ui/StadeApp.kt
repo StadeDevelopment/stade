@@ -14,6 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import dev.stade.chat.GROUP_CHAT_KEY_PREFIX
+import dev.stade.chat.STADIUM_CHAT_KEY_PREFIX
 import kotlinx.coroutines.flow.flowOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -513,6 +515,11 @@ private fun UnlockedApp(
                     if (container.isAppInForeground.value && container.activeContactId == event.contactId) return@collect
                     val notifStrings = dev.stade.ui.i18n.I18n.current
                     val contact = container.contacts.get(event.contactId)
+                    if (contact != null &&
+                        container.archivedChats.silencesMessage(contact.ownerId, event.contactId)
+                    ) {
+                        return@collect
+                    }
                     val sender = contact?.nickname ?: "Stade"
                     val preview = runCatching { container.messages.lastMessage(event.contactId)?.body }
                         .getOrNull()
@@ -521,7 +528,7 @@ private fun UnlockedApp(
                             else dev.stade.message.previewBody(it, notifStrings.photoMessage, notifStrings.voiceMessage, notifStrings.videoMessage, notifStrings.stickerMessage)
                         }
                         ?: notifStrings.notifNewMessageFallback
-                    val total = runCatching { container.messages.totalUnread() }.getOrDefault(0L).toInt()
+                    val total = runCatching { container.messages.unreadOutsideArchive() }.getOrDefault(0L).toInt()
                     val privacy = dev.stade.notification.getNotificationPrivacyEnabled().value
                     dev.stade.notification.showIncomingMessageNotification(
                         contactId = event.contactId,
@@ -533,6 +540,15 @@ private fun UnlockedApp(
                 }
                 is dev.stade.sync.SyncEngine.SyncEvent.RemovedFromGroup -> {
                     if (!dev.stade.notification.getNotificationsEnabled().value) return@collect
+                    val removedOwner = container.groups.getGroup(event.groupId)?.ownerId
+                    if (removedOwner != null &&
+                        container.archivedChats.isArchived(
+                            removedOwner,
+                            GROUP_CHAT_KEY_PREFIX + event.groupId
+                        )
+                    ) {
+                        return@collect
+                    }
                     val privacy = dev.stade.notification.getNotificationPrivacyEnabled().value
                     val notifStrings = dev.stade.ui.i18n.I18n.current
                     dev.stade.notification.showIncomingMessageNotification(
@@ -548,6 +564,14 @@ private fun UnlockedApp(
                     if (container.isAppInForeground.value && container.activeContactId == event.groupId) return@collect
                     val notifStrings = dev.stade.ui.i18n.I18n.current
                     val group = container.groups.getGroup(event.groupId)
+                    if (group != null &&
+                        container.archivedChats.silencesMessage(
+                            group.ownerId,
+                            GROUP_CHAT_KEY_PREFIX + event.groupId
+                        )
+                    ) {
+                        return@collect
+                    }
                     val name = group?.name ?: "Stade"
                     val preview = container.groups.lastMessage(event.groupId)?.body
                         ?.let {
@@ -568,6 +592,13 @@ private fun UnlockedApp(
                     if (!dev.stade.notification.getNotificationsEnabled().value) return@collect
                     val stadium = container.stadiums.getStadium(event.stadiumId) ?: return@collect
                     if (stadium.muted) return@collect
+                    if (container.archivedChats.silencesMessage(
+                            stadium.ownerId,
+                            STADIUM_CHAT_KEY_PREFIX + event.stadiumId
+                        )
+                    ) {
+                        return@collect
+                    }
                     if (container.isAppInForeground.value && container.activeContactId == event.stadiumId) return@collect
                     val notifStrings = dev.stade.ui.i18n.I18n.current
                     val preview = runCatching { container.stadiums.lastMessage(event.stadiumId)?.body }
@@ -583,7 +614,7 @@ private fun UnlockedApp(
                         senderName = stadium.name,
                         preview = preview,
                         privacy = privacy,
-                        unreadTotal = runCatching { container.messages.totalUnread() }.getOrDefault(0L).toInt()
+                        unreadTotal = runCatching { container.messages.unreadOutsideArchive() }.getOrDefault(0L).toInt()
                     )
                 }
                 is dev.stade.sync.SyncEngine.SyncEvent.StadiumInviteReceived -> {

@@ -14,6 +14,12 @@ private const val AUTO_UNARCHIVE_KEY = "arch.autoUnarchive"
 const val GROUP_CHAT_KEY_PREFIX = "grp_"
 const val STADIUM_CHAT_KEY_PREFIX = "std_"
 
+fun archivedChatStaysSilent(
+    archivedKeys: Set<String>,
+    chatKey: String,
+    autoUnarchive: Boolean
+): Boolean = !autoUnarchive && archivedKeys.contains(chatKey)
+
 fun archivedUnreadChats(
     archivedKeys: Set<String>,
     unreadContactIds: Set<String>,
@@ -47,6 +53,14 @@ class ArchivedChats(private val db: StadeDb) {
             .mapToList(Dispatchers.Default)
             .map { rows -> rows.mapTo(mutableSetOf()) { it.key.removePrefix(prefix) } }
     }
+
+    fun isArchived(ownerId: String, chatKey: String): Boolean =
+        runCatching { archived(ownerId).contains(chatKey) }.getOrDefault(false)
+
+    fun silencesMessage(ownerId: String, chatKey: String): Boolean =
+        runCatching {
+            archivedChatStaysSilent(archived(ownerId), chatKey, autoUnarchiveOnMessage())
+        }.getOrDefault(false)
 
     fun observeUnreadChats(ownerId: String): Flow<Int> =
         combine(
