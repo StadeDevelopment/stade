@@ -846,6 +846,10 @@ object TurkishStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "${count} sabitlenmiş mesaj"
 
 
+    override val languageSearchPlaceholder = "Dil ara"
+    override val languageSearchNoResults = "Bununla eşleşen dil yok"
+
+
     override val chatWallpaperTitle = "Sohbet duvar kağıdı"
     override val chatWallpaperOnSubtitle = "Senin seçtiğin, yalnızca bu cihazda tutulur"
     override val chatWallpaperOffSubtitle = "Stade deseni. Kendi fotoğrafını kullanmak için dokun"

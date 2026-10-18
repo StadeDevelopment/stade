@@ -829,6 +829,10 @@ object PersianStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "${count} پیام سنجاق‌شده"
 
 
+    override val languageSearchPlaceholder = "جست‌وجوی زبان"
+    override val languageSearchNoResults = "زبانی با این عبارت پیدا نشد"
+
+
     override val chatWallpaperTitle = "پس‌زمینه گفت‌وگو"
     override val chatWallpaperOnSubtitle = "خودت انتخابش کرده‌ای و فقط روی همین دستگاه می‌ماند"
     override val chatWallpaperOffSubtitle = "نقش Stade. برای استفاده از عکس خودت بزن"

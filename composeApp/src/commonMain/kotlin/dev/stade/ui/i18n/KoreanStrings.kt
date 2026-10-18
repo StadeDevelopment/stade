@@ -829,6 +829,10 @@ object KoreanStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "고정된 메시지 ${count}개"
 
 
+    override val languageSearchPlaceholder = "언어 검색"
+    override val languageSearchNoResults = "일치하는 언어가 없습니다"
+
+
     override val chatWallpaperTitle = "대화 배경"
     override val chatWallpaperOnSubtitle = "내가 고른 배경이며 이 기기에만 보관됩니다"
     override val chatWallpaperOffSubtitle = "Stade 패턴입니다. 눌러서 내 사진을 사용하세요"

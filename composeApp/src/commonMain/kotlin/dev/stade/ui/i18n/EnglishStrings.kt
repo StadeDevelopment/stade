@@ -849,6 +849,10 @@ object EnglishStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "${count} pinned messages"
 
 
+    override val languageSearchPlaceholder = "Search languages"
+    override val languageSearchNoResults = "No language matches that"
+
+
     override val chatWallpaperTitle = "Chat wallpaper"
     override val chatWallpaperOnSubtitle = "Chosen by you, kept on this device only"
     override val chatWallpaperOffSubtitle = "The Stade pattern. Tap to use a photo of your own"

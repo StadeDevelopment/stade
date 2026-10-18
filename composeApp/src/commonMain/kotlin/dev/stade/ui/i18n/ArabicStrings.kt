@@ -829,6 +829,10 @@ object ArabicStrings : AppStrings() {
     override fun pinnedMessagesBanner(count: Int) = "${count} رسالة مثبّتة"
 
 
+    override val languageSearchPlaceholder = "ابحث عن لغة"
+    override val languageSearchNoResults = "لا توجد لغة مطابقة"
+
+
     override val chatWallpaperTitle = "خلفية المحادثة"
     override val chatWallpaperOnSubtitle = "اخترتها بنفسك وتبقى على هذا الجهاز وحده"
     override val chatWallpaperOffSubtitle = "نقش Stade. اضغط لاستخدام صورة من عندك"

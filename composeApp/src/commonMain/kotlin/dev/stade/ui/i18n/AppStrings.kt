@@ -744,6 +744,9 @@ abstract class AppStrings {
     abstract val backupExportWarning: String
     abstract fun backupExportSize(size: String): String
 
+    abstract val languageSearchPlaceholder: String
+    abstract val languageSearchNoResults: String
+
     abstract val chatWallpaperTitle: String
     abstract val chatWallpaperOnSubtitle: String
     abstract val chatWallpaperOffSubtitle: String
