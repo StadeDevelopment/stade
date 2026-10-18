@@ -2,12 +2,34 @@ package dev.stade.identity
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 
 class ContactPresenceTest {
 
     @Test
-    fun aChosenStatusIsShownEvenWhileTheContactIsConnected() {
+    fun aDisconnectedContactIsOfflineWhateverTheyChose() {
+        for (code in listOf("", "online", "idle", "dnd", "offline", "partying")) {
+            assertEquals(
+                ProfileStatus.OFFLINE,
+                contactPresence(code, connected = false, everConnected = true),
+                "'$code' must not outlive the connection it was learned over"
+            )
+        }
+    }
+
+    @Test
+    fun aChosenStatusIsShownWhileTheContactIsConnected() {
+        assertEquals(
+            ProfileStatus.DND,
+            contactPresence(ProfileStatus.DND.code, connected = true, everConnected = true)
+        )
+        assertEquals(
+            ProfileStatus.IDLE,
+            contactPresence(ProfileStatus.IDLE.code, connected = true, everConnected = true)
+        )
+    }
+
+    @Test
+    fun aContactWhoSaysTheyAreOfflineIsTakenAtTheirWord() {
         assertEquals(
             ProfileStatus.OFFLINE,
             contactPresence(ProfileStatus.OFFLINE.code, connected = true, everConnected = true),
@@ -16,32 +38,15 @@ class ContactPresenceTest {
     }
 
     @Test
-    fun aChosenStatusIsShownWhileTheContactIsDisconnected() {
-        assertEquals(
-            ProfileStatus.ONLINE,
-            contactPresence(ProfileStatus.ONLINE.code, connected = false, everConnected = true)
-        )
-        assertEquals(
-            ProfileStatus.DND,
-            contactPresence(ProfileStatus.DND.code, connected = false, everConnected = true)
-        )
-    }
-
-    @Test
     fun theLiveConnectionFillsInWhenNoStatusWasChosen() {
         assertEquals(ProfileStatus.ONLINE, contactPresence("", connected = true, everConnected = true))
-        assertEquals(ProfileStatus.OFFLINE, contactPresence("", connected = false, everConnected = true))
     }
 
     @Test
-    fun anUnknownStatusFallsBackToTheLiveConnection() {
+    fun anUnknownStatusFallsBackToBeingConnected() {
         assertEquals(
             ProfileStatus.ONLINE,
             contactPresence("partying", connected = true, everConnected = true)
-        )
-        assertEquals(
-            ProfileStatus.OFFLINE,
-            contactPresence("partying", connected = false, everConnected = true)
         )
     }
 
@@ -54,8 +59,7 @@ class ContactPresenceTest {
         )
         assertEquals(
             ProfileStatus.NONE,
-            contactPresence(ProfileStatus.DND.code, connected = false, everConnected = false),
-            "a status we could never have received must not be shown"
+            contactPresence(ProfileStatus.DND.code, connected = false, everConnected = false)
         )
     }
 
@@ -65,19 +69,5 @@ class ContactPresenceTest {
             ProfileStatus.ONLINE,
             contactPresence("", connected = true, everConnected = false)
         )
-    }
-
-    @Test
-    fun presenceAlwaysResolvesToSomethingShowableOnceConnected() {
-        val cases = listOf("", "online", "offline", "idle", "dnd", "nonsense", "ONLINE", " ")
-        for (code in cases) {
-            for (connected in listOf(true, false)) {
-                assertNotEquals(
-                    ProfileStatus.NONE,
-                    contactPresence(code, connected, everConnected = true),
-                    "presence for '$code' must be showable rather than empty"
-                )
-            }
-        }
     }
 }

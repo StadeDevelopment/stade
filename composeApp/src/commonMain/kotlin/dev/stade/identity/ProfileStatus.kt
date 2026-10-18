@@ -14,8 +14,7 @@ enum class ProfileStatus(val code: String) {
 }
 
 fun contactPresence(statusCode: String, connected: Boolean, everConnected: Boolean): ProfileStatus {
-    if (!connected && !everConnected) return ProfileStatus.NONE
+    if (!connected) return if (everConnected) ProfileStatus.OFFLINE else ProfileStatus.NONE
     val chosen = ProfileStatus.fromCode(statusCode)
-    if (chosen != ProfileStatus.NONE) return chosen
-    return if (connected) ProfileStatus.ONLINE else ProfileStatus.OFFLINE
+    return if (chosen != ProfileStatus.NONE) chosen else ProfileStatus.ONLINE
 }
