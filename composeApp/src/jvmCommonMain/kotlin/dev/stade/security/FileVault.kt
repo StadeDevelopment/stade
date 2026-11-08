@@ -508,8 +508,17 @@ class FileVault(private val rootDir: File) : Vault {
         memoryKib: Int,
         parallelism: Int
     ): ByteArray =
-        if (kind == KDF_ARGON2ID) deriveArgon2(password, salt, iterations, memoryKib, parallelism)
-        else deriveKey(password, salt, iterations)
+        if (kind == KDF_ARGON2ID) {
+            deriveArgon2(
+                password,
+                salt,
+                iterations.coerceIn(1, MAX_ACCEPTED_ARGON_TIME_COST),
+                memoryKib.coerceIn(8, MAX_ACCEPTED_ARGON_MEMORY_KIB),
+                parallelism.coerceIn(1, MAX_ACCEPTED_ARGON_PARALLELISM)
+            )
+        } else {
+            deriveKey(password, salt, iterations.coerceIn(1, MAX_ACCEPTED_PBKDF2_ITERS))
+        }
 
     private fun gcmEncrypt(key: ByteArray, nonce: ByteArray, plaintext: ByteArray): ByteArray {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -759,6 +768,10 @@ class FileVault(private val rootDir: File) : Vault {
         private const val ARGON_PARALLELISM = 1
         private const val KDF_SUFFIX_LEN = (1 + 4 + 4) * 2
         private const val STATE_SUFFIX_LEN = 1
+        private const val MAX_ACCEPTED_ARGON_TIME_COST = 16
+        private const val MAX_ACCEPTED_ARGON_MEMORY_KIB = ARGON_MEMORY_KIB * 4
+        private const val MAX_ACCEPTED_ARGON_PARALLELISM = 8
+        private const val MAX_ACCEPTED_PBKDF2_ITERS = 2_000_000
         private val DB_SIDECAR_SUFFIXES = listOf("-wal", "-shm", "-journal")
         private const val SQLITE_HEADER_LEN = 100
         private val SQLITE_MAGIC = "SQLite format 3".encodeToByteArray() + byteArrayOf(0)
