@@ -202,6 +202,8 @@ object TurkishStrings : AppStrings() {
     override val unknownNickname = "Bilinmeyen"
     override val unknownError = "Bilinmeyen hata"
     override val sendBodyTooLarge = "Mesaj gönderilemeyecek kadar büyük"
+    override fun lanPortFallbackSuffix(preferredPort: Int) = " ($preferredPort portu doluydu, yedek port kullanılıyor)"
+    override fun lanNoFreePort(firstPort: Int, lastPort: Int, cause: String) = "$firstPort ile $lastPort arasında boş port yok — $cause"
     override fun contactNameFallback(last4: String) = "Kişi-$last4"
 
     override val backgroundRunningNotice = "Uygulama arka planda çalışmaya devam ediyor"

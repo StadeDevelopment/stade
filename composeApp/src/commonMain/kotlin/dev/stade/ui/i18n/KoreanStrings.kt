@@ -199,6 +199,8 @@ object KoreanStrings : AppStrings() {
     override val unknownNickname = "알 수 없음"
     override val unknownError = "알 수 없는 오류"
     override val sendBodyTooLarge = "메시지가 너무 커서 보낼 수 없습니다"
+    override fun lanPortFallbackSuffix(preferredPort: Int) = " ($preferredPort 포트가 사용 중이어서 대체 포트를 사용합니다)"
+    override fun lanNoFreePort(firstPort: Int, lastPort: Int, cause: String) = "$firstPort~$lastPort 사이에 사용 가능한 포트가 없습니다 — $cause"
     override fun contactNameFallback(last4: String) = "연락처-$last4"
 
     override val backgroundRunningNotice = "앱이 백그라운드에서 계속 실행됩니다"

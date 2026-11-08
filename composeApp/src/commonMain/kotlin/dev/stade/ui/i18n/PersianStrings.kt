@@ -199,6 +199,8 @@ object PersianStrings : AppStrings() {
     override val unknownNickname = "ناشناس"
     override val unknownError = "خطای ناشناخته"
     override val sendBodyTooLarge = "پیام برای ارسال بیش از حد بزرگ است"
+    override fun lanPortFallbackSuffix(preferredPort: Int) = " (پورت $preferredPort مشغول بود، از پورت جایگزین استفاده می‌شود)"
+    override fun lanNoFreePort(firstPort: Int, lastPort: Int, cause: String) = "بین $firstPort و $lastPort پورت آزادی نیست — $cause"
     override fun contactNameFallback(last4: String) = "مخاطب-$last4"
 
     override val backgroundRunningNotice = "برنامه در پس‌زمینه در حال اجرا می‌ماند"

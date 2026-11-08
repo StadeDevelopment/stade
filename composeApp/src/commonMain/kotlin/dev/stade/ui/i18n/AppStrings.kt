@@ -189,6 +189,8 @@ abstract class AppStrings {
     abstract val unknownNickname: String
     abstract val unknownError: String
     abstract val sendBodyTooLarge: String
+    abstract fun lanPortFallbackSuffix(preferredPort: Int): String
+    abstract fun lanNoFreePort(firstPort: Int, lastPort: Int, cause: String): String
     abstract fun contactNameFallback(last4: String): String
 
     abstract val backgroundRunningNotice: String

@@ -11,6 +11,7 @@ import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.readFully
 import io.ktor.utils.io.writeFully
 import dev.stade.backgroundFailures
+import dev.stade.ui.i18n.I18n
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,7 +37,7 @@ class LanTransport(
     private val selector = SelectorManager(Dispatchers.IO)
     private var server: ServerSocket? = null
     @Volatile private var actualPort: Int = tcpPort
-    private val discovery = DiscoveryService(nodeId, discoveryPort, tcpPort)
+    private val discovery = DiscoveryService(nodeId, discoveryPort) { actualPort }
     private val mutex = Mutex()
 
     override suspend fun start(handler: suspend (Connection) -> Unit) = mutex.withLock {
@@ -51,7 +52,7 @@ class LanTransport(
                 val msg = buildString {
                     if (lanIps.isEmpty()) append("0.0.0.0:$candidate")
                     else append(lanIps.joinToString(", ") { "$it:$candidate" })
-                    if (candidate != tcpPort) append(" (port $tcpPort doluydu, fallback)")
+                    if (candidate != tcpPort) append(I18n.current.lanPortFallbackSuffix(tcpPort))
                 }
                 state.value = TransportInfo(
                     type, "LAN",
@@ -67,7 +68,7 @@ class LanTransport(
             }
         }
         state.value = TransportInfo(type, "LAN", available = false, running = false,
-            message = "$tcpPort..${tcpPort + 9} hepsi dolu — ${lastErr?.message ?: ""}")
+            message = I18n.current.lanNoFreePort(tcpPort, tcpPort + 9, lastErr?.message ?: ""))
     }
 
     override suspend fun stop() = mutex.withLock {
@@ -190,7 +191,7 @@ internal class TcpConnection : Connection {
 private class DiscoveryService(
     private val nodeId: String,
     private val port: Int,
-    private val tcpPort: Int
+    private val tcpPortProvider: () -> Int
 ) {
     private val peers = mutableMapOf<String, Long>()
     private val mutex = Mutex()
@@ -247,8 +248,8 @@ private class DiscoveryService(
     }
 
     private suspend fun broadcastLoop(sock: DatagramSocket) {
-        val msg = "STADE|$nodeId|$tcpPort".toByteArray()
         while (scope.isActive) {
+            val msg = "STADE|$nodeId|${tcpPortProvider()}".toByteArray()
             for (addr in broadcastAddresses()) {
                 val packet = DatagramPacket(msg, msg.size, addr, port)
                 runCatching { sock.send(packet) }

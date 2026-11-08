@@ -204,6 +204,8 @@ object EnglishStrings : AppStrings() {
     override val unknownNickname = "Unknown"
     override val unknownError = "Unknown error"
     override val sendBodyTooLarge = "Message is too large to send"
+    override fun lanPortFallbackSuffix(preferredPort: Int) = " (port $preferredPort was busy, using a fallback)"
+    override fun lanNoFreePort(firstPort: Int, lastPort: Int, cause: String) = "No free port between $firstPort and $lastPort — $cause"
     override fun contactNameFallback(last4: String) = "Contact-$last4"
 
     override val backgroundRunningNotice = "The app keeps running in the background"

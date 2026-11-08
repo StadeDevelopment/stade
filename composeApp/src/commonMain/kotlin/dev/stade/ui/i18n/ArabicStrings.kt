@@ -199,6 +199,8 @@ object ArabicStrings : AppStrings() {
     override val unknownNickname = "غير معروف"
     override val unknownError = "خطأ غير معروف"
     override val sendBodyTooLarge = "الرسالة أكبر من أن تُرسل"
+    override fun lanPortFallbackSuffix(preferredPort: Int) = " (المنفذ $preferredPort مشغول، يُستخدم منفذ بديل)"
+    override fun lanNoFreePort(firstPort: Int, lastPort: Int, cause: String) = "لا يوجد منفذ متاح بين $firstPort و$lastPort — $cause"
     override fun contactNameFallback(last4: String) = "جهة اتصال-$last4"
 
     override val backgroundRunningNotice = "يستمر التطبيق في العمل في الخلفية"
