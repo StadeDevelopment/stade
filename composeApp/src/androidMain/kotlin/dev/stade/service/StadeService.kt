@@ -92,13 +92,10 @@ class StadeService : Service() {
                 val app = application as? StadeApplication ?: return
                 if (intent?.action == Intent.ACTION_SCREEN_OFF) {
                     scope.launch {
-                        runCatching { app.boot.activeContainer()?.close() }
-                        runCatching { app.boot.markLocked() }
-                        runCatching { withContext(Dispatchers.IO) { app.vault.flushAndClose() } }
+                        withContext(Dispatchers.IO) { app.boot.lockDown() }
                     }
                 } else {
-                    runCatching { app.boot.markLocked() }
-                    runCatching { app.vault.flushAndClose() }
+                    runCatching { app.boot.lockDownBlocking() }
                 }
             }
         }

@@ -5,6 +5,7 @@ import dev.stade.db.StadeDb
 import dev.stade.security.SessionTimeout
 import dev.stade.security.Vault
 import dev.stade.transport.TransportPlugin
+import kotlinx.coroutines.runBlocking
 
 class BootContext(
     val vault: Vault,
@@ -50,6 +51,17 @@ class BootContext(
         }
         leftForegroundAtMillis = 0L
         return true
+    }
+
+    suspend fun lockDown() {
+        val container = synchronized(lock) { active }
+        if (container != null) runCatching { container.close() }
+        markLocked()
+        runCatching { vault.flushAndClose() }
+    }
+
+    fun lockDownBlocking() {
+        runBlocking { lockDown() }
     }
 
     fun activeContainer(): AppContainer? =

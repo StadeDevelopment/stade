@@ -132,12 +132,12 @@ class StadeApplication : Application() {
         })
         Runtime.getRuntime().addShutdownHook(Thread {
             runCatching { kotlinx.coroutines.runBlocking { embeddedTor?.shutdown() } }
-            runCatching { vault.flushAndClose() }
+            runCatching { boot.lockDownBlocking() }
         })
     }
 
     override fun onTerminate() {
-        runCatching { vault.flushAndClose() }
+        runCatching { boot.lockDownBlocking() }
         super.onTerminate()
     }
 

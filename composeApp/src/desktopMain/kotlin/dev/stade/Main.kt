@@ -166,9 +166,15 @@ fun main(args: Array<String>) {
                 torAppRoot,
                 layoutProvider = { TorBinaryLoader.prepare(torAppRoot) }
             )
+            val shutdownBoot = java.util.concurrent.atomic.AtomicReference<BootContext?>(null)
             Runtime.getRuntime().addShutdownHook(Thread {
                 runCatching { kotlinx.coroutines.runBlocking { embeddedTor.shutdown() } }
-                runCatching { vault.flushAndClose() }
+                val booted = shutdownBoot.get()
+                if (booted != null) {
+                    runCatching { booted.lockDownBlocking() }
+                } else {
+                    runCatching { vault.flushAndClose() }
+                }
                 runCatching { DesktopNotifier.removeTray() }
             })
             BootContext(
@@ -189,7 +195,7 @@ fun main(args: Array<String>) {
                     pendingInviteAtBoot?.let { c.pendingInvite.value = it }
                     setDesktopContainer(c)
                 }
-            )
+            ).also { shutdownBoot.set(it) }
         }
 
         val windowState = rememberWindowState(
