@@ -91,7 +91,7 @@ Arabic.
 ## What Stade deliberately doesn't do
 
 - **No accounts, no phone numbers, no central directory.** Every identity is self-issued and every message path is peer-to-peer.
-- **No read receipts, no "last seen", no presence.** Whether and when you read a message is nobody else's business.
+- **No read receipts.** Whether and when you read a message is nobody else's business. Stade does show a contact as online while you are connected to them, and shows a status they chose for themselves, but never a last-seen time and never anything about what you have read.
 - **No analytics, telemetry, or crash reporting.** Nothing about how you use Stade leaves your device.
 
 ## Contributing

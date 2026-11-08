@@ -15,3 +15,5 @@ out/
 
 update-key.hex
 *.pem
+
+audit/
