@@ -152,9 +152,17 @@ android {
                 "proguard-rules.pro"
             )
             val ksPath = localProps.getProperty("keystore.path")
+            val allowUnsigned = providers.gradleProperty("stade.allowDebugSignedRelease")
+                .orNull?.equals("true", ignoreCase = true) == true
             signingConfig = if (ksPath != null) {
                 signingConfigs.getByName("release")
             } else {
+                if (!allowUnsigned) {
+                    throw GradleException(
+                        "No release keystore configured. Set keystore.path in local.properties, " +
+                            "or pass -Pstade.allowDebugSignedRelease=true for a throwaway build."
+                    )
+                }
                 signingConfigs.getByName("debug")
             }
         }
@@ -370,7 +378,7 @@ val downloadTorBinaries by tasks.registering {
                     .joinToString("") { byte -> "%02x".format(byte) }
                 val expected = providers.gradleProperty(plat.shaProp).orNull?.trim()?.takeIf { it.isNotEmpty() }
                 if (expected == null) {
-                    logger.warn("[tor] ${plat.key} SHA-256 NOT pinned. Actual=$actualSha  -> set ${plat.shaProp} in gradle.properties")
+                    throw GradleException("Tor binary ${plat.key} has no pinned SHA-256. Actual=$actualSha -> set ${plat.shaProp} in gradle.properties")
                 } else if (!expected.equals(actualSha, ignoreCase = true)) {
                     throw GradleException("Tor binary ${plat.key} hash mismatch. expected=$expected actual=$actualSha")
                 }
@@ -442,7 +450,7 @@ val downloadAndroidTorBinaries by tasks.registering {
                     .joinToString("") { byte -> "%02x".format(byte) }
                 val expected = providers.gradleProperty(abi.shaProp).orNull?.trim()?.takeIf { it.isNotEmpty() }
                 if (expected == null) {
-                    logger.warn("[tor-android] ${abi.abi} SHA-256 NOT pinned. Actual=$actualSha  -> set ${abi.shaProp} in gradle.properties")
+                    throw GradleException("Tor binary ${abi.abi} has no pinned SHA-256. Actual=$actualSha -> set ${abi.shaProp} in gradle.properties")
                 } else if (!expected.equals(actualSha, ignoreCase = true)) {
                     throw GradleException("Android Tor binary ${abi.abi} hash mismatch. expected=$expected actual=$actualSha")
                 }

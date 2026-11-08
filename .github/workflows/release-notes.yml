@@ -28,13 +28,16 @@ jobs:
 
       - name: Generate categorized release notes
         id: notes
+        env:
+          INPUT_TAG: ${{ inputs.target_tag }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
 
           # Use the tag given on a manual run, otherwise take the pushed tag
           # or the one carried by the release event
-          INPUT_TAG="${{ inputs.target_tag }}"
-          EVENT_TAG="${{ github.event.release.tag_name }}"
+          INPUT_TAG="${INPUT_TAG:-}"
+          EVENT_TAG="${EVENT_TAG:-}"
           if [ -n "$INPUT_TAG" ]; then
             CURRENT_TAG="$INPUT_TAG"
           elif [ -n "$EVENT_TAG" ]; then
@@ -143,10 +146,12 @@ jobs:
       - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTES_TAG: ${{ steps.notes.outputs.current_tag }}
+          NOTES_PATH: ${{ steps.notes.outputs.notes_file }}
         run: |
           set -euo pipefail
-          TAG="${{ steps.notes.outputs.current_tag }}"
-          NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
+          TAG="$NOTES_TAG"
+          NOTES_FILE="$NOTES_PATH"
 
           # Flag pre-releases (anything carrying alpha, beta or rc)
           EXTRA_FLAGS=""

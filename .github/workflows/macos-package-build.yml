@@ -100,5 +100,5 @@ jobs:
             exit 1
           fi
 
-          gh release upload "$TAG" "$DMG_FILE" ${DMG_FILE}.sig --repo "$GITHUB_REPOSITORY" --clobber 2>/dev/null || gh release upload "$TAG" "$DMG_FILE" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$TAG" "$DMG_FILE" "${DMG_FILE}.sig" --repo "$GITHUB_REPOSITORY" --clobber
           echo "Attached: $DMG_FILE -> $TAG"

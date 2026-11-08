@@ -108,5 +108,5 @@ jobs:
             exit 1
           fi
 
-          gh release upload "$TAG" "$DEB_FILE" "$RPM_FILE" ${DEB_FILE}.sig ${RPM_FILE}.sig --repo "$GITHUB_REPOSITORY" --clobber 2>/dev/null || gh release upload "$TAG" "$DEB_FILE" "$RPM_FILE" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$TAG" "$DEB_FILE" "$RPM_FILE" "${DEB_FILE}.sig" "${RPM_FILE}.sig" --repo "$GITHUB_REPOSITORY" --clobber
           echo "Attached: $DEB_FILE, $RPM_FILE -> $TAG"
