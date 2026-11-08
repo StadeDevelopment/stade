@@ -18,6 +18,8 @@ object DesktopUpdateState {
         private set
     var installer by mutableStateOf<File?>(null)
         private set
+    var installerSha256: String? = null
+        private set
 
     val hasUpdate: Boolean
         get() = available != null && stage != UpdateStage.Idle && stage != UpdateStage.UpToDate
@@ -44,6 +46,7 @@ object DesktopUpdateState {
         when (val result = downloadUpdate(container, target) { progress = it }) {
             is UpdateDownload.Ready -> {
                 installer = result.installer
+                installerSha256 = result.sha256
                 stage = UpdateStage.Ready
             }
             else -> stage = UpdateStage.Failed

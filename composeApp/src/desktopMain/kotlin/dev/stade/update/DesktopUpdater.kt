@@ -25,12 +25,15 @@ import java.awt.Desktop
 import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
+import java.security.SecureRandom
 
 private const val METADATA_TIMEOUT_MS = 20_000L
 private const val READ_BUFFER = 64 * 1024
 
+private const val UPDATE_DIR_PREFIX = "stade-update-"
+
 sealed interface UpdateDownload {
-    data class Ready(val installer: File) : UpdateDownload
+    data class Ready(val installer: File, val sha256: String) : UpdateDownload
     data object NoAsset : UpdateDownload
     data object Failed : UpdateDownload
     data object Corrupt : UpdateDownload
@@ -118,8 +121,8 @@ suspend fun downloadUpdate(
         ?: return@withContext UpdateDownload.Failed
     if (parsed.protocol.name != "https") return@withContext UpdateDownload.Failed
 
-    val dir = File(System.getProperty("java.io.tmpdir"), "stade-update").apply { mkdirs() }
-    val target = File(dir, asset.name)
+    val dir = newUpdateDirectory() ?: return@withContext UpdateDownload.Failed
+    val target = File(dir, safeAssetName(asset.name))
     val digest = MessageDigest.getInstance("SHA-256")
 
     val ok = runCatching {
@@ -175,10 +178,48 @@ suspend fun downloadUpdate(
             return@withContext UpdateDownload.Corrupt
         }
     }
-    UpdateDownload.Ready(target)
+    UpdateDownload.Ready(target, actual)
 }
 
-fun launchInstaller(installer: File): Boolean = runCatching {
+private fun safeAssetName(name: String): String {
+    val base = name.substringAfterLast('/').substringAfterLast('\\')
+    val cleaned = base.filter { it.isLetterOrDigit() || it == '.' || it == '-' || it == '_' }
+    return cleaned.ifBlank { "stade-update" }
+}
+
+private fun newUpdateDirectory(): File? = runCatching {
+    val root = File(System.getProperty("java.io.tmpdir"))
+    root.listFiles { f -> f.isDirectory && f.name.startsWith(UPDATE_DIR_PREFIX) }
+        ?.forEach { runCatching { it.deleteRecursively() } }
+    val suffix = ByteArray(8).also { SecureRandom().nextBytes(it) }
+        .joinToString("") { byte -> "%02x".format(byte) }
+    val dir = File(root, UPDATE_DIR_PREFIX + suffix)
+    if (!dir.mkdirs()) return@runCatching null
+    runCatching {
+        java.nio.file.Files.setPosixFilePermissions(
+            dir.toPath(),
+            java.nio.file.attribute.PosixFilePermissions.fromString("rwx------")
+        )
+    }
+    dir
+}.getOrNull()
+
+private fun sha256Of(file: File): String? = runCatching {
+    val digest = MessageDigest.getInstance("SHA-256")
+    file.inputStream().use { input ->
+        val buffer = ByteArray(READ_BUFFER)
+        while (true) {
+            val n = input.read(buffer)
+            if (n <= 0) break
+            digest.update(buffer, 0, n)
+        }
+    }
+    digest.digest().joinToString("") { byte -> ((byte.toInt() and 0xff) + 0x100).toString(16).substring(1) }
+}.getOrNull()
+
+fun launchInstaller(installer: File, expectedSha256: String): Boolean = runCatching {
+    if (!installer.isFile) return false
+    if (sha256Of(installer) != expectedSha256) return false
     val os = System.getProperty("os.name").orEmpty().lowercase()
     when {
         os.contains("win") -> {

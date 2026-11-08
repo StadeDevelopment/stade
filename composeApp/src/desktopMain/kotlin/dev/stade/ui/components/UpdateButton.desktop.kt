@@ -98,7 +98,8 @@ actual fun UpdateAvailableButton(container: AppContainer, modifier: Modifier) {
             confirmButton = {
                 TextButton(onClick = {
                     val file = DesktopUpdateState.installer
-                    if (file != null && launchInstaller(file)) {
+                    val digest = DesktopUpdateState.installerSha256
+                    if (file != null && digest != null && launchInstaller(file, digest)) {
                         exitProcess(0)
                     } else {
                         DesktopUpdateState.markFailed()
