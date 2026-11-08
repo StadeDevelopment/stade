@@ -243,7 +243,7 @@ class SyncEngine(
             mldsaPublicKey = owner.publicMlDsaKey,
             nonce = ourNonce,
             transcriptCommitment = ourTc,
-            addresses = runCatching { selfAddressesProvider() }.getOrDefault(emptyList()),
+            addresses = selfAddressesFor(connection.remoteAddress),
             reAddRequest = pendingReAdds.isNotEmpty(),
             groupProtocol = GROUP_PROTOCOL_VERSION,
             wireProtocol = WIRE_PROTOCOL_VERSION,
@@ -540,6 +540,11 @@ class SyncEngine(
             )
         }.getOrNull() ?: contacts.findByStadeId(peerHello.stadeId) ?: return null
         return newContact to true
+    }
+
+    internal fun selfAddressesFor(peerAddress: String): List<String> {
+        val all = runCatching { selfAddressesProvider() }.getOrDefault(emptyList())
+        return shareableAddresses(all, peerAddress)
     }
 
     private fun transcriptCommitment(
