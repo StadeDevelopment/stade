@@ -327,6 +327,7 @@ class AppContainer(
             }
         }
         runCatching { driver.close() }
+        runCatching { dev.stade.media.clearMediaCaches() }
         runCatching { dev.stade.security.clearBiometricUnlock() }
         runCatching { vault.wipe() }
     }

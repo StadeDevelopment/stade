@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import dev.stade.media.mediaCacheName
 
 @Composable
 actual fun VideoPlayerView(bytes: ByteArray, modifier: Modifier, autoPlay: Boolean) {
@@ -28,7 +29,7 @@ actual fun VideoPlayerView(bytes: ByteArray, modifier: Modifier, autoPlay: Boole
         file = withContext(Dispatchers.IO) {
             runCatching {
                 val dir = File(context.cacheDir, "videos_inline").apply { mkdirs() }
-                val target = File(dir, "inline_${bytes.contentHashCode()}.mp4")
+                val target = File(dir, "inline_${mediaCacheName(bytes)}.mp4")
                 if (!target.exists() || target.length() != bytes.size.toLong()) {
                     FileOutputStream(target).use { it.write(bytes) }
                 }

@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import dev.stade.notification.clearAllMessageNotifications
 import dev.stade.service.StadeService
@@ -45,6 +46,7 @@ class MainActivity : FragmentActivity() {
         }
         val app = (application as StadeApplication)
         applySecureScreenFlag(app)
+        trackScreenshotSetting(app)
         startForegroundService(Intent(this, StadeService::class.java))
         askNotificationPermissionIfNeeded()
         setContent { StadeApp(app.boot) }
@@ -173,18 +175,29 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private fun screenshotBlockingEnabled(app: StadeApplication): Boolean =
+        runCatching {
+            app.container?.secrets?.isScreenshotBlockingEnabled()
+                ?: app.boot.vault.isScreenshotBlockingEnabled()
+        }.getOrDefault(true)
+
     private fun applySecureScreenFlag(app: StadeApplication) {
-        val enabled = app.container?.secrets?.isScreenshotBlockingEnabled() ?: false
+        val enabled = screenshotBlockingEnabled(app)
         if (enabled == lastSecureFlagState) return
-        if (lastSecureFlagState == null && !enabled) {
-            lastSecureFlagState = false
-            return
-        }
         lastSecureFlagState = enabled
         if (enabled) {
             window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
+    private fun trackScreenshotSetting(app: StadeApplication) {
+        lifecycleScope.launch {
+            app.containerFlow.collectLatest { container ->
+                applySecureScreenFlag(app)
+                container?.screenshotSettingTick?.collect { applySecureScreenFlag(app) }
+            }
         }
     }
 

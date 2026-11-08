@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import uk.co.caprica.vlcj.factory.discovery.NativeDiscovery
 import uk.co.caprica.vlcj.player.component.EmbeddedMediaPlayerComponent
 import java.io.File
+import dev.stade.media.mediaCacheName
 
 private val vlcAvailable: Boolean by lazy {
     runCatching { NativeDiscovery().discover() }.getOrDefault(false)
@@ -40,8 +41,8 @@ actual fun VideoPlayerView(bytes: ByteArray, modifier: Modifier, autoPlay: Boole
 
     val file = remember(bytes) {
         val dir = File(System.getProperty("java.io.tmpdir"), "stade_videos_inline").apply { mkdirs() }
-        val f = File(dir, "inline_${bytes.contentHashCode()}.mp4")
-        if (!f.exists()) f.writeBytes(bytes)
+        val f = File(dir, "inline_${mediaCacheName(bytes)}.mp4")
+        if (!f.exists() || f.length() != bytes.size.toLong()) f.writeBytes(bytes)
         f
     }
     val component = remember(file) { EmbeddedMediaPlayerComponent() }
@@ -51,7 +52,10 @@ actual fun VideoPlayerView(bytes: ByteArray, modifier: Modifier, autoPlay: Boole
         } else {
             component.mediaPlayer().media().startPaused(file.absolutePath)
         }
-        onDispose { component.mediaPlayer().release() }
+        onDispose {
+            component.mediaPlayer().release()
+            runCatching { file.delete() }
+        }
     }
     SwingPanel(modifier = modifier, factory = { component })
 }

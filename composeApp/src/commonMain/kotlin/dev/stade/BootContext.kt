@@ -57,6 +57,7 @@ class BootContext(
         val container = synchronized(lock) { active }
         if (container != null) runCatching { container.close() }
         markLocked()
+        runCatching { dev.stade.media.clearMediaCaches() }
         runCatching { vault.flushAndClose() }
     }
 
