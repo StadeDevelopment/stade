@@ -12,10 +12,15 @@ actual class DriverFactory {
         val dbFile = File(dbFilePath)
         dbFile.parentFile?.mkdirs()
         val fresh = !dbFile.exists() || dbFile.length() == 0L
-        val driver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.absolutePath}", Properties())
+        val driver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.absolutePath}", storageProperties())
         DesktopSchemaUpgrade.apply(driver, fresh)
         return driver
     }
+}
+
+private fun storageProperties(): Properties = Properties().apply {
+    setProperty("journal_mode", "DELETE")
+    setProperty("secure_delete", "true")
 }
 
 internal object DesktopSchemaUpgrade {
