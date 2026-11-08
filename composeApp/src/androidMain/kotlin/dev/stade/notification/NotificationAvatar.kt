@@ -10,6 +10,8 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 
+private const val MAX_AVATAR_SOURCE_PIXELS = 1_600_000L
+
 internal object NotificationAvatar {
     private val palette = listOf(
         0xFF1E6091.toInt() to 0xFF61A5C2.toInt(),
@@ -87,7 +89,16 @@ internal object NotificationAvatar {
     }
 
     fun fromPhotoBytes(bytes: ByteArray, sizePx: Int = 128): Bitmap? = runCatching {
-        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        val width = bounds.outWidth
+        val height = bounds.outHeight
+        if (width <= 0 || height <= 0) return null
+        if (width.toLong() * height.toLong() > MAX_AVATAR_SOURCE_PIXELS) return null
+        var sample = 1
+        while (width / (sample * 2) >= sizePx && height / (sample * 2) >= sizePx) sample *= 2
+        val options = BitmapFactory.Options().apply { inSampleSize = sample }
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return null
         val scaled = Bitmap.createScaledBitmap(decoded, sizePx, sizePx, true)
 
         val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)

@@ -23,8 +23,9 @@ internal class GifFrames(val frames: List<ImageBitmap>, val delaysMs: List<Int>)
 internal fun decodeGif(bytes: ByteArray): GifFrames? = runCatching {
     Codec.makeFromData(Data.makeFromBytes(bytes)).use { codec ->
         val info = codec.imageInfo
-        if (info.width.toLong() * info.height.toLong() > MAX_GIF_FRAME_PIXELS) return@use null
-        val count = minOf(codec.frameCount, MAX_GIF_FRAMES)
+        val framePixels = info.width.toLong() * info.height.toLong()
+        if (framePixels > MAX_GIF_FRAME_PIXELS) return@use null
+        val count = gifFrameBudget(framePixels, codec.frameCount)
         if (count <= 1) return@use null
 
         val frames = ArrayList<ImageBitmap>(count)

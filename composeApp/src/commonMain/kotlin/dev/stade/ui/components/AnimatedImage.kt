@@ -15,6 +15,13 @@ import kotlinx.coroutines.withContext
 
 const val MAX_GIF_FRAMES = 160
 const val MAX_GIF_FRAME_PIXELS = 1_600_000L
+const val MAX_GIF_TOTAL_PIXELS = 24_000_000L
+
+fun gifFrameBudget(framePixels: Long, declaredFrames: Int): Int {
+    if (framePixels <= 0L) return 0
+    val affordable = (MAX_GIF_TOTAL_PIXELS / framePixels).toInt()
+    return minOf(declaredFrames, MAX_GIF_FRAMES, affordable)
+}
 const val DEFAULT_GIF_FRAME_DELAY_MS = 100
 
 fun isGifBytes(bytes: ByteArray): Boolean {

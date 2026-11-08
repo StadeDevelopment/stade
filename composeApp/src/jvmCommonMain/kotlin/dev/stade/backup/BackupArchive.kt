@@ -64,6 +64,7 @@ object BackupArchive {
     const val ARGON_PARALLELISM = 1
     const val CHUNK_SIZE = 1 shl 20
     const val MAX_PAYLOAD_BYTES = 4L * 1024 * 1024 * 1024
+    const val MAX_ACCEPTED_ARGON_MEMORY_KIB = ARGON_MEMORY_KIB * 2
     const val MAX_NAME_LEN = 64
 
     private val rng = SecureRandom()
@@ -156,7 +157,7 @@ object BackupArchive {
             if (iterations !in 1..2_000_000) return HeaderResult.NotABackup
         } else {
             if (iterations !in 1..16) return HeaderResult.NotABackup
-            if (memoryKib !in 8..(1 shl 21)) return HeaderResult.NotABackup
+            if (memoryKib !in 8..MAX_ACCEPTED_ARGON_MEMORY_KIB) return HeaderResult.NotABackup
             if (parallelism !in 1..16) return HeaderResult.NotABackup
         }
         return HeaderResult.Ok(

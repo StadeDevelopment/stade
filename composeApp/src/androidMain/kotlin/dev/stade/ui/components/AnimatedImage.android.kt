@@ -18,6 +18,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
+import dev.stade.ui.components.MAX_GIF_FRAME_PIXELS
 
 @Composable
 actual fun AnimatedImage(
@@ -40,7 +41,15 @@ actual fun AnimatedImage(
     LaunchedEffect(bytes) {
         val decoded = withContext(Dispatchers.Default) {
             runCatching {
-                ImageDecoder.decodeDrawable(ImageDecoder.createSource(ByteBuffer.wrap(bytes)))
+                ImageDecoder.decodeDrawable(
+                    ImageDecoder.createSource(ByteBuffer.wrap(bytes))
+                ) { decoder, info, _ ->
+                    val pixels = info.size.width.toLong() * info.size.height.toLong()
+                    if (pixels > MAX_GIF_FRAME_PIXELS) {
+                        throw IllegalStateException("animation frame too large")
+                    }
+                    decoder.isMutableRequired = false
+                }
             }.getOrNull()
         }
         if (decoded == null) failed = true else drawable = decoded
