@@ -1,3 +1,9 @@
+CREATE TABLE IF NOT EXISTS ProcessedEnvelope (
+    messageId TEXT NOT NULL,
+    contactId TEXT NOT NULL,
+    processedAt INTEGER NOT NULL
+);
+
 DROP INDEX IF EXISTS idxProcessedEnvelope;
 
 ALTER TABLE ProcessedEnvelope RENAME TO ProcessedEnvelopeUnscoped;

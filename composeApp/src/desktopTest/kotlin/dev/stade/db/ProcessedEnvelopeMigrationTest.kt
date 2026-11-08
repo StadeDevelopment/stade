@@ -72,3 +72,59 @@ class ProcessedEnvelopeMigrationTest {
         }
     }
 }
+
+class ProcessedEnvelopeMigrationEdgeTest {
+
+    private fun JdbcSqliteDriver.exec(sql: String) = execute(null, sql, 0)
+
+    private fun JdbcSqliteDriver.countRows(sql: String): Long =
+        executeQuery(
+            identifier = null,
+            sql = sql,
+            mapper = { cursor: SqlCursor ->
+                cursor.next()
+                QueryResult.Value(cursor.getLong(0) ?: 0L)
+            },
+            parameters = 0
+        ).value
+
+    @Test
+    fun theMigrationAlsoWorksWhenTheTableIsMissingEntirely() {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        try {
+            StadeDb.Schema.migrate(driver, 3, 4)
+
+            driver.exec("INSERT INTO ProcessedEnvelope VALUES ('m1','alice',1)")
+            driver.exec("INSERT INTO ProcessedEnvelope VALUES ('m1','bob',2)")
+            assertEquals(
+                2L,
+                driver.countRows("SELECT COUNT(*) FROM ProcessedEnvelope"),
+                "a database without the table must still end up with the scoped shape"
+            )
+        } finally {
+            driver.close()
+        }
+    }
+
+    @Test
+    fun theBootstrapStatementAgreesWithTheMigratedShape() {
+        val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
+        try {
+            driver.exec(
+                "CREATE TABLE IF NOT EXISTS ProcessedEnvelope (messageId TEXT NOT NULL, " +
+                    "contactId TEXT NOT NULL, processedAt INTEGER NOT NULL, " +
+                    "PRIMARY KEY(messageId, contactId))"
+            )
+            driver.exec("INSERT INTO ProcessedEnvelope VALUES ('m1','alice',1)")
+            driver.exec("INSERT INTO ProcessedEnvelope VALUES ('m1','bob',2)")
+
+            assertEquals(
+                2L,
+                driver.countRows("SELECT COUNT(*) FROM ProcessedEnvelope WHERE messageId='m1'"),
+                "the bootstrap statement must allow one row per contact like the migration does"
+            )
+        } finally {
+            driver.close()
+        }
+    }
+}

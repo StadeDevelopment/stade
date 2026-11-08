@@ -47,7 +47,8 @@ internal object DesktopSchemaUpgrade {
             StadeDb.Schema.migrate(driver, current, target)
         }.isSuccess
 
-        if (migrated) writeVersion(driver, target)
+        if (!migrated) throw DatabaseSchemaException()
+        writeVersion(driver, target)
     }
 
     private fun inferVersion(driver: SqlDriver): Long = when {

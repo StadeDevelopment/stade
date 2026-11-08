@@ -154,7 +154,7 @@ class AppContainer(
             createdDriver.executeQuery(null, "SELECT messageId FROM ProcessedEnvelope LIMIT 0",
                 { _: SqlCursor -> QueryResult.Value(Unit) }, 0)
         }.onFailure {
-            runCatching { createdDriver.execute(null, "CREATE TABLE IF NOT EXISTS ProcessedEnvelope (messageId TEXT NOT NULL PRIMARY KEY, contactId TEXT NOT NULL, processedAt INTEGER NOT NULL)", 0) }
+            runCatching { createdDriver.execute(null, "CREATE TABLE IF NOT EXISTS ProcessedEnvelope (messageId TEXT NOT NULL, contactId TEXT NOT NULL, processedAt INTEGER NOT NULL, PRIMARY KEY(messageId, contactId))", 0) }
             runCatching { createdDriver.execute(null, "CREATE INDEX IF NOT EXISTS idxProcessedEnvelope ON ProcessedEnvelope(processedAt)", 0) }
         }
         runCatching {
