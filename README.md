@@ -21,7 +21,7 @@ Built with Kotlin Multiplatform and Compose Multiplatform, Stade runs natively o
 
 ## Privacy & App Protection
 
-- **PIN-protected vault** — the entire local database is encrypted at rest and locked behind a PIN, with configurable auto-lock timing.
+- **PIN-protected vault** — while the app is locked the entire local database is held as a single authenticated ciphertext behind an Argon2id-derived key, with configurable auto-lock timing. While it is unlocked the database is readable on disk, so the vault is protection for a device at rest rather than against a compromised running system.
 - **Duress PIN** — a second, separate PIN that instantly and permanently wipes the device if entered under coercion.
 - **Scrambled PIN keypad** — randomizes key layout to defeat shoulder-surfing and smudge attacks.
 - **Failed-attempt lockout** — escalating delays after repeated wrong PIN entries.

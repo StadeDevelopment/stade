@@ -19,6 +19,9 @@ class FileVault(private val rootDir: File) : Vault {
     private val plaintextDb: File = File(rootDir, "stade.db")
     private val sessionFile: File = File(rootDir, "stade.session")
 
+    private val dbSidecarFiles: List<File>
+        get() = DB_SIDECAR_SUFFIXES.map { File(rootDir, plaintextDb.name + it) }
+
     private val rng = SecureRandom()
     private val flushLock = Any()
 
@@ -28,6 +31,7 @@ class FileVault(private val rootDir: File) : Vault {
 
     init {
         if (!rootDir.exists()) rootDir.mkdirs()
+        restrictToOwner(rootDir, directory = true)
     }
 
     private data class Meta(
@@ -52,7 +56,8 @@ class FileVault(private val rootDir: File) : Vault {
         val kdfParallelism: Int = 0,
         var duressKdfKind: Int = KDF_PBKDF2,
         var duressKdfMemoryKib: Int = 0,
-        var duressKdfParallelism: Int = 0
+        var duressKdfParallelism: Int = 0,
+        var cleanShutdown: Boolean = false
     )
 
     override fun isInitialized(): Boolean = metaFile.exists() && metaFile.length() >= MIN_META_SIZE_LEGACY
@@ -97,6 +102,7 @@ class FileVault(private val rootDir: File) : Vault {
         dek = newDek
         unlocked = true
         if (plaintextDb.exists()) {
+            restrictToOwner(plaintextDb, directory = false)
             encryptFile(plaintextDb, encryptedDb, newDek)
         } else {
             if (encryptedDb.exists()) runCatching { secureDelete(encryptedDb) }
@@ -107,6 +113,7 @@ class FileVault(private val rootDir: File) : Vault {
     override fun unlock(password: String): UnlockOutcome {
         if (!isInitialized()) return UnlockOutcome.NotInitialized
         val meta = readMeta() ?: return UnlockOutcome.Error(dev.stade.ui.i18n.I18n.current.vaultMetaUnreadable)
+        val closedCleanly = meta.cleanShutdown
         val now = nowMillis()
         if (meta.lockoutUntilMillis > now) {
             return UnlockOutcome.LockedOut(meta.lockoutUntilMillis)
@@ -168,12 +175,17 @@ class FileVault(private val rootDir: File) : Vault {
                 )
             }.getOrDefault(meta)
         } else meta
+        finalMeta.cleanShutdown = false
         writeMeta(finalMeta)
         cached = finalMeta
         if (plaintextDb.exists() && !isValidSqliteFile(plaintextDb)) {
-            runCatching { secureDelete(plaintextDb) }
+            discardPlaintextDb()
+        }
+        if (plaintextDb.exists() && closedCleanly) {
+            discardPlaintextDb()
         }
         if (!plaintextDb.exists()) {
+            deleteDbSidecars()
             if (encryptedDb.exists()) {
                 val restored = runCatching {
                     decryptFile(encryptedDb, plaintextDb, decryptedDek)
@@ -184,6 +196,7 @@ class FileVault(private val rootDir: File) : Vault {
                     zero(decryptedDek)
                     return UnlockOutcome.Error(dev.stade.ui.i18n.I18n.current.vaultDatabaseDecryptFailed)
                 }
+                restrictToOwner(plaintextDb, directory = false)
             }
         }
         dek = decryptedDek
@@ -272,7 +285,8 @@ class FileVault(private val rootDir: File) : Vault {
             dekNonce = newDekNonce,
             dekCipher = newDekCt,
             failedAttempts = 0,
-            lockoutUntilMillis = 0L
+            lockoutUntilMillis = 0L,
+            cleanShutdown = false
         )
         writeMeta(updated)
         cached = updated
@@ -349,18 +363,48 @@ class FileVault(private val rootDir: File) : Vault {
     override fun flushAndClose() {
         synchronized(flushLock) {
             val key = dek
-            if (key != null && plaintextDb.exists()) {
-                encryptFile(plaintextDb, encryptedDb, key)
+            val flushed = when {
+                key == null -> !plaintextDb.exists()
+                plaintextDb.exists() -> runCatching { encryptFile(plaintextDb, encryptedDb, key) }.isSuccess
+                else -> true
             }
             if (plaintextDb.exists()) {
                 secureDelete(plaintextDb)
             }
+            deleteDbSidecars()
             val current = dek
             if (current != null) {
                 zero(current)
                 dek = null
             }
             unlocked = false
+            if (flushed && !plaintextDb.exists()) markCleanShutdown()
+        }
+    }
+
+    private fun markCleanShutdown() {
+        val meta = cached ?: readMeta() ?: return
+        if (meta.cleanShutdown) return
+        meta.cleanShutdown = true
+        runCatching { writeMeta(meta) }
+        cached = meta
+    }
+
+    private fun discardPlaintextDb() {
+        runCatching { if (plaintextDb.exists()) secureDelete(plaintextDb) }
+        deleteDbSidecars()
+    }
+
+    private fun deleteDbSidecars() {
+        dbSidecarFiles.forEach { f -> runCatching { if (f.exists()) secureDelete(f) } }
+    }
+
+    private fun restrictToOwner(target: File, directory: Boolean) {
+        runCatching {
+            val perms = java.nio.file.attribute.PosixFilePermissions.fromString(
+                if (directory) "rwx------" else "rw-------"
+            )
+            java.nio.file.Files.setPosixFilePermissions(target.toPath(), perms)
         }
     }
 
@@ -371,6 +415,7 @@ class FileVault(private val rootDir: File) : Vault {
         unlocked = false
         cached = null
         runCatching { if (plaintextDb.exists()) secureDelete(plaintextDb) }
+        deleteDbSidecars()
         runCatching { if (encryptedDb.exists()) secureDelete(encryptedDb) }
         runCatching { if (metaFile.exists()) secureDelete(metaFile) }
         runCatching { if (sessionFile.exists()) secureDelete(sessionFile) }
@@ -567,6 +612,7 @@ class FileVault(private val rootDir: File) : Vault {
             duressKdfMemoryKib = 0
             duressKdfParallelism = 0
         }
+        val cleanShutdown = buf.remaining() >= STATE_SUFFIX_LEN && buf.get() != 0.toByte()
         return Meta(
             salt = salt,
             iterations = iterations,
@@ -589,7 +635,8 @@ class FileVault(private val rootDir: File) : Vault {
             kdfParallelism = kdfParallelism,
             duressKdfKind = duressKdfKind,
             duressKdfMemoryKib = duressKdfMemoryKib,
-            duressKdfParallelism = duressKdfParallelism
+            duressKdfParallelism = duressKdfParallelism,
+            cleanShutdown = cleanShutdown
         )
     }
 
@@ -621,6 +668,7 @@ class FileVault(private val rootDir: File) : Vault {
         buf.put(meta.duressKdfKind.toByte())
         buf.putInt(meta.duressKdfMemoryKib)
         buf.putInt(meta.duressKdfParallelism)
+        buf.put(if (meta.cleanShutdown) 1.toByte() else 0.toByte())
         val tmp = File(metaFile.parentFile, metaFile.name + ".tmp")
         tmp.writeBytes(out)
         if (tmp.renameTo(metaFile)) return
@@ -640,13 +688,24 @@ class FileVault(private val rootDir: File) : Vault {
     }
 
     private fun isValidSqliteFile(f: File): Boolean {
-        if (f.length() < 16L) return false
+        val length = f.length()
+        if (length < SQLITE_HEADER_LEN) return false
         return try {
-            val header = ByteArray(16)
-            f.inputStream().use { it.read(header) }
-            header[0] == 0x53.toByte() && header[1] == 0x51.toByte() &&
-            header[2] == 0x4C.toByte() && header[3] == 0x69.toByte() &&
-            header[4] == 0x74.toByte() && header[5] == 0x65.toByte()
+            val header = ByteArray(SQLITE_HEADER_LEN)
+            f.inputStream().use { input ->
+                var read = 0
+                while (read < header.size) {
+                    val n = input.read(header, read, header.size - read)
+                    if (n < 0) return false
+                    read += n
+                }
+            }
+            if (!header.copyOfRange(0, SQLITE_MAGIC.size).contentEquals(SQLITE_MAGIC)) return false
+            val encoded = ((header[16].toInt() and 0xff) shl 8) or (header[17].toInt() and 0xff)
+            val pageSize = if (encoded == 1) 65_536 else encoded
+            if (pageSize < 512 || pageSize > 65_536) return false
+            if (pageSize and (pageSize - 1) != 0) return false
+            length % pageSize == 0L
         } catch (_: Throwable) {
             false
         }
@@ -699,12 +758,16 @@ class FileVault(private val rootDir: File) : Vault {
         private const val ARGON_TIME_COST = 2
         private const val ARGON_PARALLELISM = 1
         private const val KDF_SUFFIX_LEN = (1 + 4 + 4) * 2
+        private const val STATE_SUFFIX_LEN = 1
+        private val DB_SIDECAR_SUFFIXES = listOf("-wal", "-shm", "-journal")
+        private const val SQLITE_HEADER_LEN = 100
+        private val SQLITE_MAGIC = "SQLite format 3".encodeToByteArray() + byteArrayOf(0)
         private const val LOCKOUT_THRESHOLD = 5
         private const val DURESS_SUFFIX_LEN = 1 + SALT_LEN + 4 + NONCE_LEN + VERIFIER_CT_LEN
         private const val MIN_META_SIZE_PRE_DURESS =
             4 + 1 + SALT_LEN + 4 + NONCE_LEN + VERIFIER_CT_LEN + NONCE_LEN + DEK_CT_LEN + 4 + 8 + 1 + 4 + 1
         private const val MIN_META_SIZE = MIN_META_SIZE_PRE_DURESS + DURESS_SUFFIX_LEN
-        private const val FULL_META_SIZE = MIN_META_SIZE + KDF_SUFFIX_LEN
+        private const val FULL_META_SIZE = MIN_META_SIZE + KDF_SUFFIX_LEN + STATE_SUFFIX_LEN
         private const val MIN_META_SIZE_LEGACY = MIN_META_SIZE_PRE_DURESS - 1
         private val VERIFIER_PLAIN = byteArrayOf(
             'S'.code.toByte(), 'T'.code.toByte(), 'A'.code.toByte(), 'D'.code.toByte(),
