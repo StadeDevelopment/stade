@@ -116,18 +116,57 @@ object StadeBackup {
                 staged.add(onionTmp to File(targets.onionKeyPath))
             }
 
+            val displaced = mutableListOf<Pair<File, File>>()
+            var promoted = true
             for ((tmp, dest) in staged) {
-                if (!promote(tmp, dest)) return RestoreOutcome.Failed(RestoreFailure.WriteFailed)
+                if (dest.exists()) {
+                    val aside = File(dest.parentFile, dest.name + ".prerestore")
+                    runCatching { aside.delete() }
+                    val movedAside = dest.renameTo(aside) || runCatching {
+                        dest.copyTo(aside, overwrite = true)
+                        dest.delete()
+                    }.getOrDefault(false)
+                    if (!movedAside) {
+                        promoted = false
+                        break
+                    }
+                    displaced.add(dest to aside)
+                }
+                if (!promote(tmp, dest)) {
+                    promoted = false
+                    break
+                }
             }
-            onionTmp?.let { restrictPermissions(File(targets.onionKeyPath)) }
 
+            if (!promoted) {
+                displaced.forEach { (dest, aside) ->
+                    runCatching {
+                        dest.delete()
+                        if (!aside.renameTo(dest)) aside.copyTo(dest, overwrite = true)
+                    }
+                }
+                staged.forEach { (tmp, _) -> runCatching { tmp.delete() } }
+                return RestoreOutcome.Failed(RestoreFailure.WriteFailed)
+            }
+
+            val live = File(targets.plaintextDbPath)
             val plaintextRemoved = runCatching {
-                val live = File(targets.plaintextDbPath)
                 live.delete()
                 DB_SIDECAR_SUFFIXES.forEach { File(live.parentFile, live.name + it).delete() }
                 !live.exists()
             }.getOrDefault(false)
-            if (!plaintextRemoved) return RestoreOutcome.Failed(RestoreFailure.WriteFailed)
+            if (!plaintextRemoved) {
+                displaced.forEach { (dest, aside) ->
+                    runCatching {
+                        dest.delete()
+                        if (!aside.renameTo(dest)) aside.copyTo(dest, overwrite = true)
+                    }
+                }
+                return RestoreOutcome.Failed(RestoreFailure.WriteFailed)
+            }
+
+            displaced.forEach { (_, aside) -> runCatching { aside.delete() } }
+            onionTmp?.let { restrictPermissions(File(targets.onionKeyPath)) }
             return RestoreOutcome.Restored(onionKeyIncluded = onion != null)
         } catch (_: Exception) {
             return RestoreOutcome.Failed(RestoreFailure.WriteFailed)
