@@ -190,6 +190,7 @@ object ArabicStrings : AppStrings() {
     override val hsSelfConnected = "اتصلت بنفسك (عنوان قديم)"
     override val hsStadeIdMismatch = "معرّف Stade لا يطابق المفاتيح"
     override val hsIdentityKeyMismatch = "معرّف Stade هذا معروف بالفعل بمفاتيح هوية مختلفة"
+    override val hsInviteIdentityMismatch = "الطرف على هذا العنوان ليس جهة الاتصال التي كانت الدعوة لها"
     override val hsTranscriptMismatch = "عدم تطابق التزام النص (خفض إصدار؟)"
     override val hsAuthStadeIdMismatch = "معرّف Stade في AUTH لا يطابق HELLO"
     override val hsSignaturesInvalid = "تعذّر التحقق من التواقيع"

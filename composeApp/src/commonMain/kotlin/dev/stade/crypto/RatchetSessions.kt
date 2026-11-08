@@ -7,6 +7,34 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 
+private val AD_PREFIX = "stade-ad-v2".encodeToByteArray()
+
+private fun longBytes(value: Long): ByteArray {
+    val out = ByteArray(8)
+    for (i in 0 until 8) {
+        out[i] = ((value ushr (56 - 8 * i)) and 0xff).toByte()
+    }
+    return out
+}
+
+private fun orderedPair(a: ByteArray, b: ByteArray): ByteArray {
+    val n = minOf(a.size, b.size)
+    for (i in 0 until n) {
+        val x = a[i].toInt() and 0xff
+        val y = b[i].toInt() and 0xff
+        if (x != y) return if (x < y) a + b else b + a
+    }
+    return if (a.size <= b.size) a + b else b + a
+}
+
+fun envelopeAssociatedData(
+    a: ByteArray,
+    b: ByteArray,
+    messageId: String,
+    timestamp: Long,
+    hash: (ByteArray) -> ByteArray
+): ByteArray = hash(AD_PREFIX + orderedPair(a, b) + messageId.encodeToByteArray() + longBytes(timestamp))
+
 class RatchetSessions(
     private val crypto: CryptoApi,
     private val pq: PqCrypto,
@@ -64,11 +92,17 @@ class RatchetSessions(
         contacts.saveRatchet(contactId, bytes)
     }
 
-    suspend fun seal(owner: LocalIdentity, contact: Contact, plaintext: ByteArray): ByteArray =
+    suspend fun seal(
+        owner: LocalIdentity,
+        contact: Contact,
+        plaintext: ByteArray,
+        messageId: String,
+        timestamp: Long
+    ): ByteArray =
         lockFor(contact.id).withLock {
             val fresh = contacts.get(contact.id) ?: contact
             val state = loadOrInit(owner, fresh)
-            val ad = symmetricAd(owner.publicSigningKey, fresh.publicSigningKey)
+            val ad = symmetricAd(owner.publicSigningKey, fresh.publicSigningKey, messageId, timestamp)
             val out = ratchet.encrypt(state, plaintext, ad)
             persist(contact.id, state)
             out
@@ -78,13 +112,15 @@ class RatchetSessions(
         owner: LocalIdentity,
         contact: Contact,
         plaintext: ByteArray,
+        messageId: String,
+        timestamp: Long,
         fits: (ByteArray) -> Boolean
     ): ByteArray? =
         lockFor(contact.id).withLock {
             val fresh = contacts.get(contact.id) ?: contact
             val state = loadOrInit(owner, fresh)
             val rollback = RatchetSerializer.toSnapshot(state)
-            val ad = symmetricAd(owner.publicSigningKey, fresh.publicSigningKey)
+            val ad = symmetricAd(owner.publicSigningKey, fresh.publicSigningKey, messageId, timestamp)
             val out = ratchet.encrypt(state, plaintext, ad)
             if (!fits(out)) {
                 states[contact.id] = RatchetSerializer.fromSnapshot(rollback)
@@ -94,11 +130,17 @@ class RatchetSessions(
             out
         }
 
-    suspend fun open(owner: LocalIdentity, contact: Contact, frame: ByteArray): ByteArray? =
+    suspend fun open(
+        owner: LocalIdentity,
+        contact: Contact,
+        frame: ByteArray,
+        messageId: String,
+        timestamp: Long
+    ): ByteArray? =
         lockFor(contact.id).withLock {
             val fresh = contacts.get(contact.id) ?: contact
             val state = loadOrInit(owner, fresh)
-            val ad = symmetricAd(owner.publicSigningKey, fresh.publicSigningKey)
+            val ad = symmetricAd(owner.publicSigningKey, fresh.publicSigningKey, messageId, timestamp)
             val out = ratchet.decrypt(state, frame, ad)
             if (out != null) {
                 persist(contact.id, state)
@@ -106,11 +148,12 @@ class RatchetSessions(
             out
         }
 
-    private fun symmetricAd(a: ByteArray, b: ByteArray): ByteArray {
-        val cmp = compareLex(a, b)
-        val concat = if (cmp <= 0) a + b else b + a
-        return crypto.hash(concat)
-    }
+    private fun symmetricAd(
+        a: ByteArray,
+        b: ByteArray,
+        messageId: String,
+        timestamp: Long
+    ): ByteArray = envelopeAssociatedData(a, b, messageId, timestamp, crypto::hash)
 
     private fun compareLex(a: ByteArray, b: ByteArray): Int {
         val n = minOf(a.size, b.size)

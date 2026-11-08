@@ -50,6 +50,7 @@ class ConnectionManager(
     private val consecutiveFails = mutableMapOf<String, Int>()
     private val dialing = mutableMapOf<String, Long>()
     private val pendingDial = mutableSetOf<String>()
+    private val pendingExpectations = mutableMapOf<String, ExpectedPeer>()
     private val pendingAttempts = mutableMapOf<String, Int>()
     private val pendingQueuedAt = mutableMapOf<String, Long>()
     private val pendingWake = Channel<Unit>(capacity = Channel.CONFLATED)
@@ -90,7 +91,7 @@ class ConnectionManager(
             .filter { it.isNotBlank() }
             .distinct()
 
-    fun queueDial(addresses: List<String>) {
+    fun queueDial(addresses: List<String>, expect: ExpectedPeer? = null) {
         val selfSet = runCatching { selfAddresses().toSet() }.getOrDefault(emptySet())
         synchronized(pendingDial) {
             for (a in addresses) {
@@ -98,6 +99,7 @@ class ConnectionManager(
                     pendingDial.add(a)
                     pendingAttempts.remove(a)
                     pendingQueuedAt[a] = nowMs()
+                    if (expect != null) pendingExpectations[a] = expect
                     recordPending(DialAttempt(a, nowMs(), DialAttempt.Status.TRYING, I18n.current.dialQueued))
                 }
             }
@@ -113,11 +115,15 @@ class ConnectionManager(
     private fun snapshotPendingAddresses(): List<String> =
         synchronized(pendingDial) { pendingDial.toList() }
 
+    fun expectedPeerFor(address: String): ExpectedPeer? =
+        synchronized(pendingDial) { pendingExpectations[address] }
+
     private fun consumePendingAddress(addr: String) {
         synchronized(pendingDial) {
             pendingDial.remove(addr)
             pendingAttempts.remove(addr)
             pendingQueuedAt.remove(addr)
+            pendingExpectations.remove(addr)
         }
         clearPending(addr)
         removeBackoff("pending|$addr")

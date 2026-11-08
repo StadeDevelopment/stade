@@ -8,6 +8,7 @@ import dev.stade.identity.LocalIdentity
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -83,7 +84,7 @@ class RatchetSessionStartTest {
 
     @Test
     fun theFirstMessageOfAFreshSessionCarriesAPostQuantumCiphertext() = withSessions { sessions, owner, contact ->
-        val frame = sessions.seal(owner, contact, "first".encodeToByteArray())
+        val frame = sessions.seal(owner, contact, "first".encodeToByteArray(), "msg-1", 1_000L)
 
         assertNotNull(
             headerOf(frame).mlkemCt,
@@ -93,13 +94,13 @@ class RatchetSessionStartTest {
 
     @Test
     fun aRejectedMessageLeavesTheRatchetWhereItWas() = withSessions { sessions, owner, contact ->
-        val accepted = sessions.seal(owner, contact, "one".encodeToByteArray())
+        val accepted = sessions.seal(owner, contact, "one".encodeToByteArray(), "msg-1", 1_000L)
         val counterBefore = headerOf(accepted).counter
 
-        val rejected = sessions.sealIfFits(owner, contact, "two".encodeToByteArray()) { false }
+        val rejected = sessions.sealIfFits(owner, contact, "two".encodeToByteArray(), "msg-2", 2_000L) { false }
         assertNull(rejected, "a frame that does not fit must not be returned")
 
-        val next = sessions.sealIfFits(owner, contact, "two".encodeToByteArray()) { true }
+        val next = sessions.sealIfFits(owner, contact, "two".encodeToByteArray(), "msg-2", 2_000L) { true }
         assertNotNull(next)
         assertTrue(
             headerOf(next).counter == counterBefore + 1,

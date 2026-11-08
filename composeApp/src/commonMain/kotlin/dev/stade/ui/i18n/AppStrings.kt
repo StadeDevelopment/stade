@@ -180,6 +180,7 @@ abstract class AppStrings {
     abstract val hsSelfConnected: String
     abstract val hsStadeIdMismatch: String
     abstract val hsIdentityKeyMismatch: String
+    abstract val hsInviteIdentityMismatch: String
     abstract val hsTranscriptMismatch: String
     abstract val hsAuthStadeIdMismatch: String
     abstract val hsSignaturesInvalid: String

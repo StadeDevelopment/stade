@@ -190,6 +190,7 @@ object PersianStrings : AppStrings() {
     override val hsSelfConnected = "به خودتان متصل شدید (نشانی قدیمی)"
     override val hsStadeIdMismatch = "شناسهٔ Stade با کلیدها مطابقت ندارد"
     override val hsIdentityKeyMismatch = "این Stade ID از قبل با کلیدهای هویتی متفاوتی شناخته شده است"
+    override val hsInviteIdentityMismatch = "طرف این نشانی مخاطبی نیست که دعوت برای او بود"
     override val hsTranscriptMismatch = "عدم تطابق تعهد رونوشت (احتمال تنزل نسخه؟)"
     override val hsAuthStadeIdMismatch = "شناسهٔ Stade در AUTH با HELLO مطابقت ندارد"
     override val hsSignaturesInvalid = "امضاها تأیید نشدند"

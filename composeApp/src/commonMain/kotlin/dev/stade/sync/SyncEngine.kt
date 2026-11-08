@@ -99,7 +99,7 @@ class SyncEngine(
     val groupManager: GroupManager? = null,
     val stadiumManager: StadiumManager? = null
 ) {
-    private val protocolVersion = 4
+    private val protocolVersion = 5
     private val json = Json { ignoreUnknownKeys = true }
     private val _events = MutableSharedFlow<SyncEvent>(extraBufferCapacity = 64)
     val events: SharedFlow<SyncEvent> = _events
@@ -110,6 +110,7 @@ class SyncEngine(
     private val _versionMismatch = MutableStateFlow<VersionMismatch?>(null)
     val peerVersionMismatch: StateFlow<VersionMismatch?> = _versionMismatch.asStateFlow()
     @Volatile var selfAddressesProvider: () -> List<String> = { emptyList() }
+    @Volatile var expectedPeerProvider: (String) -> dev.stade.transport.ExpectedPeer? = { null }
     @Volatile private var forgottenIds = emptySet<String>()
     @Volatile private var forgottenLoaded = false
     @Volatile private var pendingReAdds = emptySet<String>()
@@ -150,7 +151,7 @@ class SyncEngine(
     ): Boolean {
         var encoded: ByteArray? = null
         val sealed = try {
-            ratchet.sealIfFits(owner, contact, body.encodeToByteArray()) { candidate ->
+            ratchet.sealIfFits(owner, contact, body.encodeToByteArray(), messageId, timestamp) { candidate ->
                 val frame = json.encodeToString(
                     MessagePayload.serializer(),
                     MessagePayload(messageId, timestamp, candidate)
@@ -224,16 +225,7 @@ class SyncEngine(
     private suspend fun handshake(owner: LocalIdentity, connection: Connection): Negotiated? {
         val ourNonce = crypto.randomBytes(32)
         val ourEphemeral = handshakeService.newEphemeral()
-        val ourTc = transcriptCommitment(
-            protocolVersion,
-            owner.publicSigningKey,
-            owner.publicHandshakeKey,
-            owner.publicMlKemKey,
-            owner.publicMlDsaKey,
-            ourEphemeral.dh.publicKey,
-            ourEphemeral.kem.publicKey
-        )
-        val ourHello = HelloPayload(
+        val helloDraft = HelloPayload(
             protocolVersion = protocolVersion,
             stadeId = owner.stadeId,
             nickname = owner.nickname,
@@ -242,7 +234,7 @@ class SyncEngine(
             mlkemPublicKey = owner.publicMlKemKey,
             mldsaPublicKey = owner.publicMlDsaKey,
             nonce = ourNonce,
-            transcriptCommitment = ourTc,
+            transcriptCommitment = ByteArray(0),
             addresses = selfAddressesFor(connection.remoteAddress),
             reAddRequest = pendingReAdds.isNotEmpty(),
             groupProtocol = GROUP_PROTOCOL_VERSION,
@@ -250,6 +242,8 @@ class SyncEngine(
             ephemeralHandshakeKey = ourEphemeral.dh.publicKey,
             ephemeralMlKemKey = ourEphemeral.kem.publicKey
         )
+        val ourTc = transcriptCommitment(helloDraft)
+        val ourHello = helloDraft.copy(transcriptCommitment = ourTc)
         val helloSent = withTimeoutOrNull(HANDSHAKE_STEP_MS) {
             runCatching {
                 connection.send(FrameCodec.encode(SyncRecord(RecordType.HELLO, json.encodeToString(HelloPayload.serializer(), ourHello).encodeToByteArray())))
@@ -299,21 +293,22 @@ class SyncEngine(
             _events.tryEmit(SyncEvent.HandshakeRejected(I18n.current.hsStadeIdMismatch, peerHello.stadeId))
             return null
         }
+        val expected = runCatching { expectedPeerProvider(connection.remoteAddress) }.getOrNull()
+        if (expected != null &&
+            !expected.matches(peerHello.stadeId, peerHello.signingPublicKey, peerHello.mldsaPublicKey)
+        ) {
+            _events.tryEmit(
+                SyncEvent.HandshakeRejected(I18n.current.hsInviteIdentityMismatch, peerHello.stadeId)
+            )
+            return null
+        }
         if (peerHello.stadeId in forgotten()) {
             if (!peerHello.reAddRequest) return null
             unforget(peerHello.stadeId)
         }
 
         val peerEphemeral = PeerEphemeral(peerHello.ephemeralHandshakeKey, peerHello.ephemeralMlKemKey)
-        val expectedPeerTc = transcriptCommitment(
-            protocolVersion,
-            peerHello.signingPublicKey,
-            peerHello.handshakePublicKey,
-            peerHello.mlkemPublicKey,
-            peerHello.mldsaPublicKey,
-            peerEphemeral.dhPub,
-            peerEphemeral.kemPub
-        )
+        val expectedPeerTc = transcriptCommitment(peerHello)
         if (!expectedPeerTc.contentEquals(peerHello.transcriptCommitment)) {
             _events.tryEmit(SyncEvent.HandshakeRejected(I18n.current.hsTranscriptMismatch, peerHello.stadeId))
             return null
@@ -332,10 +327,13 @@ class SyncEngine(
             return null
         }
 
-        val authMessage = AUTH_PREFIX + peerHello.nonce + ourTc + peerHello.transcriptCommitment
+        val weAreStadiumJoining = stadiumManager?.getPendingJoinForContact(peerHello.stadeId) != null
+        val authMessage = authSignatureMessage(
+            peerHello.nonce, ourTc, peerHello.transcriptCommitment,
+            weAreStadiumJoining, existingBeforeAuth == null
+        )
         val ourEdSig = crypto.sign(owner.privateSigningKey, authMessage)
         val ourDsaSig = pq.signMlDsa(owner.privateMlDsaKey, owner.publicMlDsaKey, authMessage)
-        val weAreStadiumJoining = stadiumManager?.getPendingJoinForContact(peerHello.stadeId) != null
         val ourAuth = AuthPayload(
             owner.stadeId, ourEdSig, ourDsaSig,
             isStadiumJoin = weAreStadiumJoining,
@@ -359,7 +357,10 @@ class SyncEngine(
             return null
         }
 
-        val peerAuthMessage = AUTH_PREFIX + ourNonce + peerHello.transcriptCommitment + ourTc
+        val peerAuthMessage = authSignatureMessage(
+            ourNonce, peerHello.transcriptCommitment, ourTc,
+            peerAuth.isStadiumJoin, peerAuth.noExistingContact
+        )
         val edOk = crypto.verify(peerHello.signingPublicKey, peerAuthMessage, peerAuth.edSignature)
         val dsaOk = pq.verifyMlDsa(peerHello.mldsaPublicKey, peerAuthMessage, peerAuth.mldsaSignature)
         if (!edOk || !dsaOk) {
@@ -547,26 +548,10 @@ class SyncEngine(
         return shareableAddresses(all, peerAddress)
     }
 
-    private fun transcriptCommitment(
-        proto: Int,
-        edPub: ByteArray,
-        xPub: ByteArray,
-        kemPub: ByteArray,
-        dsaPub: ByteArray,
-        ephDhPub: ByteArray,
-        ephKemPub: ByteArray
-    ): ByteArray {
-        val out = ByteArray(4)
-        out[0] = ((proto ushr 24) and 0xff).toByte()
-        out[1] = ((proto ushr 16) and 0xff).toByte()
-        out[2] = ((proto ushr 8) and 0xff).toByte()
-        out[3] = (proto and 0xff).toByte()
-        return crypto.hash(TC_PREFIX + out + edPub + xPub + kemPub + dsaPub + ephDhPub + ephKemPub)
-    }
+    private fun transcriptCommitment(hello: HelloPayload): ByteArray =
+        crypto.hash(handshakeTranscriptBody(hello))
 
     companion object {
-        private val AUTH_PREFIX = "stade-auth-v3".encodeToByteArray()
-        private val TC_PREFIX = "stade-tc-v3".encodeToByteArray()
     }
 
     private inner class ContactSession(
@@ -836,7 +821,7 @@ class SyncEngine(
                         }
                         return
                     }
-                    val plain = ratchet.open(owner, contact, payload.ratchetFrame)
+                    val plain = ratchet.open(owner, contact, payload.ratchetFrame, payload.messageId, payload.timestamp)
                     if (plain == null) {
                         _events.tryEmit(SyncEvent.DecryptFailed(contact.id))
                         return
@@ -950,7 +935,7 @@ class SyncEngine(
                                     val msgId = Encoding.toHex(crypto.randomBytes(16))
                                     val ts = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                                     val joinerBody = if (rosterBody != null && peerGroupProto(contact.id) >= GROUP_PROTOCOL_VERSION) rosterBody else welcomeBody
-                                    val sealed = ratchet.seal(owner, contact, joinerBody.encodeToByteArray())
+                                    val sealed = ratchet.seal(owner, contact, joinerBody.encodeToByteArray(), msgId, ts)
                                     val mp = MessagePayload(msgId, ts, sealed)
                                     val frame = json.encodeToString(MessagePayload.serializer(), mp).encodeToByteArray()
                                     outbox.enqueue(contact.id, msgId, frame)
@@ -989,7 +974,7 @@ class SyncEngine(
                                 val msgId2 = Encoding.toHex(crypto.randomBytes(16))
                                 val ts2 = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
                                 val joinBody = "$GRP_JOIN_PREFIX${parsed.groupId}:${parsed.inviteToken}"
-                                val sealed = ratchet.seal(owner, contact, joinBody.encodeToByteArray())
+                                val sealed = ratchet.seal(owner, contact, joinBody.encodeToByteArray(), msgId2, ts2)
                                 val mp = MessagePayload(msgId2, ts2, sealed)
                                 val frame = json.encodeToString(MessagePayload.serializer(), mp).encodeToByteArray()
                                 outbox.enqueue(contact.id, msgId2, frame)
@@ -1016,7 +1001,7 @@ class SyncEngine(
                                 runCatching {
                                     val msgId = Encoding.toHex(crypto.randomBytes(16))
                                     val ts = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                                    val sealed = ratchet.seal(owner, contact, welcomeBody.encodeToByteArray())
+                                    val sealed = ratchet.seal(owner, contact, welcomeBody.encodeToByteArray(), msgId, ts)
                                     val mp = MessagePayload(msgId, ts, sealed)
                                     val frame = json.encodeToString(MessagePayload.serializer(), mp).encodeToByteArray()
                                     outbox.enqueue(contact.id, msgId, frame)
@@ -1068,7 +1053,7 @@ class SyncEngine(
                                 runCatching {
                                     val msgId = Encoding.toHex(crypto.randomBytes(16))
                                     val ts = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-                                    val sealed = ratchet.seal(owner, contact, reply.encodeToByteArray())
+                                    val sealed = ratchet.seal(owner, contact, reply.encodeToByteArray(), msgId, ts)
                                     val mp = MessagePayload(msgId, ts, sealed)
                                     val frame = json.encodeToString(MessagePayload.serializer(), mp).encodeToByteArray()
                                     outbox.enqueue(contact.id, msgId, frame)

@@ -8,6 +8,7 @@ import dev.stade.contact.PROMOTE_TO_CONTACT_PREFIX
 import dev.stade.crypto.Encoding
 import dev.stade.identity.LocalIdentity
 import dev.stade.stadium.PendingStadiumJoin
+import dev.stade.transport.ExpectedPeer
 import dev.stade.ui.i18n.AppStrings
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -15,6 +16,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.Clock
 
 private val STADE_ID_REGEX = Regex("^STADE-[0-9A-Za-z]{4}-[0-9A-Za-z]{4}-[0-9A-Za-z]{4}$")
+
+fun InvitePayload.expectedPeer(): ExpectedPeer =
+    ExpectedPeer(stadeId, signingPublicKey, mldsaPublicKey)
 
 const val ACCEPT_INVITE_TIMEOUT_MS = 5 * 60_000L
 
@@ -83,7 +87,7 @@ fun AppContainer.beginAcceptInvite(
             val currentLan = fresh.filter { it.startsWith("lan://") }
             val merged = (nonLan + currentLan).distinct()
             if (merged != existing.addresses) runCatching { contacts.setAddresses(existing.id, merged) }
-            connections.queueDial(fresh)
+            connections.queueDial(fresh, payload.expectedPeer())
         }
         return BeginAcceptResult.Error(promoteOrAlreadyAdded(owner, renamed, strings))
     }
@@ -93,7 +97,7 @@ fun AppContainer.beginAcceptInvite(
     if (addrs.isEmpty()) return BeginAcceptResult.NoAddress(payload)
 
     val lanOnly = addrs.none { it.startsWith("tor://") }
-    connections.queueDial(addrs)
+    connections.queueDial(addrs, payload.expectedPeer())
 
     val a = alias.trim()
     val targetId = payload.stadeId
@@ -146,7 +150,7 @@ fun AppContainer.beginAcceptStadiumInvite(
         appScope.launch { stadiumChat.sendJoinRequest(owner, existingContact.id, pending) }
     } else {
         if (addrs.isEmpty()) return BeginAcceptStadiumResult.NoAddress(stadiumData.stadiumName)
-        connections.queueDial(addrs)
+        connections.queueDial(addrs, payload.expectedPeer())
     }
 
     val stadiumId = stadiumData.stadiumId
