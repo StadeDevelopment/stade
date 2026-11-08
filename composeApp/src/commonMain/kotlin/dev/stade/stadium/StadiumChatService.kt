@@ -180,7 +180,7 @@ class StadiumChatService(
             val contact = contacts.get(contactId) ?: return@forEach
             runCatching { sync.queueOutgoing(owner, contact, msgId, body, timestamp) }
         }
-        stadiums.deleteMessage(messageId)
+        stadiums.deleteMessage(stadium.id, messageId)
     }
 
     suspend fun leave(owner: LocalIdentity, stadium: StadiumInfo): Boolean {

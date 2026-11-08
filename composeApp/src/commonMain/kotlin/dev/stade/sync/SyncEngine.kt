@@ -710,10 +710,12 @@ class SyncEngine(
                 payload.startsWith(GRP_ACT_REACTION) -> {
                     val wrapper = parseReactionWrapper(payload.removePrefix(GRP_ACT_REACTION))
                     if (wrapper == null) false else {
-                        if (wrapper.add) messages.upsertReaction(wrapper.targetMessageId, frame.senderId, wrapper.emoji)
-                        else messages.deleteReaction(wrapper.targetMessageId, frame.senderId)
-                        _events.tryEmit(SyncEvent.ReactionUpdated(wrapper.targetMessageId))
-                        true
+                        if (!messages.isGroupMessageIn(wrapper.targetMessageId, frame.groupId)) true else {
+                            if (wrapper.add) messages.upsertReaction(wrapper.targetMessageId, frame.senderId, wrapper.emoji)
+                            else messages.deleteReaction(wrapper.targetMessageId, frame.senderId)
+                            _events.tryEmit(SyncEvent.ReactionUpdated(wrapper.targetMessageId))
+                            true
+                        }
                     }
                 }
                 payload.startsWith(GRP_ACT_RECEIPT) -> {
@@ -808,7 +810,7 @@ class SyncEngine(
                             json.decodeFromString(MessagePayload.serializer(), record.payload.decodeToString())
                         }.getOrNull()
                     ) ?: return
-                    if (messages.isEnvelopeProcessed(payload.messageId)) {
+                    if (messages.isEnvelopeProcessed(payload.messageId, contact.id)) {
                         val ack = AckPayload(payload.messageId)
                         runCatching {
                             connection.send(FrameCodec.encode(SyncRecord(RecordType.ACK, json.encodeToString(AckPayload.serializer(), ack).encodeToByteArray())))
@@ -832,7 +834,7 @@ class SyncEngine(
                         }
                         bodyStr.startsWith(REACTION_BODY_PREFIX) -> {
                             val wrapper = if ((contacts.get(contact.id)?.kind ?: 0) == 0) parseReactionWrapper(bodyStr) else null
-                            if (wrapper != null) {
+                            if (wrapper != null && messages.isMessageInChatWith(wrapper.targetMessageId, contact.id)) {
                                 if (wrapper.add) messages.upsertReaction(wrapper.targetMessageId, contact.id, wrapper.emoji)
                                 else messages.deleteReaction(wrapper.targetMessageId, contact.id)
                                 _events.tryEmit(SyncEvent.ReactionUpdated(wrapper.targetMessageId))
@@ -883,7 +885,7 @@ class SyncEngine(
                         }
                         groupManager != null && bodyStr.startsWith(GRP_FRAME_PREFIX) -> {
                             if (!handleGroupFrame(groupManager, bodyStr, payload.messageId, payload.timestamp)) {
-                                runCatching { messages.forgetEnvelope(payload.messageId) }
+                                runCatching { messages.forgetEnvelope(payload.messageId, contact.id) }
                                 return
                             }
                         }
@@ -1093,7 +1095,12 @@ class SyncEngine(
                             if ((contacts.get(contact.id)?.kind ?: 0) == 0) {
                                 val tag = parseVanishTag(bodyStr)
                                 val now = Clock.System.now().toEpochMilliseconds()
-                                if (tag == null || now < tag.deadlineAtMs) {
+                                val sweepable = tag == null || vanish.withLock(contact.id) {
+                                    vanish.ensureSweepableSessionLocked(
+                                        contact.id, tag.sessionId, tag.deadlineAtMs, now
+                                    )
+                                }
+                                if (sweepable) {
                                     val saved = messages.saveIncoming(
                                         payload.messageId, contact.id, tag?.innerBody ?: bodyStr, payload.timestamp, tag?.sessionId
                                     )

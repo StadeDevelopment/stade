@@ -77,7 +77,22 @@ class VanishManager(
 
     fun adoptRemoteStartLocked(contactId: String, sessionId: String, startedAt: Long, durationMs: Long, now: Long) {
         if (now >= startedAt + durationMs) return
+        if (durationMs > VanishDuration.ONE_DAY) return
         db.stadeDbQueries.insertVanishSession(sessionId, contactId, startedAt, durationMs)
+    }
+
+    fun ensureSweepableSessionLocked(
+        contactId: String,
+        sessionId: String,
+        deadlineAtMs: Long,
+        now: Long
+    ): Boolean {
+        if (now >= deadlineAtMs) return false
+        val duration = deadlineAtMs - now
+        if (duration > VanishDuration.ONE_DAY) return false
+        if (sessionsForContact(contactId).any { it.sessionId == sessionId }) return true
+        db.stadeDbQueries.insertVanishSession(sessionId, contactId, now, duration)
+        return true
     }
 
     private fun sweepExpiredLocked(contactId: String, now: Long) {

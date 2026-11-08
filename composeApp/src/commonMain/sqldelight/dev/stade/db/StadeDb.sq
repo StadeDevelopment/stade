@@ -87,9 +87,10 @@ CREATE TABLE KeyValue (
 );
 
 CREATE TABLE ProcessedEnvelope (
-    messageId TEXT NOT NULL PRIMARY KEY,
+    messageId TEXT NOT NULL,
     contactId TEXT NOT NULL,
-    processedAt INTEGER NOT NULL
+    processedAt INTEGER NOT NULL,
+    PRIMARY KEY(messageId, contactId)
 );
 
 CREATE INDEX idxProcessedEnvelope ON ProcessedEnvelope(processedAt);
@@ -197,7 +198,7 @@ selectLastMessagePreview:
 SELECT id, contactId, direction, substr(body, 1, 200) AS body, timestamp, delivered, read, vanishSessionId FROM Message WHERE contactId = ? ORDER BY timestamp DESC LIMIT 1;
 
 markDelivered:
-UPDATE Message SET delivered = 1 WHERE id = ?;
+UPDATE Message SET delivered = 1 WHERE id = ? AND contactId = ?;
 
 markRead:
 UPDATE Message SET read = 1 WHERE contactId = ?;
@@ -272,7 +273,7 @@ selectKvPrefixed:
 SELECT key, value FROM KeyValue WHERE key LIKE ? ORDER BY key;
 
 envelopeProcessed:
-SELECT COUNT(*) FROM ProcessedEnvelope WHERE messageId = ?;
+SELECT COUNT(*) FROM ProcessedEnvelope WHERE messageId = ? AND contactId = ?;
 
 markEnvelopeProcessed:
 INSERT OR IGNORE INTO ProcessedEnvelope(messageId, contactId, processedAt) VALUES (?, ?, ?);
@@ -281,7 +282,7 @@ pruneProcessedEnvelope:
 DELETE FROM ProcessedEnvelope WHERE processedAt < ?;
 
 forgetProcessedEnvelope:
-DELETE FROM ProcessedEnvelope WHERE messageId = ?;
+DELETE FROM ProcessedEnvelope WHERE messageId = ? AND contactId = ?;
 
 wipeMessages:
 DELETE FROM Message;
@@ -460,6 +461,12 @@ INSERT OR REPLACE INTO MessageReaction(messageId, fromId, emoji) VALUES (?, ?, ?
 deleteReaction:
 DELETE FROM MessageReaction WHERE messageId = ? AND fromId = ?;
 
+messageInChat:
+SELECT COUNT(*) FROM Message WHERE id = ? AND contactId = ?;
+
+groupMessageInGroup:
+SELECT COUNT(*) FROM GroupMessage WHERE id = ? AND groupId = ?;
+
 selectReactionsForMessage:
 SELECT * FROM MessageReaction WHERE messageId = ?;
 
@@ -607,7 +614,7 @@ deleteStadiumMessages:
 DELETE FROM StadiumMessage WHERE stadiumId = ?;
 
 deleteStadiumMessage:
-DELETE FROM StadiumMessage WHERE id = ?;
+DELETE FROM StadiumMessage WHERE id = ? AND stadiumId = ?;
 
 wipeStadiums:
 DELETE FROM Stadium;

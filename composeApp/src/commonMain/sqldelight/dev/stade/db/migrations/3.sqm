@@ -1,0 +1,17 @@
+DROP INDEX IF EXISTS idxProcessedEnvelope;
+
+ALTER TABLE ProcessedEnvelope RENAME TO ProcessedEnvelopeUnscoped;
+
+CREATE TABLE ProcessedEnvelope (
+    messageId TEXT NOT NULL,
+    contactId TEXT NOT NULL,
+    processedAt INTEGER NOT NULL,
+    PRIMARY KEY(messageId, contactId)
+);
+
+INSERT OR IGNORE INTO ProcessedEnvelope(messageId, contactId, processedAt)
+SELECT messageId, contactId, processedAt FROM ProcessedEnvelopeUnscoped;
+
+DROP TABLE ProcessedEnvelopeUnscoped;
+
+CREATE INDEX idxProcessedEnvelope ON ProcessedEnvelope(processedAt);

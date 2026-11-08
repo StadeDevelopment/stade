@@ -40,6 +40,12 @@ class MessageManager(private val db: StadeDb, private val crypto: CryptoApi) {
             SearchResult(it.id, it.contactId, false, it.contactNickname, previewBody(it.body, ""), it.timestamp)
         }
 
+    fun isMessageInChatWith(messageId: String, contactId: String): Boolean =
+        db.stadeDbQueries.messageInChat(messageId, contactId).executeAsOne() > 0L
+
+    fun isGroupMessageIn(messageId: String, groupId: String): Boolean =
+        db.stadeDbQueries.groupMessageInGroup(messageId, groupId).executeAsOne() > 0L
+
     fun upsertReaction(messageId: String, fromId: String, emoji: String) {
         db.stadeDbQueries.upsertReaction(messageId, fromId, emoji)
     }
@@ -95,16 +101,16 @@ class MessageManager(private val db: StadeDb, private val crypto: CryptoApi) {
     fun exists(messageId: String): Boolean =
         db.stadeDbQueries.messageExists(messageId).executeAsOne() > 0L
 
-    fun isEnvelopeProcessed(messageId: String): Boolean =
-        db.stadeDbQueries.envelopeProcessed(messageId).executeAsOne() > 0L
+    fun isEnvelopeProcessed(messageId: String, contactId: String): Boolean =
+        db.stadeDbQueries.envelopeProcessed(messageId, contactId).executeAsOne() > 0L
 
     fun markEnvelopeProcessed(messageId: String, contactId: String, timestamp: Long) {
         db.stadeDbQueries.markEnvelopeProcessed(messageId, contactId, timestamp)
         db.stadeDbQueries.pruneProcessedEnvelope(timestamp - PROCESSED_ENVELOPE_RETENTION_MS)
     }
 
-    fun forgetEnvelope(messageId: String) {
-        db.stadeDbQueries.forgetProcessedEnvelope(messageId)
+    fun forgetEnvelope(messageId: String, contactId: String) {
+        db.stadeDbQueries.forgetProcessedEnvelope(messageId, contactId)
     }
 
     fun newId(): String = Encoding.toHex(crypto.randomBytes(16))
@@ -114,7 +120,7 @@ class MessageManager(private val db: StadeDb, private val crypto: CryptoApi) {
     }
 
     fun markDelivered(messageId: String, contactId: String) {
-        db.stadeDbQueries.markDelivered(messageId)
+        db.stadeDbQueries.markDelivered(messageId, contactId)
         db.stadeDbQueries.deleteOutboxForContactMessage(messageId, contactId)
     }
 

@@ -126,15 +126,15 @@ class StadiumManager(private val db: StadeDb, private val crypto: CryptoApi) {
         removeConversationShortcut(ShortcutEntityKind.STADIUM, stadiumId)
     }
 
-    fun deleteMessage(messageId: String) {
-        db.stadeDbQueries.deleteStadiumMessage(messageId)
+    fun deleteMessage(stadiumId: String, messageId: String) {
+        db.stadeDbQueries.deleteStadiumMessage(messageId, stadiumId)
     }
 
     fun handleMessageDeletedByOwner(contactId: String, stadiumId: String, messageId: String): Boolean {
         val stadium = db.stadeDbQueries.selectStadium(stadiumId).executeAsOneOrNull() ?: return false
         if (stadium.isOwner == 1L) return false
         if (stadium.creatorStadeId != contactId) return false
-        db.stadeDbQueries.deleteStadiumMessage(messageId)
+        db.stadeDbQueries.deleteStadiumMessage(messageId, stadiumId)
         return true
     }
 
