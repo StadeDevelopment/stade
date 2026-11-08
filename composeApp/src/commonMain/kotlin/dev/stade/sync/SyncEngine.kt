@@ -141,21 +141,35 @@ class SyncEngine(
         data class StadiumInviteReceived(val code: String) : SyncEvent
     }
 
-    suspend fun queueOutgoing(owner: LocalIdentity, contact: Contact, messageId: String, body: String, timestamp: Long) {
+    suspend fun queueOutgoing(
+        owner: LocalIdentity,
+        contact: Contact,
+        messageId: String,
+        body: String,
+        timestamp: Long
+    ): Boolean {
+        var encoded: ByteArray? = null
         val sealed = try {
-            ratchet.seal(owner, contact, body.encodeToByteArray())
+            ratchet.sealIfFits(owner, contact, body.encodeToByteArray()) { candidate ->
+                val frame = json.encodeToString(
+                    MessagePayload.serializer(),
+                    MessagePayload(messageId, timestamp, candidate)
+                ).encodeToByteArray()
+                encoded = frame
+                frame.size <= FrameCodec.MAX_LEN
+            }
         } catch (e: Throwable) {
             _events.tryEmit(SyncEvent.SendFailed(contact.id, e.message ?: e::class.simpleName ?: I18n.current.unknownError))
-            return
+            return false
         }
-        val payload = MessagePayload(messageId, timestamp, sealed)
-        val frame = json.encodeToString(MessagePayload.serializer(), payload).encodeToByteArray()
-        if (frame.size > FrameCodec.MAX_LEN) {
-            _events.tryEmit(SyncEvent.SendFailed(contact.id, "message too large to send"))
-            return
+        val frame = encoded
+        if (sealed == null || frame == null) {
+            _events.tryEmit(SyncEvent.SendFailed(contact.id, I18n.current.sendBodyTooLarge))
+            return false
         }
         outbox.enqueue(contact.id, messageId, frame)
         sessionsLock.withLock { sessions[contact.id] }?.notifyOutbox()
+        return true
     }
 
     suspend fun handleConnection(owner: LocalIdentity, connection: Connection, outbound: Boolean = false): Boolean {

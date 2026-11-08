@@ -41,8 +41,13 @@ class ScheduledMessageService(
                 scheduled.delete(item.id)
                 continue
             }
-            val sent = runCatching { chat.send(owner, contact, item.body, item.replyToId) }.isSuccess
-            if (sent) scheduled.delete(item.id)
+            val result = runCatching { chat.sendDetailed(owner, contact, item.body, item.replyToId) }.getOrNull()
+            if (result == null) continue
+            if (result.queued) {
+                scheduled.delete(item.id)
+            } else {
+                runCatching { chat.discardUnsent(result.message.id) }
+            }
         }
     }
 }

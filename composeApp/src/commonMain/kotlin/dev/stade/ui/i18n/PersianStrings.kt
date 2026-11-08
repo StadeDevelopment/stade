@@ -198,6 +198,7 @@ object PersianStrings : AppStrings() {
     override val hsMlkemDecapFailed = "کپسول‌زدایی ML-KEM ناموفق بود"
     override val unknownNickname = "ناشناس"
     override val unknownError = "خطای ناشناخته"
+    override val sendBodyTooLarge = "پیام برای ارسال بیش از حد بزرگ است"
     override fun contactNameFallback(last4: String) = "مخاطب-$last4"
 
     override val backgroundRunningNotice = "برنامه در پس‌زمینه در حال اجرا می‌ماند"

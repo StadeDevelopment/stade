@@ -198,6 +198,7 @@ object KoreanStrings : AppStrings() {
     override val hsMlkemDecapFailed = "ML-KEM 디캡슐화에 실패했습니다"
     override val unknownNickname = "알 수 없음"
     override val unknownError = "알 수 없는 오류"
+    override val sendBodyTooLarge = "메시지가 너무 커서 보낼 수 없습니다"
     override fun contactNameFallback(last4: String) = "연락처-$last4"
 
     override val backgroundRunningNotice = "앱이 백그라운드에서 계속 실행됩니다"

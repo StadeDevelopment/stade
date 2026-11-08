@@ -8,12 +8,22 @@ import dev.stade.vanish.VanishManager
 import dev.stade.vanish.VanishSessionInfo
 import kotlinx.datetime.Clock
 
+data class SendResult(val message: Message, val queued: Boolean)
+
 class ChatService(
     private val messages: MessageManager,
     private val sync: SyncEngine,
     private val vanish: VanishManager
 ) {
     suspend fun send(owner: LocalIdentity, contact: Contact, body: String, replyToId: String? = null): Message =
+        sendDetailed(owner, contact, body, replyToId).message
+
+    suspend fun sendDetailed(
+        owner: LocalIdentity,
+        contact: Contact,
+        body: String,
+        replyToId: String? = null
+    ): SendResult =
         vanish.withLock(contact.id) {
             val session = vanish.currentSessionLocked(contact.id)
             val wireBody = if (replyToId != null) encodeReplyBody(replyToId, body) else body
@@ -22,11 +32,15 @@ class ChatService(
             val sentBody = if (session != null) {
                 encodeVanishTag(session.sessionId, session.deadlineAtMs, wireBody)
             } else wireBody
-            runCatching {
+            val queued = runCatching {
                 sync.queueOutgoing(owner, contact, msg.id, sentBody, msg.timestamp)
-            }
-            msg
+            }.getOrDefault(false)
+            SendResult(msg, queued)
         }
+
+    fun discardUnsent(messageId: String) {
+        messages.deleteMessages(listOf(messageId))
+    }
 
 
     suspend fun sendImage(owner: LocalIdentity, contact: Contact, imageBytes: ByteArray, replyToId: String? = null, caption: String = ""): Message {

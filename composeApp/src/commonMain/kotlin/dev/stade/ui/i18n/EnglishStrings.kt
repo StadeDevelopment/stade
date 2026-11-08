@@ -203,6 +203,7 @@ object EnglishStrings : AppStrings() {
     override val hsMlkemDecapFailed = "ML-KEM decapsulation failed"
     override val unknownNickname = "Unknown"
     override val unknownError = "Unknown error"
+    override val sendBodyTooLarge = "Message is too large to send"
     override fun contactNameFallback(last4: String) = "Contact-$last4"
 
     override val backgroundRunningNotice = "The app keeps running in the background"

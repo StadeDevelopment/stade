@@ -188,6 +188,7 @@ abstract class AppStrings {
     abstract val hsMlkemDecapFailed: String
     abstract val unknownNickname: String
     abstract val unknownError: String
+    abstract val sendBodyTooLarge: String
     abstract fun contactNameFallback(last4: String): String
 
     abstract val backgroundRunningNotice: String

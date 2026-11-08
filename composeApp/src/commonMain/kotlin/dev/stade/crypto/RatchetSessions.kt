@@ -49,7 +49,9 @@ class RatchetSessions(
                 rootSeed = contact.rootKey,
                 ownDh = KeyPair(owner.publicHandshakeKey, owner.privateHandshakeKey),
                 peerDhPub = contact.publicHandshakeKey,
-                isAlice = contact.isAlice
+                isAlice = contact.isAlice,
+                ownKem = KeyPair(owner.publicMlKemKey, owner.privateMlKemKey),
+                peerKemPub = contact.publicMlKemKey
             )
         }
         states[contact.id] = state
@@ -68,6 +70,26 @@ class RatchetSessions(
             val state = loadOrInit(owner, fresh)
             val ad = symmetricAd(owner.publicSigningKey, fresh.publicSigningKey)
             val out = ratchet.encrypt(state, plaintext, ad)
+            persist(contact.id, state)
+            out
+        }
+
+    suspend fun sealIfFits(
+        owner: LocalIdentity,
+        contact: Contact,
+        plaintext: ByteArray,
+        fits: (ByteArray) -> Boolean
+    ): ByteArray? =
+        lockFor(contact.id).withLock {
+            val fresh = contacts.get(contact.id) ?: contact
+            val state = loadOrInit(owner, fresh)
+            val rollback = RatchetSerializer.toSnapshot(state)
+            val ad = symmetricAd(owner.publicSigningKey, fresh.publicSigningKey)
+            val out = ratchet.encrypt(state, plaintext, ad)
+            if (!fits(out)) {
+                states[contact.id] = RatchetSerializer.fromSnapshot(rollback)
+                return@withLock null
+            }
             persist(contact.id, state)
             out
         }

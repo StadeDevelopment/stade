@@ -201,6 +201,7 @@ object TurkishStrings : AppStrings() {
     override val hsMlkemDecapFailed = "ML-KEM decapsulate başarısız"
     override val unknownNickname = "Bilinmeyen"
     override val unknownError = "Bilinmeyen hata"
+    override val sendBodyTooLarge = "Mesaj gönderilemeyecek kadar büyük"
     override fun contactNameFallback(last4: String) = "Kişi-$last4"
 
     override val backgroundRunningNotice = "Uygulama arka planda çalışmaya devam ediyor"

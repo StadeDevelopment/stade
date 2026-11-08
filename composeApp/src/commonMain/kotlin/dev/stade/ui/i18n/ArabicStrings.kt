@@ -198,6 +198,7 @@ object ArabicStrings : AppStrings() {
     override val hsMlkemDecapFailed = "فشل فك تغليف ML-KEM"
     override val unknownNickname = "غير معروف"
     override val unknownError = "خطأ غير معروف"
+    override val sendBodyTooLarge = "الرسالة أكبر من أن تُرسل"
     override fun contactNameFallback(last4: String) = "جهة اتصال-$last4"
 
     override val backgroundRunningNotice = "يستمر التطبيق في العمل في الخلفية"
