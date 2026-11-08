@@ -340,7 +340,8 @@ val downloadTorBinaries by tasks.registering {
     outputs.upToDateWhen {
         val rootDir = outRoot.get().asFile
         torPlatforms.all { plat ->
-            rootDir.resolve("${plat.key}/.ok-$torBundleVersion").exists()
+            rootDir.resolve("${plat.key}/.ok-$torBundleVersion").exists() &&
+                rootDir.resolve("${plat.key}/.bundle-version").exists()
         }
     }
     doLast {
@@ -349,7 +350,11 @@ val downloadTorBinaries by tasks.registering {
         torPlatforms.forEach { plat ->
             val targetDir = rootDir.resolve(plat.key)
             val marker = targetDir.resolve(".ok-$torBundleVersion")
-            if (marker.exists()) return@forEach
+            val versionFile = targetDir.resolve(".bundle-version")
+            if (marker.exists()) {
+                if (!versionFile.exists()) versionFile.writeText(torBundleVersion)
+                return@forEach
+            }
             targetDir.deleteRecursively()
             targetDir.mkdirs()
             val fname = "tor-expert-bundle-${plat.triple}-$torBundleVersion.tar.gz"
@@ -373,6 +378,7 @@ val downloadTorBinaries by tasks.registering {
                     from(tarTree(resources.gzip(tmp)))
                     into(targetDir)
                 }
+                versionFile.writeText(torBundleVersion)
                 marker.writeText(actualSha)
             } finally {
                 tmp.delete()

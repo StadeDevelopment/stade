@@ -1,9 +1,34 @@
 package dev.stade.transport.tor
 
 import java.io.File
+import java.security.MessageDigest
 import java.util.Locale
 
+internal data class TorResourceEntry(
+    val relativePath: String,
+    val size: Long,
+    val executable: Boolean
+)
+
+internal const val TOR_MARKER_FORMAT = "v3"
+
+internal fun torExtractionMarker(
+    platformKey: String,
+    bundleVersion: String,
+    entries: List<TorResourceEntry>
+): String {
+    val manifest = entries
+        .sortedBy { it.relativePath }
+        .joinToString("\n") { "${it.relativePath}:${it.size}" }
+    val digest = MessageDigest.getInstance("SHA-256").digest(manifest.toByteArray(Charsets.UTF_8))
+    val hex = digest.joinToString("") { byte -> "%02x".format(byte) }
+    return "$TOR_MARKER_FORMAT-$platformKey-$bundleVersion-$hex"
+}
+
 internal object TorBinaryLoader {
+
+    private const val UNKNOWN_BUNDLE_VERSION = "unknown"
+    private const val BUNDLE_VERSION_RESOURCE = ".bundle-version"
 
     fun prepare(appRoot: File): TorLayout {
         val plat = detectPlatformKey()
@@ -11,28 +36,21 @@ internal object TorBinaryLoader {
         val targetRoot = File(appRoot, "tor/$plat")
         if (!targetRoot.exists()) targetRoot.mkdirs()
         val torRunDir = File(targetRoot, "bin")
-        if (!torRunDir.exists()) torRunDir.mkdirs()
-        val markerVersionFile = File(targetRoot, ".extracted")
-        val expectedMarker = bundleVersionMarker()
-        val needsExtract = !markerVersionFile.exists() || markerVersionFile.readText().trim() != expectedMarker
 
         val entries = listResourceEntries(resourcePath)
         if (entries.isEmpty()) {
             error("Embedded Tor binaries missing for platform '$plat' (expected resources at $resourcePath). Did the Gradle task downloadTorBinaries run?")
         }
+
+        val markerVersionFile = File(targetRoot, ".extracted")
+        val expectedMarker = torExtractionMarker(plat, readBundleVersion(resourcePath), entries)
+        val markerMatches = markerVersionFile.exists() &&
+            runCatching { markerVersionFile.readText().trim() }.getOrNull() == expectedMarker
+        val needsExtract = !markerMatches || locateTorExecutable(torRunDir) == null
+
         if (needsExtract) {
-            torRunDir.listFiles()?.forEach { it.deleteRecursively() }
-            entries.forEach { entry ->
-                val out = File(torRunDir, entry.relativePath)
-                out.parentFile?.mkdirs()
-                javaClass.getResourceAsStream("$resourcePath/${entry.relativePath}")
-                    ?.use { input -> out.outputStream().use { input.copyTo(it) } }
-                    ?: error("Resource missing: $resourcePath/${entry.relativePath}")
-                if (entry.executable) {
-                    runCatching { out.setExecutable(true, false) }
-                }
-            }
-            adhocSignMacBinaries(torRunDir)
+            runCatching { markerVersionFile.delete() }
+            extractInto(targetRoot, torRunDir, resourcePath, entries)
             markerVersionFile.writeText(expectedMarker)
         }
 
@@ -53,6 +71,56 @@ internal object TorBinaryLoader {
         runCatching { obfs4Exe?.setExecutable(true, false) }
         return TorLayout(torRunDir, torExe, dataDir, geoip, geoip6, obfs4Exe)
     }
+
+    private fun extractInto(
+        targetRoot: File,
+        torRunDir: File,
+        resourcePath: String,
+        entries: List<TorResourceEntry>
+    ) {
+        val staging = File(targetRoot, "bin.staging")
+        staging.deleteRecursively()
+        if (!staging.mkdirs()) error("Cannot create Tor staging directory $staging")
+
+        entries.forEach { entry ->
+            val out = File(staging, entry.relativePath)
+            out.parentFile?.mkdirs()
+            val written = javaClass.getResourceAsStream("$resourcePath/${entry.relativePath}")
+                ?.use { input -> out.outputStream().use { output -> input.copyTo(output) } }
+                ?: error("Resource missing: $resourcePath/${entry.relativePath}")
+            if (entry.size >= 0L && written != entry.size) {
+                staging.deleteRecursively()
+                error("Truncated Tor resource ${entry.relativePath}: wrote $written of ${entry.size} bytes")
+            }
+            if (entry.executable) {
+                runCatching { out.setExecutable(true, false) }
+            }
+        }
+
+        adhocSignMacBinaries(staging)
+        if (locateTorExecutable(staging) == null) {
+            staging.deleteRecursively()
+            error("Staged Tor bundle has no executable under $staging")
+        }
+
+        val previous = File(targetRoot, "bin.previous")
+        previous.deleteRecursively()
+        if (torRunDir.exists() && !torRunDir.renameTo(previous)) {
+            torRunDir.deleteRecursively()
+        }
+        if (!staging.renameTo(torRunDir)) {
+            staging.deleteRecursively()
+            error("Cannot activate staged Tor bundle at $torRunDir")
+        }
+        previous.deleteRecursively()
+    }
+
+    private fun readBundleVersion(resourcePath: String): String =
+        runCatching {
+            javaClass.getResourceAsStream("$resourcePath/$BUNDLE_VERSION_RESOURCE")
+                ?.use { it.readBytes().toString(Charsets.UTF_8).trim() }
+                ?.takeIf { it.isNotEmpty() }
+        }.getOrNull() ?: UNKNOWN_BUNDLE_VERSION
 
     private fun adhocSignMacBinaries(dir: File) {
         val os = System.getProperty("os.name").lowercase(Locale.ROOT)
@@ -98,8 +166,6 @@ internal object TorBinaryLoader {
         return "$os-$arch"
     }
 
-    private fun bundleVersionMarker(): String = "v2-${detectPlatformKey()}"
-
     private fun locateTorExecutable(dir: File): File? {
         val candidates = listOf(
             File(dir, "tor/tor.exe"),
@@ -110,17 +176,15 @@ internal object TorBinaryLoader {
         return candidates.firstOrNull { it.isFile }
     }
 
-    private data class EntryRef(val relativePath: String, val executable: Boolean)
-
-    private fun listResourceEntries(resourcePath: String): List<EntryRef> {
+    private fun listResourceEntries(resourcePath: String): List<TorResourceEntry> {
         val url = javaClass.getResource(resourcePath) ?: return emptyList()
         val proto = url.protocol
-        val collected = mutableListOf<EntryRef>()
+        val collected = mutableListOf<TorResourceEntry>()
         if (proto == "file") {
             val rootFile = java.nio.file.Paths.get(url.toURI()).toFile()
             rootFile.walkTopDown().filter { it.isFile }.forEach { f ->
                 val rel = f.relativeTo(rootFile).path.replace(File.separatorChar, '/')
-                collected += EntryRef(rel, isExecutableName(rel))
+                collected += TorResourceEntry(rel, f.length(), isExecutableName(rel))
             }
         } else if (proto == "jar") {
             val spec = url.toString()
@@ -135,7 +199,7 @@ internal object TorBinaryLoader {
                     val name = e.name
                     if (!name.startsWith("$inside/")) continue
                     val rel = name.substring(inside.length + 1)
-                    collected += EntryRef(rel, isExecutableName(rel))
+                    collected += TorResourceEntry(rel, e.size, isExecutableName(rel))
                 }
             }
         }
@@ -152,4 +216,3 @@ internal object TorBinaryLoader {
         return false
     }
 }
-
