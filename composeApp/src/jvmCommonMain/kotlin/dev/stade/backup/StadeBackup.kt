@@ -17,6 +17,8 @@ class BackupTargets(
 
 enum class RestoreFailure { WrongPassphrase, NotABackup, Damaged, Incomplete, WriteFailed, NewerVersion }
 
+private val DB_SIDECAR_SUFFIXES = listOf("-wal", "-shm", "-journal")
+
 sealed interface VerifyOutcome {
     data class Valid(val entries: List<BackupEntry>, val payloadBytes: Long, val onionKeyIncluded: Boolean) : VerifyOutcome
     data class Failed(val reason: RestoreFailure) : VerifyOutcome
@@ -119,7 +121,13 @@ object StadeBackup {
             }
             onionTmp?.let { restrictPermissions(File(targets.onionKeyPath)) }
 
-            runCatching { File(targets.plaintextDbPath).delete() }
+            val plaintextRemoved = runCatching {
+                val live = File(targets.plaintextDbPath)
+                live.delete()
+                DB_SIDECAR_SUFFIXES.forEach { File(live.parentFile, live.name + it).delete() }
+                !live.exists()
+            }.getOrDefault(false)
+            if (!plaintextRemoved) return RestoreOutcome.Failed(RestoreFailure.WriteFailed)
             return RestoreOutcome.Restored(onionKeyIncluded = onion != null)
         } catch (_: Exception) {
             return RestoreOutcome.Failed(RestoreFailure.WriteFailed)
