@@ -11,3 +11,12 @@ val backgroundFailures = CoroutineExceptionHandler { _, throwable ->
 }
 
 expect fun reportBackgroundFailure(throwable: Throwable)
+
+inline fun <T> runCancellable(block: () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        Result.failure(t)
+    }

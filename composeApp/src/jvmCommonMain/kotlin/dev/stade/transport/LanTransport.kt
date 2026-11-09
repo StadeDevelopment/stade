@@ -11,6 +11,7 @@ import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.readFully
 import io.ktor.utils.io.writeFully
 import dev.stade.backgroundFailures
+import dev.stade.runCancellable
 import dev.stade.sync.MAX_WIRE_FRAME_BYTES
 import dev.stade.ui.i18n.I18n
 import kotlinx.coroutines.CoroutineScope
@@ -108,7 +109,7 @@ class LanTransport(
 
     private suspend fun runAccept(server: ServerSocket, handler: suspend (Connection) -> Unit) {
         while (scope.isActive) {
-            val socket = runCatching { server.accept() }.getOrNull() ?: break
+            val socket = runCancellable { server.accept() }.getOrNull() ?: break
             if (!inboundLimiter.tryAcquire()) {
                 runCatching { socket.close() }
                 continue

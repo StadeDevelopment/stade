@@ -1,5 +1,6 @@
 ﻿package dev.stade.sync
 
+import dev.stade.runCancellable
 import dev.stade.contact.Contact
 import dev.stade.contact.ContactManager
 import dev.stade.contact.HandshakeEphemeral
@@ -190,7 +191,7 @@ class SyncEngine(
             if (outbound != preferOutbound) {
                 val existing = sessionsLock.withLock { sessions[contact.id]?.takeIf { it.isAlive() } }
                 if (existing != null) {
-                    runCatching { connection.close() }
+                    runCancellable { connection.close() }
                     return@coroutineScope
                 }
             }
@@ -495,7 +496,7 @@ class SyncEngine(
             val rec = SyncRecord(RecordType.KEM_OFFER,
                 json.encodeToString(KemOfferPayload.serializer(), KemOfferPayload(kemCt)).encodeToByteArray())
             val offerSent = withTimeoutOrNull(HANDSHAKE_STEP_MS) {
-                runCatching { connection.send(FrameCodec.encode(rec)) }.isSuccess
+                runCancellable { connection.send(FrameCodec.encode(rec)) }.isSuccess
             }
             if (offerSent != true) return null
         } else {
@@ -593,7 +594,7 @@ class SyncEngine(
                 sender.cancel()
                 pinger.cancel()
                 watchdog.cancel()
-                runCatching { connection.close() }
+                runCancellable { connection.close() }
             }
         }
 
@@ -647,7 +648,7 @@ class SyncEngine(
 
         private suspend fun runReceiver(scope: CoroutineScope) {
             while (scope.isActive) {
-                val frame = runCatching { connection.receive() }.getOrNull() ?: return
+                val frame = runCancellable { connection.receive() }.getOrNull() ?: return
                 lastRxAt = Clock.System.now().toEpochMilliseconds()
                 val record = FrameCodec.decode(frame) ?: continue
                 try {
@@ -666,7 +667,7 @@ class SyncEngine(
                     runCatching {
                         connection.send(FrameCodec.encode(SyncRecord(RecordType.PING, ByteArray(0))))
                     }.getOrElse {
-                        runCatching { connection.close() }
+                        runCancellable { connection.close() }
                         return
                     }
                 }
@@ -680,7 +681,7 @@ class SyncEngine(
                     delay(WATCHDOG_TICK_MS)
                     val active = maxOf(lastRxAt, connection.lastProgressAtMs)
                     if (Clock.System.now().toEpochMilliseconds() - active > SILENCE_LIMIT_MS) {
-                        runCatching { connection.close() }
+                        runCancellable { connection.close() }
                         return
                     }
                 }
@@ -1139,7 +1140,7 @@ class SyncEngine(
                     }
                 }
                 RecordType.PING -> { }
-                RecordType.BYE -> { runCatching { connection.close() } }
+                RecordType.BYE -> { runCancellable { connection.close() } }
                 else -> { }
             }
         }

@@ -9,6 +9,7 @@ import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.readFully
 import io.ktor.utils.io.writeFully
 import dev.stade.backgroundFailures
+import dev.stade.runCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -370,7 +371,7 @@ class TorTransport(
 
     private suspend fun runAccept(server: ServerSocket, handler: suspend (Connection) -> Unit) {
         while (scope.isActive) {
-            val socket = runCatching { server.accept() }.getOrNull() ?: break
+            val socket = runCancellable { server.accept() }.getOrNull() ?: break
             if (!inboundLimiter.tryAcquire()) {
                 runCatching { socket.close() }
                 continue
