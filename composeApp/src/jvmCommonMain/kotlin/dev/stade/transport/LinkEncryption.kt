@@ -86,6 +86,8 @@ internal class EncryptedLinkConnection(
 
     override val remoteAddress: String get() = inner.remoteAddress
 
+    override val lastProgressAtMs: Long get() = inner.lastProgressAtMs
+
     private val negotiateLock = Mutex()
     private var negotiated = false
     private var link: LinkEncryption? = null

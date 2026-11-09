@@ -121,6 +121,13 @@ data class SyncRecord(
     override fun hashCode(): Int = type.hashCode() * 31 + payload.contentHashCode()
 }
 
+const val FRAME_HEADER_BYTES = 5
+
+const val LINK_SEAL_OVERHEAD_BYTES = 16
+
+const val MAX_WIRE_FRAME_BYTES =
+    4 * 1024 * 1024 + FRAME_HEADER_BYTES + LINK_SEAL_OVERHEAD_BYTES
+
 object FrameCodec {
     const val MAX_LEN = 4 * 1024 * 1024
 

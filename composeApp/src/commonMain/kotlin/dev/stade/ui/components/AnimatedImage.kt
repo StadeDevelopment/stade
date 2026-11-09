@@ -30,6 +30,17 @@ fun isGifBytes(bytes: ByteArray): Boolean {
     return header == "GIF87a" || header == "GIF89a"
 }
 
+class AnimationFrames(val bytes: ByteArray) {
+    override fun equals(other: Any?): Boolean {
+        if (other !is AnimationFrames) return false
+        if (other.bytes === bytes) return true
+        if (other.bytes.size != bytes.size) return false
+        return other.bytes.contentEquals(bytes)
+    }
+
+    override fun hashCode(): Int = bytes.size
+}
+
 fun isAnimatedBytes(bytes: ByteArray): Boolean =
     isGifBytes(bytes) || dev.stade.sticker.isAnimatedWebpBytes(bytes)
 

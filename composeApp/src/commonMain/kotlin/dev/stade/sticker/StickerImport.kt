@@ -1,7 +1,7 @@
 package dev.stade.sticker
 
 const val MAX_IMPORT_ENTRIES = 120
-const val MAX_IMPORT_ENTRY_BYTES = 2 * 1024 * 1024
+const val MAX_IMPORT_ENTRY_BYTES = dev.stade.message.MAX_ATTACHMENT_BYTES
 const val MAX_IMPORT_ARCHIVE_BYTES = 64L * 1024 * 1024
 
 class ImportedImage(val name: String, val bytes: ByteArray)

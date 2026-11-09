@@ -622,13 +622,13 @@ class SyncEngine(
                 val item = runCatching { outbox.item(id) }.getOrNull() ?: continue
                 if (item.payload.size > FrameCodec.MAX_LEN) {
                     outbox.remove(item.id)
-                    _events.tryEmit(SyncEvent.SendFailed(contact.id, "message too large to send"))
+                    _events.tryEmit(SyncEvent.SendFailed(contact.id, I18n.current.sendBodyTooLarge))
                     continue
                 }
                 val record = toWireRecord(item.payload)
                 if (record.payload.size > FrameCodec.MAX_LEN) {
                     outbox.remove(item.id)
-                    _events.tryEmit(SyncEvent.SendFailed(contact.id, "message too large to send"))
+                    _events.tryEmit(SyncEvent.SendFailed(contact.id, I18n.current.sendBodyTooLarge))
                     continue
                 }
                 val ok = runCatching {
@@ -676,7 +676,8 @@ class SyncEngine(
             try {
                 while (true) {
                     delay(WATCHDOG_TICK_MS)
-                    if (Clock.System.now().toEpochMilliseconds() - lastRxAt > SILENCE_LIMIT_MS) {
+                    val active = maxOf(lastRxAt, connection.lastProgressAtMs)
+                    if (Clock.System.now().toEpochMilliseconds() - active > SILENCE_LIMIT_MS) {
                         runCatching { connection.close() }
                         return
                     }

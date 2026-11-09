@@ -22,6 +22,7 @@ interface Connection {
     suspend fun send(frame: ByteArray)
     suspend fun receive(): ByteArray?
     suspend fun close()
+    val lastProgressAtMs: Long get() = 0L
 }
 
 interface IncomingConnections {

@@ -27,7 +27,8 @@ actual fun AnimatedImage(
     modifier: Modifier,
     contentScale: ContentScale
 ) {
-    val playable = remember(bytes) {
+    val key = AnimationFrames(bytes)
+    val playable = remember(key) {
         isAnimatedBytes(bytes) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
     }
     if (!playable) {
@@ -35,10 +36,10 @@ actual fun AnimatedImage(
         return
     }
 
-    var drawable by remember(bytes) { mutableStateOf<Drawable?>(null) }
-    var failed by remember(bytes) { mutableStateOf(false) }
+    var drawable by remember(key) { mutableStateOf<Drawable?>(null) }
+    var failed by remember(key) { mutableStateOf(false) }
 
-    LaunchedEffect(bytes) {
+    LaunchedEffect(key) {
         val decoded = withContext(Dispatchers.Default) {
             runCatching {
                 ImageDecoder.decodeDrawable(

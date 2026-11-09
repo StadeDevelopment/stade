@@ -11,6 +11,7 @@ import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.readFully
 import io.ktor.utils.io.writeFully
 import dev.stade.backgroundFailures
+import dev.stade.sync.MAX_WIRE_FRAME_BYTES
 import dev.stade.ui.i18n.I18n
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -135,6 +136,8 @@ class LanTransport(
     }.getOrDefault(emptyList())
 }
 
+private const val READ_CHUNK_BYTES = 64 * 1024
+
 internal class TcpConnection : Connection {
     private val socket: Socket
     private val reader: ByteReadChannel
@@ -168,17 +171,28 @@ internal class TcpConnection : Connection {
         writer.flush()
     }
 
+    @Volatile private var progressAt = System.currentTimeMillis()
+
+    override val lastProgressAtMs: Long get() = progressAt
+
     override suspend fun receive(): ByteArray? = withContext(Dispatchers.IO) {
         runCatching {
             val header = ByteArray(4)
             reader.readFully(header)
+            progressAt = System.currentTimeMillis()
             val len = ((header[0].toInt() and 0xff) shl 24) or
                 ((header[1].toInt() and 0xff) shl 16) or
                 ((header[2].toInt() and 0xff) shl 8) or
                 (header[3].toInt() and 0xff)
-            if (len <= 0 || len > 4 * 1024 * 1024) return@runCatching null
+            if (len <= 0 || len > MAX_WIRE_FRAME_BYTES) return@runCatching null
             val payload = ByteArray(len)
-            reader.readFully(payload)
+            var read = 0
+            while (read < len) {
+                val chunk = minOf(READ_CHUNK_BYTES, len - read)
+                reader.readFully(payload, read, chunk)
+                read += chunk
+                progressAt = System.currentTimeMillis()
+            }
             payload
         }.getOrNull()
     }

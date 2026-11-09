@@ -61,11 +61,12 @@ actual fun AnimatedImage(
         return
     }
 
-    var animation by remember(bytes) { mutableStateOf<GifFrames?>(null) }
-    var settled by remember(bytes) { mutableStateOf(false) }
-    var frameIndex by remember(bytes) { mutableStateOf(0) }
+    val key = AnimationFrames(bytes)
+    var animation by remember(key) { mutableStateOf<GifFrames?>(null) }
+    var settled by remember(key) { mutableStateOf(false) }
+    var frameIndex by remember(key) { mutableStateOf(0) }
 
-    LaunchedEffect(bytes) {
+    LaunchedEffect(key) {
         animation = withContext(Dispatchers.Default) { decodeGif(bytes) }
         settled = true
     }
