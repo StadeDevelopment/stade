@@ -181,6 +181,7 @@ abstract class AppStrings {
     abstract val hsStadeIdMismatch: String
     abstract val hsIdentityKeyMismatch: String
     abstract val hsInviteIdentityMismatch: String
+    abstract val hsNoOpenInvite: String
     abstract val hsTranscriptMismatch: String
     abstract val hsAuthStadeIdMismatch: String
     abstract val hsSignaturesInvalid: String

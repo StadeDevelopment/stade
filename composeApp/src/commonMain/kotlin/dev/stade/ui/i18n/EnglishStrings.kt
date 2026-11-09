@@ -196,6 +196,7 @@ object EnglishStrings : AppStrings() {
     override val hsStadeIdMismatch = "Stade ID does not match the keys"
     override val hsIdentityKeyMismatch = "This Stade ID is already known with different identity keys"
     override val hsInviteIdentityMismatch = "The peer at this address is not the contact the invite was for"
+    override val hsNoOpenInvite = "An unknown peer tried to connect while no invite of yours was open"
     override val hsTranscriptMismatch = "Transcript commitment mismatch (downgrade?)"
     override val hsAuthStadeIdMismatch = "AUTH Stade ID does not match HELLO"
     override val hsSignaturesInvalid = "Signatures could not be verified"

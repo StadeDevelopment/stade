@@ -191,6 +191,7 @@ object KoreanStrings : AppStrings() {
     override val hsStadeIdMismatch = "Stade ID가 키와 일치하지 않습니다"
     override val hsIdentityKeyMismatch = "이 Stade ID는 다른 신원 키로 이미 등록되어 있습니다"
     override val hsInviteIdentityMismatch = "이 주소의 상대는 초대 대상 연락처가 아닙니다"
+    override val hsNoOpenInvite = "열려 있는 초대가 없는데 알 수 없는 상대가 연결을 시도했습니다"
     override val hsTranscriptMismatch = "트랜스크립트 커밋이 일치하지 않습니다(다운그레이드 시도?)"
     override val hsAuthStadeIdMismatch = "AUTH의 Stade ID가 HELLO와 일치하지 않습니다"
     override val hsSignaturesInvalid = "서명을 확인하지 못했습니다"

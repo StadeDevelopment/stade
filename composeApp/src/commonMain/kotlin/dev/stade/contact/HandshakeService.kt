@@ -58,7 +58,10 @@ class HandshakeService(
     private val version: Byte = 0x02
 
 
+    @Volatile var onInviteIssued: () -> Unit = {}
+
     fun createInvite(owner: LocalIdentity, addresses: List<String> = emptyList()): InviteCode {
+        runCatching { onInviteIssued() }
         val cleanAddrs = addresses.filter { it.isNotBlank() }.distinct()
         val tbs = composeTbs(
             nickname = owner.nickname,

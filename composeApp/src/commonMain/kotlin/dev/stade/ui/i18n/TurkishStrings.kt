@@ -194,6 +194,7 @@ object TurkishStrings : AppStrings() {
     override val hsStadeIdMismatch = "Stade ID anahtarlarla eşleşmiyor"
     override val hsIdentityKeyMismatch = "Bu Stade ID farklı kimlik anahtarlarıyla zaten tanınıyor"
     override val hsInviteIdentityMismatch = "Bu adresteki taraf, davetin ait olduğu kişi değil"
+    override val hsNoOpenInvite = "Açık bir davetin yokken tanınmayan bir taraf bağlanmaya çalıştı"
     override val hsTranscriptMismatch = "Transcript commitment uyumsuz (downgrade?)"
     override val hsAuthStadeIdMismatch = "AUTH Stade ID HELLO ile eşleşmiyor"
     override val hsSignaturesInvalid = "İmzalar doğrulanamadı"

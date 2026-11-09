@@ -267,6 +267,8 @@ class AppContainer(
     val connections = ConnectionManager(transports, contacts, sync, transportSettings, isForeground = { isAppInForeground.value }).also { manager ->
         sync.selfAddressesProvider = { manager.selfAddresses() }
         sync.expectedPeerProvider = { address -> manager.expectedPeerFor(address) }
+        sync.invitesOpenProvider = { dev.stade.contact.isInviteWindowOpen(db) }
+        handshake.onInviteIssued = { dev.stade.contact.openInviteWindow(db) }
     }
 
     val screenshotSettingTick = MutableStateFlow(0)

@@ -112,6 +112,7 @@ class SyncEngine(
     val peerVersionMismatch: StateFlow<VersionMismatch?> = _versionMismatch.asStateFlow()
     @Volatile var selfAddressesProvider: () -> List<String> = { emptyList() }
     @Volatile var expectedPeerProvider: (String) -> dev.stade.transport.ExpectedPeer? = { null }
+    @Volatile var invitesOpenProvider: () -> Boolean = { true }
     @Volatile private var forgottenIds = emptySet<String>()
     @Volatile private var forgottenLoaded = false
     @Volatile private var pendingReAdds = emptySet<String>()
@@ -400,6 +401,13 @@ class SyncEngine(
             runCatching { contacts.delete(existing.id) }
         }
 
+        if (!newContactAllowed(peerHello, peerAuth, expected != null)) {
+            _events.tryEmit(
+                SyncEvent.HandshakeRejected(I18n.current.hsNoOpenInvite, peerHello.stadeId)
+            )
+            return null
+        }
+
         val established = gatedNewContactHandshake(
             owner, connection, peerHello, peerAuth.isStadiumJoin, priorKind, ourEphemeral, peerEphemeral
         )
@@ -425,6 +433,18 @@ class SyncEngine(
         runCatching {
             if (contacts.get(contactId)?.groupProto != supported) contacts.setGroupProto(contactId, supported)
         }
+    }
+
+    private fun newContactAllowed(
+        peerHello: HelloPayload,
+        peerAuth: AuthPayload,
+        weDialedThem: Boolean
+    ): Boolean {
+        if (weDialedThem) return true
+        if (peerHello.stadeId in pendingReAdds) return true
+        if (stadiumManager?.getPendingJoinForContact(peerHello.stadeId) != null) return true
+        if (peerAuth.isStadiumJoin) return true
+        return runCatching { invitesOpenProvider() }.getOrDefault(true)
     }
 
     private suspend fun gatedNewContactHandshake(
