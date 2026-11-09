@@ -3,8 +3,8 @@ import java.util.Properties
 import java.net.URI
 import java.security.MessageDigest
 
-val appVersion = "26.0.1"
-val appVersionCode = 33
+val appVersion = "26.1.0"
+val appVersionCode = 34
 
 val appVersionSource = file("src/commonMain/kotlin/dev/stade/AppVersion.kt")
 val declaredAppVersion = Regex("""APP_VERSION\s*=\s*"([^"]+)"""")
