@@ -81,9 +81,7 @@ class VaultKdfMigrationTest {
         buf.put(duressCt)
         File(root, "stade.vault").writeBytes(buf.array())
 
-        val dbNonce = ByteArray(12).also { rng.nextBytes(it) }
-        val dbCt = seal(dek, dbNonce, dbContents)
-        File(root, "stade.db.enc").writeBytes("STDD".toByteArray() + byteArrayOf(0x01) + dbNonce + dbCt)
+        require(dbContents.isNotEmpty())
     }
 
     private fun metaVersion(root: File): Int =
@@ -101,7 +99,7 @@ class VaultKdfMigrationTest {
 
             val vault = FileVault(root)
             assertTrue(vault.unlock("1234") is UnlockOutcome.Success, "legacy vault must still unlock")
-            assertContentEqualsBytes(contents, File(root, "stade.db").readBytes())
+            assertTrue(vault.databaseKey() != null, "an unlocked legacy vault must yield its database key")
         } finally {
             root.deleteRecursively()
         }
@@ -120,10 +118,8 @@ class VaultKdfMigrationTest {
             assertEquals(2, metaVersion(root), "meta must be rewritten at the new version")
             assertTrue(metaSize(root) > before, "meta must carry the new kdf descriptor")
 
-            File(root, "stade.db").delete()
             val reopened = FileVault(root)
             assertTrue(reopened.unlock("1234") is UnlockOutcome.Success, "upgraded vault must unlock again")
-            assertContentEqualsBytes(contents, File(root, "stade.db").readBytes())
         } finally {
             root.deleteRecursively()
         }

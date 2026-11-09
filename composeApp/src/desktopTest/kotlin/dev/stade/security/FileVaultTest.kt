@@ -28,70 +28,23 @@ class FileVaultTest {
     }
 
     @Test
-    fun flushAndCloseEncryptsThenRemovesPlaintextDatabase() {
+    fun flushAndCloseLocksTheVaultAndDropsTheKey() {
         val root = Files.createTempDirectory("stade-vault-test")
         try {
             val vault = FileVault(root.toFile())
             vault.setup("1234")
-            val plaintext = root.resolve("stade.db").toFile()
-            plaintext.writeText("SQLite format 3\u0000test data")
+            assertTrue(vault.databaseKey() != null)
 
             vault.flushAndClose()
 
-            assertFalse(plaintext.exists())
-            assertTrue(root.resolve("stade.db.enc").toFile().exists())
             assertFalse(vault.isUnlocked())
+            assertEquals(null, vault.databaseKey(), "the database key must not outlive the lock")
         } finally {
             root.toFile().deleteRecursively()
         }
     }
 
-    @Test
-    fun keepsEncryptedDatabaseWhenCiphertextCannotBeDecrypted() {
-        val root = Files.createTempDirectory("stade-vault-test")
-        try {
-            val vault = FileVault(root.toFile())
-            vault.setup("1234")
-            val plaintext = root.resolve("stade.db").toFile()
-            plaintext.writeText("SQLite format 3\u0000test data")
-            vault.flushAndClose()
 
-            val encrypted = root.resolve("stade.db.enc").toFile()
-            val corruptBytes = encrypted.readBytes().also {
-                it[it.lastIndex] = (it.last().toInt() xor 1).toByte()
-            }
-            encrypted.writeBytes(corruptBytes)
-
-            assertTrue(vault.unlock("1234") is UnlockOutcome.Error)
-            assertContentEquals(corruptBytes, encrypted.readBytes())
-            assertFalse(plaintext.exists())
-            assertFalse(vault.isUnlocked())
-        } finally {
-            root.toFile().deleteRecursively()
-        }
-    }
-
-    @Test
-    fun keepsEncryptedDatabaseWhenDecryptedContentIsNotSqlite() {
-        val root = Files.createTempDirectory("stade-vault-test")
-        try {
-            val vault = FileVault(root.toFile())
-            vault.setup("1234")
-            val plaintext = root.resolve("stade.db").toFile()
-            plaintext.writeText("this is not a SQLite database")
-            vault.flushAndClose()
-
-            val encrypted = root.resolve("stade.db.enc").toFile()
-            val encryptedBytes = encrypted.readBytes()
-
-            assertTrue(vault.unlock("1234") is UnlockOutcome.Error)
-            assertContentEquals(encryptedBytes, encrypted.readBytes())
-            assertFalse(plaintext.exists())
-            assertFalse(vault.isUnlocked())
-        } finally {
-            root.toFile().deleteRecursively()
-        }
-    }
 
     @Test
     fun verifyPasswordAcceptsTheRealPinWithoutTouchingTheSession() {

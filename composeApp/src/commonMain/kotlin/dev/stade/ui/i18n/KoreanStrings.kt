@@ -221,6 +221,7 @@ object KoreanStrings : AppStrings() {
     override val vaultKeyDerivationFailed = "키를 유도하지 못했습니다"
     override val vaultDekDecryptFailed = "키를 복호화하지 못했습니다"
     override val vaultDatabaseDecryptFailed = "금고를 열지 못했습니다. 파일은 삭제되지 않았습니다."
+    override val vaultLegacyDatabase = "이 보관함은 데이터베이스를 다르게 저장하던 이전 버전에서 만들어졌습니다. 계속하려면 앱을 초기화하고 다시 설정하세요."
 
     override val notifConnectionChannelName = "연결 상태"
     override val notifConnectionChannelDesc = "Stade가 피어 연결을 유지합니다"

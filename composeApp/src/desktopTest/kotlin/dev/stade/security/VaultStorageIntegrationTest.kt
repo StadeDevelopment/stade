@@ -4,10 +4,10 @@ import dev.stade.db.DriverFactory
 import dev.stade.db.StadeDb
 import java.io.File
 import java.nio.file.Files
-import java.sql.DriverManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 private val SIDECAR_SUFFIXES = listOf("-wal", "-shm", "-journal")
@@ -18,17 +18,8 @@ private fun sidecarsBeside(dbFile: File): List<String> =
         .filter { it.exists() }
         .map { it.name }
 
-private fun journalModeOf(dbPath: String): String =
-    DriverManager.getConnection("jdbc:sqlite:$dbPath").use { connection ->
-        connection.createStatement().use { statement ->
-            statement.executeQuery("PRAGMA journal_mode").use { rows ->
-                rows.next()
-                rows.getString(1)
-            }
-        }
-    }
-
 private fun fileContains(file: File, needle: ByteArray): Boolean {
+    if (!file.exists()) return false
     val hay = file.readBytes()
     if (needle.isEmpty() || needle.size > hay.size) return false
     for (i in 0..hay.size - needle.size) {
@@ -44,107 +35,125 @@ private fun fileContains(file: File, needle: ByteArray): Boolean {
     return false
 }
 
-private fun withRoots(body: (File, File) -> Unit) {
-    val a = Files.createTempDirectory("stade-vault-storage")
-    val b = Files.createTempDirectory("stade-vault-storage-other")
+private fun withRoot(body: (File) -> Unit) {
+    val dir = Files.createTempDirectory("stade-vault-storage")
     try {
-        body(a.toFile(), b.toFile())
+        body(dir.toFile())
     } finally {
-        a.toFile().deleteRecursively()
-        b.toFile().deleteRecursively()
+        dir.toFile().deleteRecursively()
     }
 }
 
 class VaultStorageIntegrationTest {
 
-    @Test
-    fun theLiveDatabaseKeepsNoPlaintextSidecars() = withRoots { root, _ ->
-        val vault = FileVault(root)
-        vault.setup("1234")
-        val driver = DriverFactory().create(vault.plaintextDbPath())
-        val db = StadeDb(driver)
-        repeat(50) { db.stadeDbQueries.putKv("probe-$it", "sensitive-$it".encodeToByteArray()) }
-
-        val live = File(vault.plaintextDbPath())
-        assertEquals(emptyList(), sidecarsBeside(live), "the live database must stand alone")
-        driver.close()
-        assertEquals(
-            "delete",
-            journalModeOf(vault.plaintextDbPath()).lowercase(),
-            "write-ahead logging must stay off so no plaintext journal persists"
-        )
-    }
+    private val secret = "UNIQUE-SECRET-PAYLOAD-7f3a9c".encodeToByteArray()
 
     @Test
-    fun deletedRowsDoNotLingerInTheDatabaseFile() = withRoots { root, _ ->
+    fun theDatabaseOnDiskIsNotReadableWhileTheAppIsRunning() = withRoot { root ->
         val vault = FileVault(root)
-        vault.setup("1234")
-        val driver = DriverFactory().create(vault.plaintextDbPath())
-        val db = StadeDb(driver)
-        val secret = "UNIQUE-SECRET-PAYLOAD-7f3a9c".encodeToByteArray()
-        db.stadeDbQueries.putKv("probe-secret", secret)
+        vault.setup("123456")
+        val key = assertNotNull(vault.databaseKey(), "an unlocked vault must expose a database key")
+        val driver = DriverFactory().create(vault.databasePath(), key)
+        StadeDb(driver).stadeDbQueries.putKv("probe", secret)
 
-        val live = File(vault.plaintextDbPath())
-        assertTrue(fileContains(live, secret), "the row must be in the file before it is deleted")
-
-        db.stadeDbQueries.deleteKv("probe-secret")
-
+        val live = File(vault.databasePath())
+        assertTrue(live.exists() && live.length() > 0, "the database must exist on disk")
         assertFalse(
             fileContains(live, secret),
-            "a deleted row must not stay readable in the database file"
+            "a row must not be readable in the database file even while the app is unlocked"
+        )
+        assertFalse(
+            live.readBytes().copyOfRange(0, 16).decodeToString().startsWith("SQLite format 3"),
+            "the file must not be a plain database at all"
         )
         driver.close()
     }
 
     @Test
-    fun realRowsSurviveTheLockAndUnlockRoundTrip() = withRoots { root, _ ->
+    fun aCrashLeavesNothingReadableBehind() = withRoot { root ->
         val vault = FileVault(root)
-        vault.setup("1234")
-        val factory = DriverFactory()
-        val driver = factory.create(vault.plaintextDbPath())
-        StadeDb(driver).stadeDbQueries.putKv("carried", "payload".encodeToByteArray())
-
+        vault.setup("123456")
+        val driver = DriverFactory().create(vault.databasePath(), vault.databaseKey()!!)
+        StadeDb(driver).stadeDbQueries.putKv("probe", secret)
         driver.close()
+
+        val live = File(vault.databasePath())
+        assertFalse(
+            fileContains(live, secret),
+            "a device seized after a crash must not yield the contents"
+        )
+    }
+
+    @Test
+    fun lockingClearsTheKeyAndTheJournals() = withRoot { root ->
+        val vault = FileVault(root)
+        vault.setup("123456")
+        val driver = DriverFactory().create(vault.databasePath(), vault.databaseKey()!!)
+        StadeDb(driver).stadeDbQueries.putKv("probe", secret)
+        driver.close()
+
         vault.flushAndClose()
 
-        val live = File(vault.plaintextDbPath())
-        assertFalse(live.exists(), "a lock must remove the plaintext database")
-        assertEquals(emptyList(), sidecarsBeside(live), "a lock must leave no journal behind")
-        assertTrue(File(root, "stade.db.enc").exists())
+        assertFalse(vault.isUnlocked())
+        assertEquals(null, vault.databaseKey(), "a locked vault must not hand out the database key")
+        assertEquals(emptyList(), sidecarsBeside(File(vault.databasePath())))
+    }
+
+    @Test
+    fun realRowsSurviveLockAndUnlock() = withRoot { root ->
+        val vault = FileVault(root)
+        vault.setup("123456")
+        val factory = DriverFactory()
+        val first = factory.create(vault.databasePath(), vault.databaseKey()!!)
+        StadeDb(first).stadeDbQueries.putKv("carried", "payload".encodeToByteArray())
+        first.close()
+        vault.flushAndClose()
 
         val reopened = FileVault(root)
-        assertTrue(reopened.unlock("1234") is UnlockOutcome.Success)
-        val driver2 = factory.create(reopened.plaintextDbPath())
-        val carried = StadeDb(driver2).stadeDbQueries.getKv("carried").executeAsOneOrNull()
-        assertEquals("payload", carried?.decodeToString())
-        driver2.close()
+        assertTrue(reopened.unlock("123456") is UnlockOutcome.Success)
+        val second = factory.create(reopened.databasePath(), reopened.databaseKey()!!)
+        assertEquals(
+            "payload",
+            StadeDb(second).stadeDbQueries.getKv("carried").executeAsOneOrNull()?.decodeToString()
+        )
+        second.close()
     }
 
     @Test
-    fun rejectsARealDatabasePlantedAfterACleanLock() = withRoots { root, attacker ->
+    fun theDatabaseCannotBeOpenedWithAnotherVaultsKey() = withRoot { root ->
         val vault = FileVault(root)
-        vault.setup("1234")
+        vault.setup("123456")
         val factory = DriverFactory()
-        val driver = factory.create(vault.plaintextDbPath())
-        StadeDb(driver).stadeDbQueries.putKv("probe", "genuine".encodeToByteArray())
+        val driver = factory.create(vault.databasePath(), vault.databaseKey()!!)
+        StadeDb(driver).stadeDbQueries.putKv("probe", secret)
         driver.close()
-        vault.flushAndClose()
 
-        val plantedSource = File(attacker, "stade.db")
-        val evil = factory.create(plantedSource.absolutePath)
-        StadeDb(evil).stadeDbQueries.putKv("probe", "attacker".encodeToByteArray())
-        evil.close()
-        plantedSource.copyTo(File(vault.plaintextDbPath()), overwrite = true)
+        val outcome = runCatching {
+            val wrong = factory.create(vault.databasePath(), "0".repeat(64))
+            StadeDb(wrong).stadeDbQueries.getKv("probe").executeAsOneOrNull()
+        }
 
-        val victim = FileVault(root)
-        assertTrue(victim.unlock("1234") is UnlockOutcome.Success, "the vault must still open")
-        val driver2 = factory.create(victim.plaintextDbPath())
-        val value = StadeDb(driver2).stadeDbQueries.getKv("probe").executeAsOneOrNull()
-        assertEquals(
-            "genuine",
-            value?.decodeToString(),
-            "a database planted after a clean lock must not replace the authenticated copy"
+        assertTrue(
+            outcome.isFailure,
+            "the database must be useless to anyone who does not have the vault key"
         )
-        driver2.close()
+    }
+
+    @Test
+    fun aVaultFromTheOldFormatSaysSoInsteadOfLookingEmpty() = withRoot { root ->
+        val vault = FileVault(root)
+        vault.setup("123456")
+        vault.flushAndClose()
+        File(root, "stade.db").delete()
+        File(root, "stade.db.enc").writeBytes("STDD".encodeToByteArray() + ByteArray(64))
+
+        val reopened = FileVault(root)
+        val outcome = reopened.unlock("123456")
+
+        assertTrue(
+            outcome is UnlockOutcome.Error,
+            "an older vault must be reported, not silently replaced by an empty one"
+        )
+        assertTrue(reopened.hasLegacyEncryptedDatabase())
     }
 }

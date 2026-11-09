@@ -17,8 +17,9 @@ interface Vault {
     fun flushAndClose()
     fun wipe()
     fun metaPath(): String
-    fun plaintextDbPath(): String
-    fun encryptedDbPath(): String
+    fun databasePath(): String
+    fun databaseKey(): String?
+    fun hasLegacyEncryptedDatabase(): Boolean
     fun isScrambleKeypadEnabled(): Boolean
     fun setScrambleKeypadEnabled(enabled: Boolean)
     fun sessionTimeoutSeconds(): Int
@@ -42,15 +43,5 @@ object SessionTimeout {
     const val IMMEDIATE: Int = 0
     const val NEVER: Int = -1
     val OPTIONS: List<Int> = listOf(IMMEDIATE, 30, 60, 5 * 60, 15 * 60, 60 * 60, NEVER)
-    fun label(value: Int): String = when (value) {
-        IMMEDIATE -> "Hemen"
-        NEVER -> "Asla"
-        30 -> "30 saniye"
-        60 -> "1 dakika"
-        5 * 60 -> "5 dakika"
-        15 * 60 -> "15 dakika"
-        60 * 60 -> "1 saat"
-        else -> if (value < 60) "$value saniye" else "${value / 60} dakika"
-    }
 }
 

@@ -5,7 +5,7 @@ import java.io.File
 
 actual fun backupContents(vault: Vault): BackupContents {
     val targets = StadeBackup.targetsFor(vault)
-    val database = listOf(targets.plaintextDbPath, targets.encryptedDbPath)
+    val database = listOf(targets.databasePath, targets.databasePath)
         .map { File(it) }
         .filter { it.isFile }
         .maxOfOrNull { it.length() } ?: 0L

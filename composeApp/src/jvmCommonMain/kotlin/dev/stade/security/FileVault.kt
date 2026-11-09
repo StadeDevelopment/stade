@@ -66,9 +66,22 @@ class FileVault(private val rootDir: File) : Vault {
 
     override fun metaPath(): String = metaFile.absolutePath
 
-    override fun plaintextDbPath(): String = plaintextDb.absolutePath
+    override fun databasePath(): String = plaintextDb.absolutePath
 
-    override fun encryptedDbPath(): String = encryptedDb.absolutePath
+    override fun databaseKey(): String? = dek?.let { toHex(it) }
+
+    override fun hasLegacyEncryptedDatabase(): Boolean =
+        encryptedDb.exists() && !plaintextDb.exists()
+
+    private fun toHex(bytes: ByteArray): String {
+        val out = StringBuilder(bytes.size * 2)
+        bytes.forEach { b ->
+            val v = b.toInt() and 0xff
+            out.append("0123456789abcdef"[v ushr 4])
+            out.append("0123456789abcdef"[v and 0x0f])
+        }
+        return out.toString()
+    }
 
     override fun nowMillis(): Long = System.currentTimeMillis()
 
@@ -101,12 +114,8 @@ class FileVault(private val rootDir: File) : Vault {
         cached = meta
         dek = newDek
         unlocked = true
-        if (plaintextDb.exists()) {
-            restrictToOwner(plaintextDb, directory = false)
-            encryptFile(plaintextDb, encryptedDb, newDek)
-        } else {
-            if (encryptedDb.exists()) runCatching { secureDelete(encryptedDb) }
-        }
+        if (plaintextDb.exists()) restrictToOwner(plaintextDb, directory = false)
+        if (encryptedDb.exists()) runCatching { secureDelete(encryptedDb) }
         zero(kek)
     }
 
@@ -178,27 +187,15 @@ class FileVault(private val rootDir: File) : Vault {
         finalMeta.cleanShutdown = false
         writeMeta(finalMeta)
         cached = finalMeta
-        if (plaintextDb.exists() && !isValidSqliteFile(plaintextDb)) {
-            discardPlaintextDb()
+        if (encryptedDb.exists() && !plaintextDb.exists()) {
+            zero(decryptedDek)
+            return UnlockOutcome.Error(dev.stade.ui.i18n.I18n.current.vaultLegacyDatabase)
         }
-        if (plaintextDb.exists() && closedCleanly) {
-            discardPlaintextDb()
+        if (plaintextDb.exists() && isValidSqliteFile(plaintextDb)) {
+            zero(decryptedDek)
+            return UnlockOutcome.Error(dev.stade.ui.i18n.I18n.current.vaultLegacyDatabase)
         }
-        if (!plaintextDb.exists()) {
-            deleteDbSidecars()
-            if (encryptedDb.exists()) {
-                val restored = runCatching {
-                    decryptFile(encryptedDb, plaintextDb, decryptedDek)
-                    isValidSqliteFile(plaintextDb)
-                }.getOrDefault(false)
-                if (!restored) {
-                    runCatching { if (plaintextDb.exists()) secureDelete(plaintextDb) }
-                    zero(decryptedDek)
-                    return UnlockOutcome.Error(dev.stade.ui.i18n.I18n.current.vaultDatabaseDecryptFailed)
-                }
-                restrictToOwner(plaintextDb, directory = false)
-            }
-        }
+        if (plaintextDb.exists()) restrictToOwner(plaintextDb, directory = false)
         dek = decryptedDek
         unlocked = true
         syncSessionFile()
@@ -354,23 +351,12 @@ class FileVault(private val rootDir: File) : Vault {
 
     override fun flushAndKeep() {
         synchronized(flushLock) {
-            val key = dek ?: return
-            if (!plaintextDb.exists()) return
-            encryptFile(plaintextDb, encryptedDb, key)
+            if (plaintextDb.exists()) restrictToOwner(plaintextDb, directory = false)
         }
     }
 
     override fun flushAndClose() {
         synchronized(flushLock) {
-            val key = dek
-            val flushed = when {
-                key == null -> !plaintextDb.exists()
-                plaintextDb.exists() -> runCatching { encryptFile(plaintextDb, encryptedDb, key) }.isSuccess
-                else -> true
-            }
-            if (plaintextDb.exists()) {
-                secureDelete(plaintextDb)
-            }
             deleteDbSidecars()
             val current = dek
             if (current != null) {
@@ -378,7 +364,7 @@ class FileVault(private val rootDir: File) : Vault {
                 dek = null
             }
             unlocked = false
-            if (flushed && !plaintextDb.exists()) markCleanShutdown()
+            markCleanShutdown()
         }
     }
 
@@ -532,35 +518,7 @@ class FileVault(private val rootDir: File) : Vault {
         return cipher.doFinal(ciphertext)
     }
 
-    private fun encryptFile(source: File, dest: File, key: ByteArray) {
-        val plaintext = source.readBytes()
-        val nonce = ByteArray(NONCE_LEN).also { rng.nextBytes(it) }
-        val ct = gcmEncrypt(key, nonce, plaintext)
-        val tmp = File(dest.parentFile, dest.name + ".tmp")
-        tmp.outputStream().use { os ->
-            os.write(DB_MAGIC)
-            os.write(byteArrayOf(DB_VERSION))
-            os.write(nonce)
-            os.write(ct)
-        }
-        if (tmp.renameTo(dest)) return
-        if (dest.exists()) dest.delete()
-        if (!tmp.renameTo(dest)) {
-            tmp.copyTo(dest, overwrite = true)
-            tmp.delete()
-        }
-    }
 
-    private fun decryptFile(source: File, dest: File, key: ByteArray) {
-        val bytes = source.readBytes()
-        require(bytes.size > DB_HEADER_LEN) { "encrypted db corrupt" }
-        require(bytes.copyOfRange(0, 4).contentEquals(DB_MAGIC)) { "bad magic" }
-        require(bytes[4] == DB_VERSION) { "bad version" }
-        val nonce = bytes.copyOfRange(5, 5 + NONCE_LEN)
-        val ct = bytes.copyOfRange(5 + NONCE_LEN, bytes.size)
-        val pt = gcmDecrypt(key, nonce, ct)
-        dest.writeBytes(pt)
-    }
 
     private fun readMeta(): Meta? {
         if (!metaFile.exists()) return null

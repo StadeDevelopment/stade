@@ -18,8 +18,7 @@ class RestoreRollbackTest {
 
     private fun targetsIn(root: File) = BackupTargets(
         vaultMetaPath = File(root, "stade.vault").absolutePath,
-        encryptedDbPath = File(root, "stade.db.enc").absolutePath,
-        plaintextDbPath = File(root, "stade.db").absolutePath,
+        databasePath = File(root, "stade.db").absolutePath,
         onionKeyPath = File(root, "tor/onion.key").absolutePath
     )
 
@@ -28,7 +27,7 @@ class RestoreRollbackTest {
         try {
             val targets = targetsIn(root)
             File(targets.vaultMetaPath).writeBytes(meta.encodeToByteArray())
-            File(targets.encryptedDbPath).writeBytes(db.encodeToByteArray())
+            File(targets.databasePath).writeBytes(db.encodeToByteArray())
             val out = ByteArrayOutputStream()
             assertTrue(StadeBackup.export(out, passphrase.toCharArray(), targets), "fixture export")
             return out.toByteArray()
@@ -38,40 +37,35 @@ class RestoreRollbackTest {
     }
 
     @Test
-    fun aRestoreThatCannotFinishLeavesTheOldInstallIntact() {
+    fun aRestoreThatCannotFinishLeavesTheOldVaultKeyInPlace() {
         val root = newRoot()
         try {
             val targets = targetsIn(root)
             File(targets.vaultMetaPath).writeBytes("ORIGINAL-META".encodeToByteArray())
-            File(targets.encryptedDbPath).writeBytes("ORIGINAL-DB".encodeToByteArray())
             val archive = archiveOf("BACKUP-META", "BACKUP-DB", "pass")
 
-            File(targets.plaintextDbPath).mkdirs()
-            File(File(targets.plaintextDbPath), "blocker").writeText("x")
+            File(targets.databasePath).mkdirs()
+            File(File(targets.databasePath), "blocker").writeText("x")
+            File(root, "stade.db.prerestore").mkdirs()
+            File(File(root, "stade.db.prerestore"), "blocker").writeText("x")
 
-            val scratch = File(root, "scratch")
             val outcome = StadeBackup.restore(
-                ByteArrayInputStream(archive), "pass".toCharArray(), targets, scratch
+                ByteArrayInputStream(archive), "pass".toCharArray(), targets, File(root, "scratch")
             )
 
             assertTrue(outcome is RestoreOutcome.Failed, "the restore must report failure: $outcome")
             assertEquals(
                 "ORIGINAL-META",
                 File(targets.vaultMetaPath).readBytes().decodeToString(),
-                "a failed restore must not leave the backup's vault key over the old database"
-            )
-            assertEquals(
-                "ORIGINAL-DB",
-                File(targets.encryptedDbPath).readBytes().decodeToString(),
-                "a failed restore must leave the old encrypted database in place"
+                "a failed restore must not leave the backup's vault key over a database it could not replace"
             )
             assertFalse(
                 File(root, "stade.vault.prerestore").exists(),
-                "rollback must not leave its working copies behind"
+                "rollback must not leave its working copy behind"
             )
             assertFalse(
-                File(root, "stade.db.enc.prerestore").exists(),
-                "rollback must not leave its working copies behind"
+                File(root, "stade.vault.restore").exists(),
+                "a failed restore must not leave staged files behind"
             )
         } finally {
             root.deleteRecursively()
@@ -79,13 +73,13 @@ class RestoreRollbackTest {
     }
 
     @Test
-    fun aCleanRestoreStillReplacesBothFilesTogether() {
+    fun aCleanRestoreReplacesTheKeyAndTheDatabaseTogether() {
         val root = newRoot()
         try {
             val targets = targetsIn(root)
             File(targets.vaultMetaPath).writeBytes("ORIGINAL-META".encodeToByteArray())
-            File(targets.encryptedDbPath).writeBytes("ORIGINAL-DB".encodeToByteArray())
-            File(targets.plaintextDbPath).writeBytes("live".encodeToByteArray())
+            File(targets.databasePath).writeBytes("ORIGINAL-DB".encodeToByteArray())
+            File(root, "stade.db-wal").writeText("stale journal")
             val archive = archiveOf("BACKUP-META", "BACKUP-DB", "pass")
 
             val outcome = StadeBackup.restore(
@@ -94,9 +88,13 @@ class RestoreRollbackTest {
 
             assertTrue(outcome is RestoreOutcome.Restored, "the restore must succeed: $outcome")
             assertEquals("BACKUP-META", File(targets.vaultMetaPath).readBytes().decodeToString())
-            assertEquals("BACKUP-DB", File(targets.encryptedDbPath).readBytes().decodeToString())
-            assertFalse(File(targets.plaintextDbPath).exists(), "the stale live database must be gone")
+            assertEquals("BACKUP-DB", File(targets.databasePath).readBytes().decodeToString())
+            assertFalse(
+                File(root, "stade.db-wal").exists(),
+                "a journal from the replaced database must not be paired with the restored one"
+            )
             assertFalse(File(root, "stade.vault.prerestore").exists())
+            assertFalse(File(root, "stade.db.prerestore").exists())
         } finally {
             root.deleteRecursively()
         }

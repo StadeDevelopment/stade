@@ -8,15 +8,18 @@ import java.io.File
 import java.util.Properties
 
 actual class DriverFactory {
-    actual fun create(dbFilePath: String): SqlDriver {
+    actual fun create(dbFilePath: String, key: String): SqlDriver {
         val dbFile = File(dbFilePath)
         dbFile.parentFile?.mkdirs()
         val fresh = !dbFile.exists() || dbFile.length() == 0L
-        val driver = JdbcSqliteDriver("jdbc:sqlite:${dbFile.absolutePath}", storageProperties())
+        val driver = JdbcSqliteDriver(encryptedJdbcUrl(dbFile.absolutePath, key), storageProperties())
         DesktopSchemaUpgrade.apply(driver, fresh)
         return driver
     }
 }
+
+fun encryptedJdbcUrl(dbFilePath: String, key: String): String =
+    "jdbc:sqlite:$dbFilePath?cipher=sqlcipher&key=$key"
 
 private fun storageProperties(): Properties = Properties().apply {
     setProperty("journal_mode", "DELETE")

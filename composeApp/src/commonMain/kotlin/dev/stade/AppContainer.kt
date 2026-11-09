@@ -63,7 +63,9 @@ class AppContainer(
     private val driver: SqlDriver
 
     init {
-        val createdDriver = driverFactory.create(vault.plaintextDbPath())
+        val databaseKey = vault.databaseKey()
+            ?: throw IllegalStateException("the vault must be unlocked before the database is opened")
+        val createdDriver = driverFactory.create(vault.databasePath(), databaseKey)
         try {
             DatabaseSchema.requireCompatible(createdDriver)
         } catch (error: DatabaseSchemaException) {

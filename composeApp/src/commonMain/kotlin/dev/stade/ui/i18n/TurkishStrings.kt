@@ -224,6 +224,7 @@ object TurkishStrings : AppStrings() {
     override val vaultKeyDerivationFailed = "Anahtar türetilemedi"
     override val vaultDekDecryptFailed = "DEK çözülemedi"
     override val vaultDatabaseDecryptFailed = "Kasa açılamadı. Dosya silinmedi."
+    override val vaultLegacyDatabase = "Bu kasa, veritabanını farklı saklayan eski bir sürümle oluşturulmuş. Devam etmek için uygulamayı sıfırlayıp yeniden kur."
 
     override val notifConnectionChannelName = "Bağlantı"
     override val notifConnectionChannelDesc = "Stade eşlerle bağlantı durumunu korur"

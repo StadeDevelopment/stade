@@ -11,6 +11,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+private const val TEST_DB_KEY = "schema-upgrade-test-key"
+
 private val PROFILE_COLUMNS = listOf(
     "LocalIdentity" to "bio",
     "LocalIdentity" to "status",
@@ -30,7 +32,7 @@ class DesktopSchemaUpgradeTest {
         File.createTempFile("stade-schema-", ".db").also { it.delete() }
 
     private fun open(file: File): SqlDriver =
-        JdbcSqliteDriver("jdbc:sqlite:${file.absolutePath}", Properties())
+        JdbcSqliteDriver(encryptedJdbcUrl(file.absolutePath, TEST_DB_KEY), Properties())
 
     private fun userVersion(driver: SqlDriver): Long =
         driver.executeQuery(
@@ -83,7 +85,7 @@ class DesktopSchemaUpgradeTest {
     @Test
     fun `a fresh database is created and stamped at the current version`() {
         val file = tempDbFile()
-        val driver = DriverFactory().create(file.absolutePath)
+        val driver = DriverFactory().create(file.absolutePath, TEST_DB_KEY)
         try {
             assertTrue(hasColumn(driver, "Contact", "addresses"))
             assertEquals(StadeDb.Schema.version, userVersion(driver))
@@ -109,7 +111,7 @@ class DesktopSchemaUpgradeTest {
             seed.close()
         }
 
-        val driver = DriverFactory().create(file.absolutePath)
+        val driver = DriverFactory().create(file.absolutePath, TEST_DB_KEY)
         try {
             MIGRATION_COLUMNS.forEach { (table, column) ->
                 assertTrue(
@@ -142,7 +144,7 @@ class DesktopSchemaUpgradeTest {
             seed.close()
         }
 
-        val driver = DriverFactory().create(file.absolutePath)
+        val driver = DriverFactory().create(file.absolutePath, TEST_DB_KEY)
         try {
             (PROFILE_COLUMNS + POST_PROFILE_COLUMNS).forEach { (table, column) ->
                 assertTrue(
@@ -171,7 +173,7 @@ class DesktopSchemaUpgradeTest {
             seed.close()
         }
 
-        val driver = DriverFactory().create(file.absolutePath)
+        val driver = DriverFactory().create(file.absolutePath, TEST_DB_KEY)
         try {
             assertTrue(hasColumn(driver, "Contact", "addresses"))
             assertEquals(
@@ -189,7 +191,7 @@ class DesktopSchemaUpgradeTest {
     @Test
     fun `opening an already current database again changes nothing`() {
         val file = tempDbFile()
-        val first = DriverFactory().create(file.absolutePath)
+        val first = DriverFactory().create(file.absolutePath, TEST_DB_KEY)
         try {
             seedContact(first, "c1")
             assertEquals(StadeDb.Schema.version, userVersion(first))
@@ -197,7 +199,7 @@ class DesktopSchemaUpgradeTest {
             first.close()
         }
 
-        val second = DriverFactory().create(file.absolutePath)
+        val second = DriverFactory().create(file.absolutePath, TEST_DB_KEY)
         try {
             assertEquals(StadeDb.Schema.version, userVersion(second))
             assertEquals(1L, contactCount(second))

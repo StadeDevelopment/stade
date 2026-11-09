@@ -19,8 +19,7 @@ private class Fixture {
     }
     val targets = BackupTargets(
         vaultMetaPath = File(root, "stade.vault").absolutePath,
-        encryptedDbPath = File(root, "stade.db.enc").absolutePath,
-        plaintextDbPath = File(root, "stade.db").absolutePath,
+        databasePath = File(root, "stade.db").absolutePath,
         onionKeyPath = File(root, "tor/onion.key").absolutePath
     )
 
@@ -30,8 +29,7 @@ private class Fixture {
 
     fun seed(withOnion: Boolean = true) {
         File(targets.vaultMetaPath).writeBytes(meta)
-        File(targets.encryptedDbPath).writeBytes(db)
-        File(targets.plaintextDbPath).writeBytes(Random(13).nextBytes(4096))
+        File(targets.databasePath).writeBytes(db)
         if (withOnion) {
             File(targets.onionKeyPath).parentFile.mkdirs()
             File(targets.onionKeyPath).writeBytes(onion)
@@ -40,8 +38,7 @@ private class Fixture {
 
     fun clearInstall() {
         File(targets.vaultMetaPath).delete()
-        File(targets.encryptedDbPath).delete()
-        File(targets.plaintextDbPath).delete()
+        File(targets.databasePath).delete()
         File(targets.onionKeyPath).delete()
     }
 
@@ -76,7 +73,7 @@ class StadeBackupTest {
         assertTrue(outcome.onionKeyIncluded)
 
         assertContentEquals(f.meta, File(f.targets.vaultMetaPath).readBytes())
-        assertContentEquals(f.db, File(f.targets.encryptedDbPath).readBytes())
+        assertContentEquals(f.db, File(f.targets.databasePath).readBytes())
         assertContentEquals(f.onion, File(f.targets.onionKeyPath).readBytes())
     }
 
@@ -87,14 +84,14 @@ class StadeBackupTest {
         val archive = f.export("a-long-enough-passphrase")
 
         File(f.targets.vaultMetaPath).writeBytes(Random(41).nextBytes(180))
-        File(f.targets.encryptedDbPath).writeBytes(Random(42).nextBytes(9_000))
+        File(f.targets.databasePath).writeBytes(Random(42).nextBytes(9_000))
         File(f.targets.onionKeyPath).writeBytes("ED25519-V3:SOMETHINGELSE==".encodeToByteArray())
 
         val outcome = f.restore(archive, "a-long-enough-passphrase")
         assertTrue(outcome is RestoreOutcome.Restored, "expected a restore, got $outcome")
 
         assertContentEquals(f.meta, File(f.targets.vaultMetaPath).readBytes())
-        assertContentEquals(f.db, File(f.targets.encryptedDbPath).readBytes())
+        assertContentEquals(f.db, File(f.targets.databasePath).readBytes())
         assertContentEquals(f.onion, File(f.targets.onionKeyPath).readBytes())
     }
 
@@ -113,22 +110,9 @@ class StadeBackupTest {
             .toList()
         assertTrue(leftovers.isEmpty(), "restore temporaries were left behind: $leftovers")
         assertTrue(File(f.targets.vaultMetaPath).isFile)
-        assertTrue(File(f.targets.encryptedDbPath).isFile)
+        assertTrue(File(f.targets.databasePath).isFile)
     }
 
-    @Test
-    fun theStalePlaintextDatabaseIsRemovedOnRestore() {
-        val f = Fixture()
-        f.seed()
-        val archive = f.export("a-long-enough-passphrase")
-        File(f.targets.plaintextDbPath).writeBytes(Random(14).nextBytes(2048))
-
-        f.restore(archive, "a-long-enough-passphrase")
-        assertFalse(
-            File(f.targets.plaintextDbPath).exists(),
-            "a leftover plaintext db would shadow the restored ciphertext"
-        )
-    }
 
     @Test
     fun anAccountWithoutATorAddressStillRestores() {
@@ -140,7 +124,7 @@ class StadeBackupTest {
         val outcome = f.restore(archive, "a-long-enough-passphrase")
         if (outcome !is RestoreOutcome.Restored) fail("expected Restored, got $outcome")
         assertFalse(outcome.onionKeyIncluded)
-        assertContentEquals(f.db, File(f.targets.encryptedDbPath).readBytes())
+        assertContentEquals(f.db, File(f.targets.databasePath).readBytes())
     }
 
     @Test
@@ -149,13 +133,13 @@ class StadeBackupTest {
         f.seed()
         val archive = f.export("a-long-enough-passphrase")
         val replacement = Random(15).nextBytes(64)
-        File(f.targets.encryptedDbPath).writeBytes(replacement)
+        File(f.targets.databasePath).writeBytes(replacement)
 
         val outcome = f.restore(archive, "not-the-passphrase")
         assertEquals(RestoreOutcome.Failed(RestoreFailure.WrongPassphrase), outcome)
         assertContentEquals(
             replacement,
-            File(f.targets.encryptedDbPath).readBytes(),
+            File(f.targets.databasePath).readBytes(),
             "a failed restore must not overwrite the current account"
         )
     }

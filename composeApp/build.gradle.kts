@@ -87,6 +87,8 @@ kotlin {
                 implementation(libs.androidx.biometric)
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.sqldelight.android.driver)
+                implementation(libs.sqlcipher.android)
+                implementation(libs.androidx.sqlite)
                 implementation("androidx.media3:media3-exoplayer:1.4.1")
                 implementation("androidx.media3:media3-ui:1.4.1")
                 implementation("com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1")
@@ -98,6 +100,7 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.sqldelight.sqlite.driver)
+                implementation(libs.sqlite.jdbc.cipher)
                 runtimeOnly(libs.slf4j.nop)
                 implementation("net.java.dev.jna:jna:5.14.0")
                 implementation("net.java.dev.jna:jna-platform:5.14.0")
@@ -306,6 +309,10 @@ fun setVolumeIcon(dmgFile: File, icnsFile: File, setFilePath: String) {
 
 tasks.matching { it.name == "packageDmg" || it.name == "packageReleaseDmg" }.configureEach {
     finalizedBy(fixDmgVolumeIcon)
+}
+
+configurations.configureEach {
+    exclude(group = "org.xerial", module = "sqlite-jdbc")
 }
 
 sqldelight {

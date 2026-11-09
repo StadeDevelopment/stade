@@ -221,6 +221,7 @@ object ArabicStrings : AppStrings() {
     override val vaultKeyDerivationFailed = "تعذّر اشتقاق المفتاح"
     override val vaultDekDecryptFailed = "تعذّر فك تشفير المفتاح"
     override val vaultDatabaseDecryptFailed = "تعذّر فتح الخزنة. لم يُحذف الملف."
+    override val vaultLegacyDatabase = "أُنشئت هذه الخزنة بإصدار أقدم يخزّن قاعدة البيانات بطريقة مختلفة. أعد ضبط التطبيق وإعداده من جديد للمتابعة."
 
     override val notifConnectionChannelName = "الاتصال"
     override val notifConnectionChannelDesc = "يُبقي Stade اتصالات الأقران نشطة"

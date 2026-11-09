@@ -221,6 +221,7 @@ object PersianStrings : AppStrings() {
     override val vaultKeyDerivationFailed = "کلید استخراج نشد"
     override val vaultDekDecryptFailed = "کلید رمزگشایی نشد"
     override val vaultDatabaseDecryptFailed = "گاوصندوق باز نشد. فایل حذف نشده است."
+    override val vaultLegacyDatabase = "این گاوصندوق با نسخه‌ای قدیمی ساخته شده که پایگاه داده را به شکل دیگری ذخیره می‌کرد. برای ادامه، برنامه را بازنشانی و دوباره راه‌اندازی کنید."
 
     override val notifConnectionChannelName = "اتصال"
     override val notifConnectionChannelDesc = "Stade اتصال‌های همتا را زنده نگه می‌دارد"

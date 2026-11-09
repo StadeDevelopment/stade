@@ -10,8 +10,7 @@ import java.nio.file.attribute.PosixFilePermissions
 
 class BackupTargets(
     val vaultMetaPath: String,
-    val encryptedDbPath: String,
-    val plaintextDbPath: String,
+    val databasePath: String,
     val onionKeyPath: String
 )
 
@@ -37,14 +36,13 @@ object StadeBackup {
 
     fun targetsFor(vault: Vault): BackupTargets = BackupTargets(
         vaultMetaPath = vault.metaPath(),
-        encryptedDbPath = vault.encryptedDbPath(),
-        plaintextDbPath = vault.plaintextDbPath(),
+        databasePath = vault.databasePath(),
         onionKeyPath = torIdentityPath()
     )
 
     fun export(out: OutputStream, passphrase: CharArray, targets: BackupTargets): Boolean {
         val meta = File(targets.vaultMetaPath)
-        val db = File(targets.encryptedDbPath)
+        val db = File(targets.databasePath)
         if (!meta.isFile || !db.isFile) return false
 
         val sources = mutableListOf(
@@ -105,8 +103,8 @@ object StadeBackup {
             val staged = mutableListOf<Pair<File, File>>()
             val metaTmp = stage(ok.payload, meta, File(targets.vaultMetaPath))
             staged.add(metaTmp to File(targets.vaultMetaPath))
-            val dbTmp = stage(ok.payload, db, File(targets.encryptedDbPath))
-            staged.add(dbTmp to File(targets.encryptedDbPath))
+            val dbTmp = stage(ok.payload, db, File(targets.databasePath))
+            staged.add(dbTmp to File(targets.databasePath))
 
             val onion = byName[ENTRY_ONION]
             var onionTmp: File? = null
@@ -149,11 +147,10 @@ object StadeBackup {
                 return RestoreOutcome.Failed(RestoreFailure.WriteFailed)
             }
 
-            val live = File(targets.plaintextDbPath)
+            val live = File(targets.databasePath)
             val plaintextRemoved = runCatching {
-                live.delete()
                 DB_SIDECAR_SUFFIXES.forEach { File(live.parentFile, live.name + it).delete() }
-                !live.exists()
+                DB_SIDECAR_SUFFIXES.none { File(live.parentFile, live.name + it).exists() }
             }.getOrDefault(false)
             if (!plaintextRemoved) {
                 displaced.forEach { (dest, aside) ->

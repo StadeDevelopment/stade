@@ -226,6 +226,7 @@ object EnglishStrings : AppStrings() {
     override val vaultKeyDerivationFailed = "Could not derive key"
     override val vaultDekDecryptFailed = "Could not decrypt key"
     override val vaultDatabaseDecryptFailed = "Could not open vault. The file was not deleted."
+    override val vaultLegacyDatabase = "This vault was made by an older version that stored its database differently. Reset the app and set it up again to continue."
 
     override val notifConnectionChannelName = "Connectivity"
     override val notifConnectionChannelDesc = "Stade keeps peer connections alive"

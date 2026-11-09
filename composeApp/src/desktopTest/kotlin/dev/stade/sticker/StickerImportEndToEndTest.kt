@@ -44,7 +44,7 @@ private fun freshManager(): Pair<StickerManager, StadeDb> {
         System.getProperty("java.io.tmpdir"),
         "stade-stickers-${Random.nextLong()}/stade.db"
     ).absolutePath
-    val driver = DriverFactory().create(path)
+    val driver = DriverFactory().create(path, "sticker-test-key")
     val db = StadeDb(driver)
     return StickerManager(db, platformCrypto()) to db
 }

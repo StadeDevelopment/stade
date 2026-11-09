@@ -211,6 +211,7 @@ abstract class AppStrings {
     abstract val vaultKeyDerivationFailed: String
     abstract val vaultDekDecryptFailed: String
     abstract val vaultDatabaseDecryptFailed: String
+    abstract val vaultLegacyDatabase: String
 
     abstract val notifConnectionChannelName: String
     abstract val notifConnectionChannelDesc: String

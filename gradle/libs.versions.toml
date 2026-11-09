@@ -7,6 +7,9 @@ serialization = "1.7.3"
 datetime = "0.6.1"
 ktor = "3.0.1"
 sqldelight = "2.0.2"
+sqlcipherAndroid = "4.9.0"
+sqliteJdbcCipher = "3.50.1.0"
+androidxSqlite = "2.4.0"
 androidx-activity = "1.9.3"
 androidx-core = "1.13.1"
 androidx-biometric = "1.1.0"
@@ -29,6 +32,9 @@ sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sq
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+sqlcipher-android = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipherAndroid" }
+androidx-sqlite = { module = "androidx.sqlite:sqlite", version.ref = "androidxSqlite" }
+sqlite-jdbc-cipher = { module = "io.github.willena:sqlite-jdbc", version.ref = "sqliteJdbcCipher" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "androidx-biometric" }

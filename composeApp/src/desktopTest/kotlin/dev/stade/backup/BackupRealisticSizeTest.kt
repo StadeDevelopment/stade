@@ -12,15 +12,14 @@ import kotlin.test.assertContentEquals
 private class Install(val root: File) {
     val targets = BackupTargets(
         vaultMetaPath = File(root, "stade.vault").absolutePath,
-        encryptedDbPath = File(root, "stade.db.enc").absolutePath,
-        plaintextDbPath = File(root, "stade.db").absolutePath,
+        databasePath = File(root, "stade.db.enc").absolutePath,
         onionKeyPath = File(root, "tor/hs/hs_ed25519_secret_key").absolutePath
     )
 
     fun seed(dbBytes: ByteArray) {
         root.mkdirs()
         File(targets.vaultMetaPath).writeBytes(Random(1).nextBytes(196))
-        File(targets.encryptedDbPath).writeBytes(dbBytes)
+        File(targets.databasePath).writeBytes(dbBytes)
         File(targets.onionKeyPath).apply { parentFile.mkdirs() }.writeBytes(Random(2).nextBytes(96))
     }
 }
@@ -49,7 +48,7 @@ class BackupRealisticSizeTest {
             scratch
         )
         assertTrue(outcome is RestoreOutcome.Restored, "expected a restore, got $outcome")
-        assertContentEquals(db, File(target.targets.encryptedDbPath).readBytes())
+        assertContentEquals(db, File(target.targets.databasePath).readBytes())
     }
 
     @Test
@@ -59,7 +58,7 @@ class BackupRealisticSizeTest {
         source.seed(db)
 
         val meta = File(source.targets.vaultMetaPath)
-        val encrypted = File(source.targets.encryptedDbPath)
+        val encrypted = File(source.targets.databasePath)
         val onion = File(source.targets.onionKeyPath)
         val sources = listOf(
             BackupSource(StadeBackup.ENTRY_VAULT, meta.length()) { meta.inputStream() },
@@ -83,7 +82,7 @@ class BackupRealisticSizeTest {
             scratch
         )
         assertTrue(outcome is RestoreOutcome.Restored, "expected a restore, got $outcome")
-        assertEquals(db.size.toLong(), File(target.targets.encryptedDbPath).length())
+        assertEquals(db.size.toLong(), File(target.targets.databasePath).length())
     }
 
     @Test
@@ -94,7 +93,7 @@ class BackupRealisticSizeTest {
         source.root.mkdirs()
         File(source.targets.vaultMetaPath).writeBytes(Random(3).nextBytes(metaLen))
         val db = Random(4).nextBytes(BackupArchive.CHUNK_SIZE * 2)
-        File(source.targets.encryptedDbPath).writeBytes(db)
+        File(source.targets.databasePath).writeBytes(db)
 
         val out = ByteArrayOutputStream()
         assertTrue(StadeBackup.export(out, "a-long-enough-passphrase".toCharArray(), source.targets))
@@ -109,7 +108,7 @@ class BackupRealisticSizeTest {
             scratch
         )
         assertTrue(outcome is RestoreOutcome.Restored, "expected a restore, got $outcome")
-        assertContentEquals(db, File(target.targets.encryptedDbPath).readBytes())
+        assertContentEquals(db, File(target.targets.databasePath).readBytes())
     }
 
     @Test
@@ -119,7 +118,7 @@ class BackupRealisticSizeTest {
         source.seed(db)
 
         val meta = File(source.targets.vaultMetaPath)
-        val encrypted = File(source.targets.encryptedDbPath)
+        val encrypted = File(source.targets.databasePath)
         val declared = encrypted.length()
         val sources = listOf(
             BackupSource(StadeBackup.ENTRY_VAULT, meta.length()) { meta.inputStream() },
