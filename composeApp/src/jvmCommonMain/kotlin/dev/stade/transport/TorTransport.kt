@@ -366,12 +366,22 @@ class TorTransport(
         return if (p > 0 && state.value.running) h to p else null
     }
 
+    private val inboundLimiter = InboundAcceptLimiter()
+
     private suspend fun runAccept(server: ServerSocket, handler: suspend (Connection) -> Unit) {
         while (scope.isActive) {
             val socket = runCatching { server.accept() }.getOrNull() ?: break
+            if (!inboundLimiter.tryAcquire()) {
+                runCatching { socket.close() }
+                continue
+            }
             scope.launch {
-                val conn = TcpConnection(socket, "tor://inbound")
-                handler(conn)
+                try {
+                    val conn = TcpConnection(socket, "tor://inbound")
+                    handler(conn)
+                } finally {
+                    inboundLimiter.release()
+                }
             }
         }
     }

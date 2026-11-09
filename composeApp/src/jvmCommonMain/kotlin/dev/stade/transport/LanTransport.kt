@@ -39,6 +39,7 @@ class LanTransport(
     private var server: ServerSocket? = null
     @Volatile private var actualPort: Int = tcpPort
     private val discovery = DiscoveryService(nodeId, discoveryPort) { actualPort }
+    private val inboundLimiter = InboundAcceptLimiter()
     private val mutex = Mutex()
 
     override suspend fun start(handler: suspend (Connection) -> Unit) = mutex.withLock {
@@ -107,9 +108,17 @@ class LanTransport(
     private suspend fun runAccept(server: ServerSocket, handler: suspend (Connection) -> Unit) {
         while (scope.isActive) {
             val socket = runCatching { server.accept() }.getOrNull() ?: break
+            if (!inboundLimiter.tryAcquire()) {
+                runCatching { socket.close() }
+                continue
+            }
             scope.launch {
-                val conn = EncryptedLinkConnection(TcpConnection(socket, "lan://${socket.remoteAddress}"))
-                handler(conn)
+                try {
+                    val conn = EncryptedLinkConnection(TcpConnection(socket, "lan://${socket.remoteAddress}"))
+                    handler(conn)
+                } finally {
+                    inboundLimiter.release()
+                }
             }
         }
     }
