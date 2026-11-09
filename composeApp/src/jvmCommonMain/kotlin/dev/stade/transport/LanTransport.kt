@@ -178,8 +178,15 @@ internal class TcpConnection : Connection {
         header[2] = ((len ushr 8) and 0xff).toByte()
         header[3] = (len and 0xff).toByte()
         writer.writeFully(header, 0, 4)
-        writer.writeFully(frame, 0, frame.size)
+        var written = 0
+        while (written < len) {
+            val until = minOf(written + READ_CHUNK_BYTES, len)
+            writer.writeFully(frame, written, until)
+            written = until
+            progressAt = System.currentTimeMillis()
+        }
         writer.flush()
+        progressAt = System.currentTimeMillis()
     }
 
     @Volatile private var progressAt = System.currentTimeMillis()
@@ -197,11 +204,11 @@ internal class TcpConnection : Connection {
                 (header[3].toInt() and 0xff)
             if (len <= 0 || len > MAX_WIRE_FRAME_BYTES) return@runCatching null
             val payload = ByteArray(len)
-            var read = 0
-            while (read < len) {
-                val chunk = minOf(READ_CHUNK_BYTES, len - read)
-                reader.readFully(payload, read, chunk)
-                read += chunk
+            var filled = 0
+            while (filled < len) {
+                val until = minOf(filled + READ_CHUNK_BYTES, len)
+                reader.readFully(payload, filled, until)
+                filled = until
                 progressAt = System.currentTimeMillis()
             }
             payload
