@@ -375,6 +375,8 @@ object ArabicStrings : AppStrings() {
     override val screenshotBlockingOffSubtitle = "محتوى التطبيق ظاهر في التطبيقات الأخيرة"
     override val linkPreviewsSettingTitle = "معاينات الروابط"
     override val linkPreviewsSettingSubtitle = "جلب عنوان ووصف للروابط التي تتلقاها، عبر Tor دائمًا"
+    override val typingSignalSettingTitle = "مشاركة أنك تكتب"
+    override val typingSignalSettingSubtitle = "اسمح لمن تحدّثه بأن يرى أنك تكتب ردًا"
     override val transportsLockTitle = "قفل طبقات النقل"
     override val transportsLockSubtitle = "طلب رمز PIN لفتح صفحة طبقات النقل"
     override val conversationShortcutsTitle = "جهات الاتصال الأخيرة على أيقونة التطبيق"

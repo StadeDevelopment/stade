@@ -375,6 +375,8 @@ object KoreanStrings : AppStrings() {
     override val screenshotBlockingOffSubtitle = "최근 앱 목록에서 내용이 보입니다"
     override val linkPreviewsSettingTitle = "링크 미리보기"
     override val linkPreviewsSettingSubtitle = "받은 링크의 제목과 설명을 가져옵니다. 항상 Tor를 거칩니다"
+    override val typingSignalSettingTitle = "입력 중임을 공유"
+    override val typingSignalSettingSubtitle = "대화 상대가 내가 답장을 작성 중임을 볼 수 있게 합니다"
     override val transportsLockTitle = "전송 계층 잠금"
     override val transportsLockSubtitle = "전송 계층 페이지를 열 때 PIN을 요구합니다"
     override val conversationShortcutsTitle = "앱 아이콘에 최근 연락처 표시"

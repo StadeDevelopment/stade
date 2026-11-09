@@ -6,6 +6,14 @@ import kotlinx.coroutines.flow.asStateFlow
 
 enum class TransportType { TOR, LAN }
 
+const val TOR_ADDRESS_PREFIX = "tor://"
+const val LAN_ADDRESS_SCHEME = "lan://"
+
+fun addressPrefixFor(type: TransportType): String = when (type) {
+    TransportType.TOR -> TOR_ADDRESS_PREFIX
+    TransportType.LAN -> LAN_ADDRESS_SCHEME
+}
+
 data class TransportInfo(
     val type: TransportType,
     val displayName: String,

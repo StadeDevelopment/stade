@@ -375,6 +375,8 @@ object PersianStrings : AppStrings() {
     override val screenshotBlockingOffSubtitle = "محتوای برنامه در برنامه‌های اخیر دیده می‌شود"
     override val linkPreviewsSettingTitle = "پیش‌نمایش پیوندها"
     override val linkPreviewsSettingSubtitle = "دریافت عنوان و توضیح برای پیوندهایی که می‌گیرید، همیشه از مسیر Tor"
+    override val typingSignalSettingTitle = "نمایش در حال نوشتن"
+    override val typingSignalSettingSubtitle = "بگذارید کسی که با او گفتگو می‌کنید ببیند در حال نوشتن پاسخ هستید"
     override val transportsLockTitle = "قفل لایه‌های انتقال"
     override val transportsLockSubtitle = "برای باز کردن صفحهٔ لایه‌های انتقال، پین لازم باشد"
     override val conversationShortcutsTitle = "مخاطبان اخیر روی نماد برنامه"

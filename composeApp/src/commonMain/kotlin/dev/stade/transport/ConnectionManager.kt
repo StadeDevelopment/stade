@@ -278,6 +278,7 @@ class ConnectionManager(
             }
         } else {
             runCatching { plugin.stop() }
+            runCatching { sync.disconnectSessionsOn(addressPrefixFor(type)) }
         }
         dialerWake.trySend(Unit)
         pendingWake.trySend(Unit)

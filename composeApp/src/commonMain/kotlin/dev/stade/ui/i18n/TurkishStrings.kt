@@ -384,6 +384,8 @@ object TurkishStrings : AppStrings() {
     override val screenshotBlockingOffSubtitle = "Uygulama içeriği son uygulamalar'da görünür"
     override val linkPreviewsSettingTitle = "Bağlantı önizlemeleri"
     override val linkPreviewsSettingSubtitle = "Aldığınız bağlantılar için başlık ve açıklama getirir, her zaman Tor üzerinden"
+    override val typingSignalSettingTitle = "Yazdığını paylaş"
+    override val typingSignalSettingSubtitle = "Sohbet ettiğin kişi bir yanıt yazdığını görebilsin"
     override val transportsLockTitle = "Taşıma katmanlarını kilitle"
     override val transportsLockSubtitle = "Taşıma katmanları sayfasını açmak için PIN'inizi isteyin"
     override val conversationShortcutsTitle = "Uygulama simgesinde son kişiler"

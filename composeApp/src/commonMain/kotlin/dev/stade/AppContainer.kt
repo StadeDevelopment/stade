@@ -252,7 +252,7 @@ class AppContainer(
     val pinnedMessages = PinnedMessages(db)
     val chatWallpapers = ChatWallpapers(db)
     val sync = SyncEngine(crypto, pq, contacts, messages, ratchet, outbox, handshake, vanish, groups, stadiums)
-    val chat = ChatService(messages, sync, vanish)
+    val chat = ChatService(messages, sync, vanish) { dev.stade.message.getTypingSignalEnabled(db) }
     val typing = TypingTracker()
     val scheduledMessages = ScheduledMessageManager(db, crypto)
     val scheduler = ScheduledMessageService(scheduledMessages, chat, contacts)

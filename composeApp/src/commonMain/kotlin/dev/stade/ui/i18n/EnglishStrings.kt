@@ -385,6 +385,8 @@ object EnglishStrings : AppStrings() {
     override val screenshotBlockingOffSubtitle = "App content visible in recent apps"
     override val linkPreviewsSettingTitle = "Link previews"
     override val linkPreviewsSettingSubtitle = "Fetch a title and description for links you receive, always routed through Tor"
+    override val typingSignalSettingTitle = "Share when you are typing"
+    override val typingSignalSettingSubtitle = "Let the person you are chatting with see that you are writing a reply"
     override val transportsLockTitle = "Lock transport layers"
     override val transportsLockSubtitle = "Require your PIN to open the Transport layers page"
     override val conversationShortcutsTitle = "Recent contacts on app icon"

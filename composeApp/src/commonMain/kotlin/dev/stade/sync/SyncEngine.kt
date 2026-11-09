@@ -569,6 +569,8 @@ class SyncEngine(
 
         fun isAlive(): Boolean = rootJob?.isActive != false
 
+        fun remoteAddress(): String = connection.remoteAddress
+
         fun cancel() { rootJob?.cancel() }
 
         suspend fun cancelAndJoin() {
@@ -1190,5 +1192,15 @@ class SyncEngine(
             sessions.remove(contactId)?.let { runCatching { it.cancel() } }
             _connected.value = sessions.keys.toSet()
         }
+    }
+
+    suspend fun disconnectSessionsOn(addressPrefix: String): Int = sessionsLock.withLock {
+        val doomed = sessions.filterValues { it.remoteAddress().startsWith(addressPrefix) }
+        doomed.forEach { (contactId, session) ->
+            runCatching { session.cancel() }
+            sessions.remove(contactId)
+        }
+        _connected.value = sessions.keys.toSet()
+        doomed.size
     }
 }

@@ -13,7 +13,8 @@ data class SendResult(val message: Message, val queued: Boolean)
 class ChatService(
     private val messages: MessageManager,
     private val sync: SyncEngine,
-    private val vanish: VanishManager
+    private val vanish: VanishManager,
+    private val typingSignalEnabled: () -> Boolean = { true }
 ) {
     suspend fun send(owner: LocalIdentity, contact: Contact, body: String, replyToId: String? = null): Message =
         sendDetailed(owner, contact, body, replyToId).message
@@ -75,6 +76,7 @@ class ChatService(
 
     suspend fun sendTyping(owner: LocalIdentity, contact: Contact, typing: Boolean) {
         if (contact.kind != 0) return
+        if (!typingSignalEnabled()) return
         if (!sync.isConnected(contact.id)) return
         val now = Clock.System.now().toEpochMilliseconds()
         runCatching {

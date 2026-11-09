@@ -16,7 +16,7 @@ actual val isNotificationSupported: Boolean = java.awt.SystemTray.isSupported()
 actual val isSystemNotificationSettingsSupported: Boolean = false
 
 private val _enabled = mutableStateOf(prefs.getBoolean(KEY_ENABLED, true))
-private val _privacy = mutableStateOf(prefs.getBoolean(KEY_PRIVACY, false))
+private val _privacy = mutableStateOf(prefs.getBoolean(KEY_PRIVACY, true))
 private val _runInBackground = mutableStateOf(prefs.getBoolean(KEY_BACKGROUND, true))
 
 actual fun getNotificationsEnabled(): State<Boolean> = _enabled

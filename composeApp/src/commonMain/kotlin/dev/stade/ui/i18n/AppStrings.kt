@@ -341,6 +341,8 @@ abstract class AppStrings {
     abstract val screenshotBlockingOffSubtitle: String
     abstract val linkPreviewsSettingTitle: String
     abstract val linkPreviewsSettingSubtitle: String
+    abstract val typingSignalSettingTitle: String
+    abstract val typingSignalSettingSubtitle: String
     abstract val transportsLockTitle: String
     abstract val transportsLockSubtitle: String
     abstract val conversationShortcutsTitle: String

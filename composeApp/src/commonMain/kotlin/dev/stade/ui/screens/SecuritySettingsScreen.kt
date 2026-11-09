@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Grid3x3
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ReportProblem
@@ -137,6 +138,7 @@ private fun SecuritySettingsContent(
     val lockOnShutdown by getLockOnShutdownEnabled()
     val screenshotBlockingEnabled = remember(refreshTick) { container.secrets.isScreenshotBlockingEnabled() }
     val linkPreviewsEnabled = remember(refreshTick) { dev.stade.link.getLinkPreviewsEnabled(container.db) }
+    val typingSignalEnabled = remember(refreshTick) { dev.stade.message.getTypingSignalEnabled(container.db) }
     var timeoutMenuOpen by remember { mutableStateOf(false) }
     var showNeverInfoDialog by remember { mutableStateOf(false) }
     val biometrics = rememberBiometricGate()
@@ -242,6 +244,19 @@ private fun SecuritySettingsContent(
                                 checked = linkPreviewsEnabled,
                                 onCheckedChange = {
                                     dev.stade.link.setLinkPreviewsEnabled(container.db, it)
+                                    refreshTick++
+                                }
+                            )
+                        }
+                        row {
+                            SecuritySwitchRow(
+                                icon = Icons.Default.Keyboard,
+                                tint = MaterialTheme.colorScheme.primary,
+                                title = strings.typingSignalSettingTitle,
+                                subtitle = strings.typingSignalSettingSubtitle,
+                                checked = typingSignalEnabled,
+                                onCheckedChange = {
+                                    dev.stade.message.setTypingSignalEnabled(container.db, it)
                                     refreshTick++
                                 }
                             )

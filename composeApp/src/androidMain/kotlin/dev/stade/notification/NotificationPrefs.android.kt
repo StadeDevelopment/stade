@@ -28,7 +28,7 @@ actual fun setNotificationsEnabled(value: Boolean) {
 }
 
 private val _notificationPrivacyEnabled by lazy {
-    mutableStateOf(prefs.getBoolean("privacy_enabled", false))
+    mutableStateOf(prefs.getBoolean("privacy_enabled", true))
 }
 
 actual fun getNotificationPrivacyEnabled(): State<Boolean> = _notificationPrivacyEnabled

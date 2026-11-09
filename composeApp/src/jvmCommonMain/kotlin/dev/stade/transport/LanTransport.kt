@@ -38,7 +38,8 @@ class LanTransport(
     private val selector = SelectorManager(Dispatchers.IO)
     private var server: ServerSocket? = null
     @Volatile private var actualPort: Int = tcpPort
-    private val discovery = DiscoveryService(nodeId, discoveryPort) { actualPort }
+    private val broadcastId = RotatingNodeId(nodeId)
+    private val discovery = DiscoveryService({ broadcastId.current() }, discoveryPort) { actualPort }
     private val inboundLimiter = InboundAcceptLimiter()
     private val mutex = Mutex()
 
@@ -212,7 +213,7 @@ internal class TcpConnection : Connection {
 }
 
 private class DiscoveryService(
-    private val nodeId: String,
+    private val nodeIdProvider: () -> String,
     private val port: Int,
     private val tcpPortProvider: () -> Int
 ) {
@@ -264,7 +265,7 @@ private class DiscoveryService(
             if (parts.size < 3 || parts[0] != "STADE") continue
             val peerId = parts[1]
             val peerPort = parts[2].toIntOrNull() ?: continue
-            if (peerId == nodeId) continue
+            if (peerId == nodeIdProvider()) continue
             val address = "lan://${packet.address.hostAddress}:$peerPort"
             synchronized(peers) { peers[address] = System.currentTimeMillis() }
         }
@@ -272,7 +273,7 @@ private class DiscoveryService(
 
     private suspend fun broadcastLoop(sock: DatagramSocket) {
         while (scope.isActive) {
-            val msg = "STADE|$nodeId|${tcpPortProvider()}".toByteArray()
+            val msg = "STADE|${nodeIdProvider()}|${tcpPortProvider()}".toByteArray()
             for (addr in broadcastAddresses()) {
                 val packet = DatagramPacket(msg, msg.size, addr, port)
                 runCatching { sock.send(packet) }
