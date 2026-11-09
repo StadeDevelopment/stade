@@ -19,7 +19,10 @@ private val PROFILE_COLUMNS = listOf(
     "Stadium" to "about"
 )
 
-private val MIGRATION_COLUMNS = PROFILE_COLUMNS + listOf("Contact" to "addresses")
+private val POST_PROFILE_COLUMNS = listOf("StadeGroup" to "membershipEpoch")
+
+private val MIGRATION_COLUMNS =
+    PROFILE_COLUMNS + POST_PROFILE_COLUMNS + listOf("Contact" to "addresses")
 
 class DesktopSchemaUpgradeTest {
 
@@ -129,7 +132,7 @@ class DesktopSchemaUpgradeTest {
         try {
             StadeDb.Schema.create(seed)
             seedContact(seed, "c1")
-            PROFILE_COLUMNS.forEach { (table, column) ->
+            (PROFILE_COLUMNS + POST_PROFILE_COLUMNS).forEach { (table, column) ->
                 seed.execute(null, "ALTER TABLE $table DROP COLUMN $column", 0)
             }
             seed.execute(null, "PRAGMA user_version = 0", 0)
@@ -141,7 +144,7 @@ class DesktopSchemaUpgradeTest {
 
         val driver = DriverFactory().create(file.absolutePath)
         try {
-            PROFILE_COLUMNS.forEach { (table, column) ->
+            (PROFILE_COLUMNS + POST_PROFILE_COLUMNS).forEach { (table, column) ->
                 assertTrue(
                     hasColumn(driver, table, column),
                     "an upgraded database must gain $table.$column"

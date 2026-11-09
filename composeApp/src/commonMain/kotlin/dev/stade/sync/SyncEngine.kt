@@ -798,7 +798,7 @@ class SyncEngine(
             val group = groups.getGroup(groupId) ?: return
             val entries = groups.rosterSnapshot(owner, groupId, ::rosterEntryFromContact)
             if (entries.isEmpty()) return
-            val body = groups.encodeRoster(group.id, group.name, entries)
+            val body = groups.encodeRoster(owner, group.id, group.name, entries) ?: return
             val msgId = Encoding.toHex(crypto.randomBytes(16))
             runCatching {
                 queueOutgoing(owner, member, msgId, body, Clock.System.now().toEpochMilliseconds())
@@ -929,7 +929,8 @@ class SyncEngine(
                                 groupManager.adoptIdentities(owner, joinedGroupId, ::rosterEntryFromContact)
                                 val rosterBody = groupManager.getGroup(joinedGroupId)?.let { joined ->
                                     val entries = groupManager.rosterSnapshot(owner, joined.id, ::rosterEntryFromContact)
-                                    if (entries.isEmpty()) null else groupManager.encodeRoster(joined.id, joined.name, entries)
+                                    if (entries.isEmpty()) null
+                                    else groupManager.encodeRoster(owner, joined.id, joined.name, entries)
                                 }
                                 runCatching {
                                     val msgId = Encoding.toHex(crypto.randomBytes(16))

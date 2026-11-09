@@ -52,7 +52,7 @@ class GroupManager(
     fun getGroup(groupId: String): GroupInfo? =
         db.stadeDbQueries.selectGroup(groupId).executeAsOneOrNull()?.let {
             val members = db.stadeDbQueries.selectGroupMembers(it.id).executeAsList().map { m -> m.contactId }
-            GroupInfo(it.id, it.ownerId, it.name, it.inviteToken, it.createdAt, members, it.creatorStadeId, muted = it.muted == 1L)
+            GroupInfo(it.id, it.ownerId, it.name, it.inviteToken, it.createdAt, members, it.creatorStadeId, muted = it.muted == 1L, membershipEpoch = it.membershipEpoch)
         }
 
     fun allGroups(ownerId: String): List<GroupInfo> {
@@ -62,7 +62,7 @@ class GroupManager(
             .executeAsList()
             .groupBy({ it.groupId }, { it.contactId })
         return rows.map { row ->
-            GroupInfo(row.id, row.ownerId, row.name, row.inviteToken, row.createdAt, membersByGroup[row.id].orEmpty(), row.creatorStadeId, muted = row.muted == 1L)
+            GroupInfo(row.id, row.ownerId, row.name, row.inviteToken, row.createdAt, membersByGroup[row.id].orEmpty(), row.creatorStadeId, muted = row.muted == 1L, membershipEpoch = row.membershipEpoch)
         }
     }
 
@@ -76,7 +76,7 @@ class GroupManager(
                     .executeAsList()
                     .groupBy({ it.groupId }, { it.contactId })
                 rows.map { row ->
-                    GroupInfo(row.id, row.ownerId, row.name, row.inviteToken, row.createdAt, membersByGroup[row.id].orEmpty(), row.creatorStadeId, muted = row.muted == 1L)
+                    GroupInfo(row.id, row.ownerId, row.name, row.inviteToken, row.createdAt, membersByGroup[row.id].orEmpty(), row.creatorStadeId, muted = row.muted == 1L, membershipEpoch = row.membershipEpoch)
                 }
             }
 
@@ -167,6 +167,7 @@ class GroupManager(
             db.stadeDbQueries.deleteGroupDeliveries(groupId)
             db.stadeDbQueries.deleteGroupMessages(groupId)
             db.stadeDbQueries.deleteGroupMembers(groupId)
+            db.stadeDbQueries.deleteGroupRemovals(groupId)
             db.stadeDbQueries.deleteGroup(groupId)
             db.stadeDbQueries.deleteKv(chatWallpaperKey(groupId))
         }
@@ -175,6 +176,15 @@ class GroupManager(
 
     fun removeMember(groupId: String, contactId: String) {
         db.stadeDbQueries.deleteGroupMember(groupId, contactId)
+    }
+
+    fun kickMemberAsCreator(groupId: String, memberId: String): Long? {
+        val group = db.stadeDbQueries.selectGroup(groupId).executeAsOneOrNull() ?: return null
+        val epoch = group.membershipEpoch + 1
+        removeMember(groupId, memberId)
+        db.stadeDbQueries.recordGroupRemoval(groupId, memberId, epoch)
+        db.stadeDbQueries.setGroupMembershipEpoch(epoch, groupId)
+        return epoch
     }
 
     fun observeMessages(groupId: String): Flow<List<GroupMessage>> =
@@ -223,6 +233,7 @@ class GroupManager(
             db.stadeDbQueries.deleteGroupDeliveries(groupId)
             db.stadeDbQueries.deleteGroupMessages(groupId)
             db.stadeDbQueries.deleteGroupMembers(groupId)
+            db.stadeDbQueries.deleteGroupRemovals(groupId)
             db.stadeDbQueries.deleteGroup(groupId)
             db.stadeDbQueries.deleteKv(chatWallpaperKey(groupId))
         }
@@ -296,16 +307,45 @@ class GroupManager(
     }
 
     @OptIn(ExperimentalEncodingApi::class)
-    fun encodeRoster(groupId: String, groupName: String, entries: List<GroupMemberEntry>): String {
-        val lines = entries.filter { it.hasIdentity }.joinToString("\n") { entry ->
-            listOf(
-                entry.memberId,
-                sanitizeRosterField(entry.nickname),
-                Base64.Default.encode(entry.signingKey!!),
-                Base64.Default.encode(entry.mldsaKey!!)
-            ).joinToString(GRP_ROSTER_FIELD_SEP.toString())
-        }
-        return "$GRP_ROSTER_PREFIX$groupId:${sanitizeRosterField(groupName)}\n$lines"
+    fun encodeRoster(
+        owner: LocalIdentity,
+        groupId: String,
+        groupName: String,
+        entries: List<GroupMemberEntry>
+    ): String? {
+        val group = db.stadeDbQueries.selectGroup(groupId).executeAsOneOrNull() ?: return null
+        if (group.creatorStadeId != owner.stadeId) return null
+        val usable = entries.filter { it.hasIdentity }
+        val lines = usable.joinToString("\n") { entry -> rosterLine(entry) }
+        val epoch = group.membershipEpoch
+        val material = rosterSigningMaterial(groupId, epoch, usable)
+        val edSig = crypto.sign(owner.privateSigningKey, material)
+        val dsaSig = pq.signMlDsa(owner.privateMlDsaKey, owner.publicMlDsaKey, material)
+        val header = listOf(
+            groupId,
+            epoch.toString(),
+            Base64.Default.encode(edSig),
+            Base64.Default.encode(dsaSig),
+            sanitizeRosterField(groupName)
+        ).joinToString(":")
+        return "$GRP_ROSTER_PREFIX$header\n$lines"
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun rosterLine(entry: GroupMemberEntry): String = listOf(
+        entry.memberId,
+        sanitizeRosterField(entry.nickname),
+        Base64.Default.encode(entry.signingKey!!),
+        Base64.Default.encode(entry.mldsaKey!!)
+    ).joinToString(GRP_ROSTER_FIELD_SEP.toString())
+
+    private fun rosterSigningMaterial(
+        groupId: String,
+        epoch: Long,
+        entries: List<GroupMemberEntry>
+    ): ByteArray {
+        val members = entries.map { it.memberId }.sorted().joinToString(",")
+        return "stade-roster-v1|$groupId|$epoch|$members".encodeToByteArray()
     }
 
     @OptIn(ExperimentalEncodingApi::class)
@@ -319,36 +359,74 @@ class GroupManager(
         return GroupMemberEntry(parts[0], parts[1], signing, mldsa)
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
     fun handleRoster(ownerId: String, fromContactId: String, rawBody: String): RosterUpdate? {
         val stripped = rawBody.removePrefix(GRP_ROSTER_PREFIX)
-        val colonIdx = stripped.indexOf(':')
-        if (colonIdx < 0) return null
-        val groupId = stripped.substring(0, colonIdx)
-        val rest = stripped.substring(colonIdx + 1)
-        val newlineIdx = rest.indexOf('\n')
-        val groupName = if (newlineIdx >= 0) rest.substring(0, newlineIdx) else rest
+        val newlineIdx = stripped.indexOf('\n')
+        val header = if (newlineIdx >= 0) stripped.substring(0, newlineIdx) else stripped
         val entryLines = if (newlineIdx >= 0) {
-            rest.substring(newlineIdx + 1).split('\n').filter { it.isNotBlank() }
+            stripped.substring(newlineIdx + 1).split('\n').filter { it.isNotBlank() }
         } else emptyList()
 
+        val headerParts = header.split(':', limit = 5)
+        if (headerParts.size != 5) return null
+        val groupId = headerParts[0]
+        val epoch = headerParts[1].toLongOrNull() ?: return null
+        if (epoch < 0) return null
+        val edSig = runCatching { Base64.Default.decode(headerParts[2]) }.getOrNull() ?: return null
+        val dsaSig = runCatching { Base64.Default.decode(headerParts[3]) }.getOrNull() ?: return null
+        val groupName = headerParts[4]
+
+        val entries = entryLines.mapNotNull { parseRosterEntry(it) }
+        if (entries.size != entryLines.size) return null
+
         val existing = db.stadeDbQueries.selectGroup(groupId).executeAsOneOrNull()
+        val expectedCreator = existing?.creatorStadeId
+            ?: getPendingJoinForContact(fromContactId)?.takeIf { it.groupId == groupId }?.let { fromContactId }
+            ?: return null
+        if (existing != null && existing.ownerId != ownerId) return null
+        if (existing != null && !isMember(groupId, fromContactId)) return null
+        if (existing != null && epoch < existing.membershipEpoch) return null
+
+        val creatorEntry = entries.firstOrNull { it.memberId == expectedCreator } ?: return null
+        val creatorSigning = creatorEntry.signingKey ?: return null
+        val creatorMldsa = creatorEntry.mldsaKey ?: return null
+        if (StadeId.derive(creatorSigning, creatorMldsa, crypto::hash) != expectedCreator) return null
+
+        val material = rosterSigningMaterial(groupId, epoch, entries)
+        if (!crypto.verify(creatorSigning, material, edSig)) return null
+        if (!pq.verifyMlDsa(creatorMldsa, material, dsaSig)) return null
+
         if (existing == null) {
-            val pending = getPendingJoinForContact(fromContactId)
-            if (pending == null || pending.groupId != groupId) return null
             val now = Clock.System.now().toEpochMilliseconds()
             val newToken = Encoding.toHex(crypto.randomBytes(16))
-            db.stadeDbQueries.insertGroup(groupId, ownerId, groupName, newToken, now, fromContactId)
+            db.stadeDbQueries.insertGroup(groupId, ownerId, groupName, newToken, now, expectedCreator)
             clearPendingJoin(fromContactId)
-        } else {
-            if (existing.ownerId != ownerId) return null
-            if (!isMember(groupId, fromContactId)) return null
-            if (getPendingJoinForContact(fromContactId)?.groupId == groupId) clearPendingJoin(fromContactId)
+        } else if (getPendingJoinForContact(fromContactId)?.groupId == groupId) {
+            clearPendingJoin(fromContactId)
         }
+
         val before = roster(groupId).toSet()
-        entryLines.forEach { line ->
-            val entry = parseRosterEntry(line) ?: return@forEach
+        val listed = entries.map { it.memberId }.toSet()
+
+        entries.forEach { entry ->
+            val removedAt = db.stadeDbQueries.selectGroupRemovalEpoch(groupId, entry.memberId)
+                .executeAsOneOrNull()
+            if (removedAt != null && epoch <= removedAt) return@forEach
+            if (removedAt != null) {
+                db.stadeDbQueries.clearGroupRemoval(groupId, entry.memberId)
+            }
             runCatching { setMemberIdentity(groupId, entry) }
         }
+
+        getMembers(groupId).forEach { memberId ->
+            if (memberId == expectedCreator) return@forEach
+            if (memberId in listed) return@forEach
+            removeMember(groupId, memberId)
+            db.stadeDbQueries.recordGroupRemoval(groupId, memberId, epoch)
+        }
+
+        db.stadeDbQueries.setGroupMembershipEpoch(epoch, groupId)
         return RosterUpdate(groupId, roster(groupId).toSet() != before)
     }
 
@@ -471,7 +549,10 @@ class GroupManager(
             leaveGroupLocally(groupId)
             KickOutcome(groupId, name, wasSelf = true)
         } else {
+            val epoch = group.membershipEpoch + 1
             removeMember(groupId, kickedId)
+            db.stadeDbQueries.recordGroupRemoval(groupId, kickedId, epoch)
+            db.stadeDbQueries.setGroupMembershipEpoch(epoch, groupId)
             KickOutcome(groupId, group.name, wasSelf = false)
         }
     }

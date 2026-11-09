@@ -315,7 +315,15 @@ CREATE TABLE StadeGroup (
     inviteToken TEXT NOT NULL,
     createdAt INTEGER NOT NULL,
     creatorStadeId TEXT NOT NULL DEFAULT '',
-    muted INTEGER NOT NULL DEFAULT 0
+    muted INTEGER NOT NULL DEFAULT 0,
+    membershipEpoch INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE GroupRemoval (
+    groupId TEXT NOT NULL,
+    memberId TEXT NOT NULL,
+    epoch INTEGER NOT NULL,
+    PRIMARY KEY(groupId, memberId)
 );
 
 CREATE TABLE GroupMember (
@@ -348,6 +356,24 @@ CREATE TABLE GroupDelivery (
 
 insertGroup:
 INSERT INTO StadeGroup(id, ownerId, name, inviteToken, createdAt, creatorStadeId) VALUES (?, ?, ?, ?, ?, ?);
+
+setGroupMembershipEpoch:
+UPDATE StadeGroup SET membershipEpoch = ? WHERE id = ?;
+
+recordGroupRemoval:
+INSERT OR REPLACE INTO GroupRemoval(groupId, memberId, epoch) VALUES (?, ?, ?);
+
+selectGroupRemovalEpoch:
+SELECT epoch FROM GroupRemoval WHERE groupId = ? AND memberId = ?;
+
+clearGroupRemoval:
+DELETE FROM GroupRemoval WHERE groupId = ? AND memberId = ?;
+
+deleteGroupRemovals:
+DELETE FROM GroupRemoval WHERE groupId = ?;
+
+wipeGroupRemovals:
+DELETE FROM GroupRemoval;
 
 selectGroups:
 SELECT * FROM StadeGroup WHERE ownerId = ? ORDER BY name;

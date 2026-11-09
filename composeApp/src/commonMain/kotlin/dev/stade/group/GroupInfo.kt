@@ -20,7 +20,8 @@ data class GroupInfo(
     val createdAt: Long,
     val memberIds: List<String> = emptyList(),
     val creatorStadeId: String = "",
-    val muted: Boolean = false
+    val muted: Boolean = false,
+    val membershipEpoch: Long = 0L
 )
 
 data class GroupMessage(
@@ -153,7 +154,7 @@ const val GRP_LEAVE_PREFIX = "GRPL:"
 const val GRP_RXN_PREFIX = "GRPR:"
 const val GROUP_INVITE_PREFIX = "STADE-GRP:"
 
-const val GROUP_PROTOCOL_VERSION = 2
+const val GROUP_PROTOCOL_VERSION = 3
 
 const val GRP_FRAME_PREFIX = "\u0002GRP2:"
 const val GRP_ROSTER_PREFIX = "\u0002GRPX:"

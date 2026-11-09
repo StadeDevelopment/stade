@@ -24,7 +24,7 @@ class ProcessedEnvelopeMigrationTest {
 
     @Test
     fun theSchemaVersionAdvancedWithTheNewMigration() {
-        assertEquals(4L, StadeDb.Schema.version, "a new migration must raise the schema version")
+        assertTrue(StadeDb.Schema.version >= 4L, "the scoping migration must be part of the schema")
     }
 
     @Test

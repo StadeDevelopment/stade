@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS StadeGroup (
+    id TEXT NOT NULL PRIMARY KEY,
+    ownerId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    inviteToken TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    creatorStadeId TEXT NOT NULL DEFAULT '',
+    muted INTEGER NOT NULL DEFAULT 0
+);
+
+ALTER TABLE StadeGroup ADD COLUMN membershipEpoch INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS GroupRemoval (
+    groupId TEXT NOT NULL,
+    memberId TEXT NOT NULL,
+    epoch INTEGER NOT NULL,
+    PRIMARY KEY(groupId, memberId)
+);

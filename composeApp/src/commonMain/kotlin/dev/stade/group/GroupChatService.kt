@@ -62,7 +62,7 @@ class GroupChatService(
         if (contact.groupProto < GROUP_PROTOCOL_VERSION) return
         val entries = rosterSnapshot(owner, group)
         if (entries.isEmpty()) return
-        val body = groups.encodeRoster(group.id, group.name, entries)
+        val body = groups.encodeRoster(owner, group.id, group.name, entries) ?: return
         val key = "$contactId|${group.id}"
         val stamp = body.hashCode()
         val unchanged = synchronized(rosterSent) {
@@ -148,7 +148,7 @@ class GroupChatService(
             owner, group, msgId, timestamp, "$GRP_ACT_KICK$memberId",
             legacyBody = "$GRP_KICK_PREFIX${group.id}:$memberId"
         )
-        groups.removeMember(group.id, memberId)
+        groups.kickMemberAsCreator(group.id, memberId)
         return true
     }
 

@@ -308,6 +308,7 @@ class AppContainer(
                 db.stadeDbQueries.wipeGroupMessages()
                 db.stadeDbQueries.wipeGroupMembers()
                 db.stadeDbQueries.wipeGroupDeliveries()
+                db.stadeDbQueries.wipeGroupRemovals()
                 db.stadeDbQueries.wipeGroups()
                 db.stadeDbQueries.wipeStadiumMessages()
                 db.stadeDbQueries.wipeStadiumMembers()

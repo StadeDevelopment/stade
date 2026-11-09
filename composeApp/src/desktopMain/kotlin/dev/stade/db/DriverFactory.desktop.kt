@@ -52,6 +52,7 @@ internal object DesktopSchemaUpgrade {
     }
 
     private fun inferVersion(driver: SqlDriver): Long = when {
+        hasColumn(driver, "StadeGroup", "membershipEpoch") -> 5L
         hasColumn(driver, "Contact", "bio") -> 3L
         hasColumn(driver, "Contact", "addresses") -> 2L
         else -> 1L
