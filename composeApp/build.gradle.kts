@@ -152,17 +152,9 @@ android {
                 "proguard-rules.pro"
             )
             val ksPath = localProps.getProperty("keystore.path")
-            val allowUnsigned = providers.gradleProperty("stade.allowDebugSignedRelease")
-                .orNull?.equals("true", ignoreCase = true) == true
             signingConfig = if (ksPath != null) {
                 signingConfigs.getByName("release")
             } else {
-                if (!allowUnsigned) {
-                    throw GradleException(
-                        "No release keystore configured. Set keystore.path in local.properties, " +
-                            "or pass -Pstade.allowDebugSignedRelease=true for a throwaway build."
-                    )
-                }
                 signingConfigs.getByName("debug")
             }
         }
@@ -397,6 +389,27 @@ val downloadTorBinaries by tasks.registering {
 
 tasks.matching { it.name == "desktopProcessResources" || it.name == "jvmProcessResources" }.configureEach {
     dependsOn(downloadTorBinaries)
+}
+
+val releaseKeystoreConfigured: Boolean = Properties().also { props ->
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { props.load(it) }
+}.getProperty("keystore.path") != null
+
+val allowDebugSignedRelease: Boolean = providers
+    .gradleProperty("stade.allowDebugSignedRelease")
+    .orNull?.equals("true", ignoreCase = true) == true
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    doFirst {
+        if (!releaseKeystoreConfigured && !allowDebugSignedRelease) {
+            throw GradleException(
+                "No release keystore configured, so this build would be signed with the debug " +
+                    "certificate. Set keystore.path in local.properties, or pass " +
+                    "-Pstade.allowDebugSignedRelease=true for a throwaway build."
+            )
+        }
+    }
 }
 
 data class AndroidTorAbi(val bundleTriple: String, val abi: String, val shaProp: String)
