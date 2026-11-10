@@ -19,7 +19,7 @@ actual class DriverFactory {
 }
 
 fun encryptedJdbcUrl(dbFilePath: String, key: String): String =
-    "jdbc:sqlite:$dbFilePath?cipher=sqlcipher&key=$key"
+    "jdbc:sqlite:$dbFilePath?cipher=sqlcipher&key=${sqlCipherRawKey(key)}"
 
 private fun storageProperties(): Properties = Properties().apply {
     setProperty("journal_mode", "DELETE")

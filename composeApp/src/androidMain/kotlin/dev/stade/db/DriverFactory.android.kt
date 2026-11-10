@@ -15,7 +15,7 @@ actual class DriverFactory(private val context: Context) {
             schema = StadeDb.Schema,
             context = context,
             name = name,
-            factory = SupportOpenHelperFactory(key.encodeToByteArray()),
+            factory = SupportOpenHelperFactory(sqlCipherRawKey(key).encodeToByteArray()),
             callback = StoragePragmaCallback(StadeDb.Schema)
         )
     }

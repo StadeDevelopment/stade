@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-private const val TEST_DB_KEY = "schema-upgrade-test-key"
+private const val TEST_DB_KEY = "4444444444444444444444444444444444444444444444444444444444444444"
 
 private val PROFILE_COLUMNS = listOf(
     "LocalIdentity" to "bio",

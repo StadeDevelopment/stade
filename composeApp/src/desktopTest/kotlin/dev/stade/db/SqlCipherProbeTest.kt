@@ -40,7 +40,7 @@ class SqlCipherProbeTest {
     @Test
     fun theDatabaseFileIsNotReadableWithoutTheKey() = withDir { dir ->
         val db = File(dir, "stade.db")
-        write(db.absolutePath, "correct-horse", "UNIQUE-CIPHER-MARKER")
+        write(db.absolutePath, "1111111111111111111111111111111111111111111111111111111111111111", "UNIQUE-CIPHER-MARKER")
 
         val raw = db.readBytes()
         assertFalse(
@@ -57,17 +57,17 @@ class SqlCipherProbeTest {
     @Test
     fun theRightKeyOpensItAgain() = withDir { dir ->
         val db = File(dir, "stade.db")
-        write(db.absolutePath, "correct-horse", "carried")
+        write(db.absolutePath, "1111111111111111111111111111111111111111111111111111111111111111", "carried")
 
-        assertEquals("carried", readBack(db.absolutePath, "correct-horse"))
+        assertEquals("carried", readBack(db.absolutePath, "1111111111111111111111111111111111111111111111111111111111111111"))
     }
 
     @Test
     fun theWrongKeyIsRefused() = withDir { dir ->
         val db = File(dir, "stade.db")
-        write(db.absolutePath, "correct-horse", "secret")
+        write(db.absolutePath, "1111111111111111111111111111111111111111111111111111111111111111", "secret")
 
-        val outcome = runCatching { readBack(db.absolutePath, "wrong-horse") }
+        val outcome = runCatching { readBack(db.absolutePath, "2222222222222222222222222222222222222222222222222222222222222222") }
 
         assertTrue(
             outcome.isFailure || outcome.getOrNull() == null,
@@ -83,7 +83,7 @@ class SqlCipherProbeTest {
         }
 
         val outcome = runCatching {
-            DriverManager.getConnection(encryptedJdbcUrl(db.absolutePath, "any-key")).use { c ->
+            DriverManager.getConnection(encryptedJdbcUrl(db.absolutePath, "3333333333333333333333333333333333333333333333333333333333333333")).use { c ->
                 c.createStatement().use { it.executeQuery("SELECT count(*) FROM t").close() }
             }
         }
