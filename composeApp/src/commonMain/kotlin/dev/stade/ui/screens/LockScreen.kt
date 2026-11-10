@@ -67,9 +67,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val PIN_MIN = 4
-private const val PIN_MIN_NEW = 6
-private const val PIN_MAX = 16
+internal const val PIN_MIN = 6
+internal const val PIN_MAX = 16
 private const val PIN_DOTS_MAX = 8
 
 private suspend fun Animatable<Float, *>.shake() {
@@ -513,7 +512,7 @@ fun PinSetupScreen(
     val sub = when {
         mode == PinSetupMode.Duress && phase == Phase.New -> strings.setDuressPinSubtitle
         phase == Phase.Current -> strings.enterCurrentPinSubtitle
-        phase == Phase.New -> strings.setPinSubtitle(PIN_MIN_NEW, PIN_MAX)
+        phase == Phase.New -> strings.setPinSubtitle(PIN_MIN, PIN_MAX)
         else -> strings.confirmPinSubtitle
     }
 
@@ -566,7 +565,7 @@ fun PinSetupScreen(
                             keyEvent.key == Key.Enter || keyEvent.key == Key.NumPadEnter -> {
                                 when (phase) {
                                     Phase.Current -> verifyCurrentAndAdvance()
-                                    Phase.New -> if (newPin.length >= PIN_MIN_NEW) phase = Phase.Confirm
+                                    Phase.New -> if (newPin.length >= PIN_MIN) phase = Phase.Confirm
                                     Phase.Confirm -> {}
                                 }
                                 true
@@ -651,13 +650,13 @@ fun PinSetupScreen(
                     actionLabel = null,
                     actionIsCheck = when (phase) {
                         Phase.Current -> currentPin.length >= PIN_MIN && error == null && !isVerifying
-                        Phase.New -> newPin.length >= PIN_MIN_NEW
+                        Phase.New -> newPin.length >= PIN_MIN
                         Phase.Confirm -> false
                     },
                     onAction = {
                         when (phase) {
                             Phase.Current -> verifyCurrentAndAdvance()
-                            Phase.New -> if (newPin.length >= PIN_MIN_NEW) phase = Phase.Confirm
+                            Phase.New -> if (newPin.length >= PIN_MIN) phase = Phase.Confirm
                             Phase.Confirm -> {}
                         }
                     },
@@ -669,14 +668,14 @@ fun PinSetupScreen(
                 PinConfirmAction(
                     enabled = when (phase) {
                         Phase.Current -> currentPin.length >= PIN_MIN && error == null && !isVerifying
-                        Phase.New -> newPin.length >= PIN_MIN_NEW
+                        Phase.New -> newPin.length >= PIN_MIN
                         Phase.Confirm -> false
                     },
                     label = strings.continueAction,
                     onClick = {
                         when (phase) {
                             Phase.Current -> verifyCurrentAndAdvance()
-                            Phase.New -> if (newPin.length >= PIN_MIN_NEW) phase = Phase.Confirm
+                            Phase.New -> if (newPin.length >= PIN_MIN) phase = Phase.Confirm
                             Phase.Confirm -> {}
                         }
                     },
@@ -724,9 +723,11 @@ private fun PinConfirmAction(
 
 private enum class Phase { Current, New, Confirm }
 
+internal fun pinDotCount(filled: Int): Int = filled.coerceIn(PIN_MIN, PIN_DOTS_MAX)
+
 @Composable
 internal fun PinDots(filled: Int, shakeOffset: Float, error: Boolean) {
-    val visibleDots = filled.coerceIn(PIN_MIN, PIN_DOTS_MAX)
+    val visibleDots = pinDotCount(filled)
     val overflow = (filled - PIN_DOTS_MAX).coerceAtLeast(0)
 
     Row(

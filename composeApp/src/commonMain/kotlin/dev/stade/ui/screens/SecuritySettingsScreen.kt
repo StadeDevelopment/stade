@@ -637,7 +637,7 @@ fun SecurityPinGate(
     }
 
     fun tryVerify() {
-        if (pin.length < 4 || isVerifying || error != null) return
+        if (pin.length < PIN_MIN || isVerifying || error != null) return
         val snap = pin
         isVerifying = true
         scope.launch {
@@ -709,9 +709,9 @@ fun SecurityPinGate(
                         }
                         when {
                             digit != null -> {
-                                if (!isVerifying && pin.length < 16 && error == null) {
+                                if (!isVerifying && pin.length < PIN_MAX && error == null) {
                                     pin += digit
-                                    if (pin.length >= 16) tryVerify()
+                                    if (pin.length >= PIN_MAX) tryVerify()
                                 }
                                 true
                             }
@@ -793,9 +793,9 @@ fun SecurityPinGate(
                             row.forEach { d ->
                                 GatePadButton(onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (!isVerifying && error == null && pin.length < 16) {
+                                    if (!isVerifying && error == null && pin.length < PIN_MAX) {
                                         pin += d
-                                        if (pin.length >= 16) tryVerify()
+                                        if (pin.length >= PIN_MAX) tryVerify()
                                     }
                                 }) {
                                     Text(d, style = MaterialTheme.typography.headlineSmall)
@@ -804,7 +804,7 @@ fun SecurityPinGate(
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        val canConfirm = pin.length >= 4 && !isVerifying && error == null
+                        val canConfirm = pin.length >= PIN_MIN && !isVerifying && error == null
                         Surface(
                             modifier = Modifier.size(68.dp).clip(CircleShape).clickable(enabled = canConfirm) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -824,9 +824,9 @@ fun SecurityPinGate(
                         }
                         GatePadButton(onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (!isVerifying && error == null && pin.length < 16) {
+                            if (!isVerifying && error == null && pin.length < PIN_MAX) {
                                 pin += "0"
-                                if (pin.length >= 16) tryVerify()
+                                if (pin.length >= PIN_MAX) tryVerify()
                             }
                         }) { Text("0", style = MaterialTheme.typography.headlineSmall) }
                         GatePadButton(onClick = {
@@ -893,7 +893,7 @@ private fun BiometricEnrollDialog(
     var wrong by remember { mutableStateOf(false) }
 
     fun submit() {
-        if (busy || pin.length < 4) return
+        if (busy || pin.length < PIN_MIN) return
         busy = true
         wrong = false
         val candidate = pin
@@ -953,7 +953,7 @@ private fun BiometricEnrollDialog(
                 val haptic = LocalHapticFeedback.current
                 fun press(digit: String) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    if (!busy && pin.length < 16) {
+                    if (!busy && pin.length < PIN_MAX) {
                         pin += digit
                         wrong = false
                     }
@@ -995,7 +995,7 @@ private fun BiometricEnrollDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { submit() }, enabled = !busy && pin.length >= 4) {
+            Button(onClick = { submit() }, enabled = !busy && pin.length >= PIN_MIN) {
                 Text(strings.continueAction)
             }
         },
