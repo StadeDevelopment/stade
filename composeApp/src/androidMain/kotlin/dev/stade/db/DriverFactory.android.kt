@@ -3,6 +3,7 @@ package dev.stade.db
 import android.content.Context
 import app.cash.sqldelight.db.SqlDriver
 import androidx.sqlite.db.SupportSQLiteDatabase
+import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import java.io.File
@@ -11,6 +12,7 @@ actual class DriverFactory(private val context: Context) {
     actual fun create(dbFilePath: String, key: String): SqlDriver {
         val name = File(dbFilePath).name
         loadCipherLibrary()
+        runCatching { convertPassphraseKeyToRawKey(context.getDatabasePath(name), key) }
         return AndroidSqliteDriver(
             schema = StadeDb.Schema,
             context = context,
@@ -43,5 +45,22 @@ private fun loadCipherLibrary() {
         if (cipherLoaded) return
         System.loadLibrary("sqlcipher")
         cipherLoaded = true
+    }
+}
+
+private fun opensWith(file: File, password: ByteArray): Boolean = runCatching {
+    SQLiteDatabase.openDatabase(file.absolutePath, password, null, SQLiteDatabase.OPEN_READWRITE, null).use { db ->
+        db.rawQuery("SELECT count(*) FROM sqlite_master", null).use { it.moveToFirst() }
+    }
+}.getOrDefault(false)
+
+private fun convertPassphraseKeyToRawKey(file: File, key: String) {
+    if (!file.exists() || file.length() == 0L) return
+    val rawKey = sqlCipherRawKey(key).encodeToByteArray()
+    if (opensWith(file, rawKey)) return
+    val passphrase = key.encodeToByteArray()
+    if (!opensWith(file, passphrase)) return
+    SQLiteDatabase.openDatabase(file.absolutePath, passphrase, null, SQLiteDatabase.OPEN_READWRITE, null).use { db ->
+        db.changePassword(rawKey)
     }
 }

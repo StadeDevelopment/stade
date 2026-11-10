@@ -5,6 +5,7 @@ import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import java.io.File
+import java.sql.DriverManager
 import java.util.Properties
 
 actual class DriverFactory {
@@ -12,6 +13,7 @@ actual class DriverFactory {
         val dbFile = File(dbFilePath)
         dbFile.parentFile?.mkdirs()
         val fresh = !dbFile.exists() || dbFile.length() == 0L
+        if (!fresh) convertPassphraseKeyToRawKey(dbFile.absolutePath, key)
         val driver = JdbcSqliteDriver(encryptedJdbcUrl(dbFile.absolutePath, key), storageProperties())
         DesktopSchemaUpgrade.apply(driver, fresh)
         return driver
@@ -20,6 +22,25 @@ actual class DriverFactory {
 
 fun encryptedJdbcUrl(dbFilePath: String, key: String): String =
     "jdbc:sqlite:$dbFilePath?cipher=sqlcipher&key=${sqlCipherRawKey(key)}"
+
+private fun opensWith(url: String): Boolean = runCatching {
+    DriverManager.getConnection(url).use { connection ->
+        connection.createStatement().use { statement ->
+            statement.executeQuery("SELECT count(*) FROM sqlite_master").use { it.next() }
+        }
+    }
+}.getOrDefault(false)
+
+internal fun convertPassphraseKeyToRawKey(dbFilePath: String, key: String) {
+    if (opensWith(encryptedJdbcUrl(dbFilePath, key))) return
+    val passphraseUrl = "jdbc:sqlite:$dbFilePath?cipher=sqlcipher&key=$key"
+    if (!opensWith(passphraseUrl)) return
+    DriverManager.getConnection(passphraseUrl).use { connection ->
+        connection.createStatement().use { statement ->
+            statement.execute("PRAGMA rekey = \"${sqlCipherRawKey(key)}\"")
+        }
+    }
+}
 
 private fun storageProperties(): Properties = Properties().apply {
     setProperty("journal_mode", "DELETE")
