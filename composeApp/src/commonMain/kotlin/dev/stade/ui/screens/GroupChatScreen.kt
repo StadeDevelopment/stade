@@ -229,6 +229,7 @@ fun GroupChatScreen(
     val group = remember(groupId) { container.groups.getGroup(groupId) }
     val memberIds by remember(groupId) { container.groups.observeMembers(groupId) }
         .collectAsState(initial = group?.memberIds ?: emptyList())
+    val reactionsByMessage by remember(groupId) { container.messages.observeReactionsForGroup(groupId) }.collectAsState(initial = emptyMap())
     val rawMessages by remember(groupId) { container.groups.observeMessages(groupId) }.collectAsState(initial = null)
     val messages = rawMessages ?: emptyList()
     val messageEntrance = rememberMessageEntrance(groupId)
@@ -1099,7 +1100,7 @@ fun GroupChatScreen(
                                                 (deliveryCounts[msg.id] ?: 0) >= recipientCount
                                         val isSelected by remember(msg.id) { derivedStateOf { selectedMessageIds.contains(msg.id) } }
                                         val isHighlighted = flashedMessageId == msg.id
-                                        val reactions by remember(msg.id) { container.messages.observeReactionsForMessage(msg.id) }.collectAsState(initial = emptyList())
+                                        val reactions = reactionsByMessage[msg.id].orEmpty()
                                         val quotedMsg = remember(msg.id, msg.replyToId, messagesById) {
                                             msg.replyToId?.let { rid -> messagesById[rid] }
                                         }

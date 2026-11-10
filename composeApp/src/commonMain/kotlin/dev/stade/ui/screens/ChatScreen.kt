@@ -270,6 +270,7 @@ fun ChatScreen(
     val haptic = LocalHapticFeedback.current
     var stickerDetailsMsg by remember { mutableStateOf<Message?>(null) }
     val contact = remember(contactId) { container.contacts.get(contactId) }
+    val reactionsByMessage by remember(contactId) { container.messages.observeReactionsForChat(contactId) }.collectAsState(initial = emptyMap())
     val rawMessages by remember(contactId) { container.messages.observeMessages(contactId) }.collectAsState(initial = null)
     val messages = rawMessages ?: emptyList()
     val messageEntrance = rememberMessageEntrance(contactId)
@@ -1231,7 +1232,7 @@ fun ChatScreen(
                                                 (msg.timestamp - prev.timestamp) < 60_000L
                                         val isSelected by remember(msg.id) { derivedStateOf { selectedMessageIds.contains(msg.id) } }
                                         val isHighlighted = flashedMessageId == msg.id
-                                        val reactions by remember(msg.id) { container.messages.observeReactionsForMessage(msg.id) }.collectAsState(initial = emptyList())
+                                        val reactions = reactionsByMessage[msg.id].orEmpty()
                                         val quotedMsg = remember(msg.id, msg.replyToId, messagesById) {
                                             msg.replyToId?.let { rid -> messagesById[rid] }
                                         }

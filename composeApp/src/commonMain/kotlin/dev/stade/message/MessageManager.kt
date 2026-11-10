@@ -54,6 +54,18 @@ class MessageManager(private val db: StadeDb, private val crypto: CryptoApi) {
         db.stadeDbQueries.deleteReaction(messageId, fromId)
     }
 
+    fun observeReactionsForChat(contactId: String): Flow<Map<String, List<dev.stade.db.MessageReaction>>> =
+        db.stadeDbQueries.selectReactionsForChat(contactId)
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { rows -> rows.groupBy { it.messageId } }
+
+    fun observeReactionsForGroup(groupId: String): Flow<Map<String, List<dev.stade.db.MessageReaction>>> =
+        db.stadeDbQueries.selectReactionsForGroup(groupId)
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { rows -> rows.groupBy { it.messageId } }
+
     fun observeReactionsForMessage(messageId: String): Flow<List<dev.stade.db.MessageReaction>> =
         db.stadeDbQueries.selectReactionsForMessage(messageId)
             .asFlow()

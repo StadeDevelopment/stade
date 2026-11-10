@@ -493,6 +493,12 @@ SELECT COUNT(*) FROM Message WHERE id = ? AND contactId = ?;
 groupMessageInGroup:
 SELECT COUNT(*) FROM GroupMessage WHERE id = ? AND groupId = ?;
 
+selectReactionsForChat:
+SELECT * FROM MessageReaction WHERE messageId IN (SELECT id FROM Message WHERE contactId = ?);
+
+selectReactionsForGroup:
+SELECT * FROM MessageReaction WHERE messageId IN (SELECT id FROM GroupMessage WHERE groupId = ?);
+
 selectReactionsForMessage:
 SELECT * FROM MessageReaction WHERE messageId = ?;
 
